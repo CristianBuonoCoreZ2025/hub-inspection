@@ -77,6 +77,8 @@ interface GeoCaptureProps {
   replaceEvidence?: boolean;
   /** ID del usuario que captura (para metadata de evidencia) */
   capturedBy?: string;
+  /** Si true, oculta mensajes de "fuera de rango" al usuario (solo muestra "Ubicación capturada") */
+  hideOutOfRange?: boolean;
 }
 
 export function GeoCapture({
@@ -93,6 +95,7 @@ export function GeoCapture({
   sessionToken,
   replaceEvidence,
   capturedBy,
+  hideOutOfRange = false,
 }: GeoCaptureProps) {
   const { data: threshold = GEO_THRESHOLD_METERS } = useQuery({
     queryKey: ["geo-threshold"],
@@ -109,24 +112,23 @@ export function GeoCapture({
     queryFn: async () => {
       const res = await fetch("/api/settings/map-providers");
       const data = await res.json();
-      return data as { providers: ("osm" | "mapbox")[]; tokens: Record<string, string | null> };
+      return data as { providers: ("carto" | "mapbox")[]; tokens: Record<string, string | null> };
     },
     staleTime: 5 * 60 * 1000,
   });
-  const primary = mapProviders?.providers[0] || "osm";
+  const primary = mapProviders?.providers[0] || "carto";
   const secondary = mapProviders?.providers[1] || "none";
   const mapboxToken = mapProviders?.tokens?.mapbox || process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
   const [failedPrimary, setFailedPrimary] = React.useState(false);
   const tileErrorRef = React.useRef(0);
-  const activeProvider: "osm" | "mapbox" = failedPrimary && secondary !== "none" ? secondary : primary;
+  const activeProvider: "carto" | "mapbox" = failedPrimary && secondary !== "none" ? secondary : primary;
 
   const getTileUrl = React.useCallback(
-    (provider: "osm" | "mapbox") => {
+    (provider: "carto" | "mapbox") => {
       if (provider === "mapbox" && mapboxToken) {
         return `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`;
       }
-      // CartoDB usa datos de OSM pero con CORS headers y sin rate limits estrictos.
-      // OSM directo bloquea las peticiones (403 Access Blocked) por política de uso.
+      // CartoDB: datos de OSM con CORS headers y sin rate limits estrictos.
       return "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
     },
     [mapboxToken],
@@ -144,7 +146,7 @@ export function GeoCapture({
   );
 
   const getAttribution = React.useCallback(
-    (provider: "osm" | "mapbox") => {
+    (provider: "carto" | "mapbox") => {
       if (provider === "mapbox" && mapboxToken) {
         return '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
       }
@@ -367,13 +369,15 @@ export function GeoCapture({
 
   const statusConfig = {
     pending: { icon: MapPin, color: "text-muted-foreground", bg: "bg-muted/40", label: "Pendiente" },
-    verified: { icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-500/10", label: "Verificada" },
+    verified: { icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-500/10", label: "Ubicación capturada" },
     out_of_range: { icon: AlertTriangle, color: "text-amber-600", bg: "bg-amber-500/10", label: "Fuera de rango" },
     failed: { icon: XCircle, color: "text-rose-600", bg: "bg-rose-500/10", label: "Fallida" },
   };
 
   const currentStatus = validation?.status || initialStatus;
-  const sc = statusConfig[currentStatus];
+  // Si hideOutOfRange, mostramos "Ubicación capturada" para cualquier estado exitoso
+  const displayStatus = hideOutOfRange && (currentStatus === "verified" || currentStatus === "out_of_range") ? "verified" : currentStatus;
+  const sc = statusConfig[displayStatus];
   const StatusIcon = sc.icon;
 
   return (
@@ -483,22 +487,29 @@ export function GeoCapture({
               <StatusIcon className={`h-4 w-4 ${sc.color}`} />
               <span className={`text-[11px] font-medium ${sc.color}`}>{sc.label}</span>
             </div>
-            <span className="text-[11px] font-mono text-muted-foreground">
-              {validation.distance} m
-              {validation.status === "out_of_range" && (
-                <span className="text-amber-600"> / {GEO_THRESHOLD_METERS} m máx</span>
-              )}
-            </span>
+            {!hideOutOfRange && (
+              <span className="text-[11px] font-mono text-muted-foreground">
+                {validation.distance} m
+                {validation.status === "out_of_range" && (
+                  <span className="text-amber-600"> / {GEO_THRESHOLD_METERS} m máx</span>
+                )}
+              </span>
+            )}
           </div>
-          {validation.status === "out_of_range" && (
+          {!hideOutOfRange && validation.status === "out_of_range" && (
             <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1">
               La ubicación capturada está a {validation.distance} m de la dirección declarada.
               Se permite continuar pero queda registrado para auditoría.
             </p>
           )}
-          {validation.status === "verified" && (
+          {!hideOutOfRange && validation.status === "verified" && (
             <p className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-1">
               Ubicación verificada: a {validation.distance} m de la dirección declarada.
+            </p>
+          )}
+          {hideOutOfRange && (
+            <p className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-1">
+              Tu ubicación ha sido registrada correctamente.
             </p>
           )}
         </div>

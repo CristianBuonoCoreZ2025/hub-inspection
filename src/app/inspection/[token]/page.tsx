@@ -821,6 +821,7 @@ function ResumenTab({ session, token }: { session: LiveSession; token: string })
         sessionId={session.id}
         sessionToken={token}
         replaceEvidence
+        hideOutOfRange
         claimCoords={claim?.claim_latitude != null && claim?.claim_longitude != null ? { lat: claim.claim_latitude, lng: claim.claim_longitude } : null}
         claimAddress={claim?.claim_address || undefined}
         initialCoords={session.geo_latitude && session.geo_longitude ? { lat: session.geo_latitude, lng: session.geo_longitude } : null}

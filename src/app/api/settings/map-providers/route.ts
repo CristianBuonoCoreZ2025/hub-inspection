@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { invalidateSystemSettingCache } from "@/services/settings";
 
-export type MapProvider = "osm" | "mapbox";
+export type MapProvider = "carto" | "mapbox";
 
 export interface MapProvidersConfig {
   providers: MapProvider[];
@@ -10,13 +10,15 @@ export interface MapProvidersConfig {
 }
 
 const DEFAULT_CONFIG: MapProvidersConfig = {
-  providers: ["osm"],
-  tokens: { osm: null, mapbox: null },
+  providers: ["carto", "mapbox"],
+  tokens: { carto: null, mapbox: null },
 };
 
 /**
  * GET /api/settings/map-providers
  * Devuelve la configuración de proveedores de mapas (orden y tokens).
+ * CartoDB es el proveedor por defecto (gratis, CORS, sin rate limits).
+ * Mapbox es la alternativa secundaria (requiere token).
  */
 export async function GET() {
   try {
@@ -33,14 +35,16 @@ export async function GET() {
     let config: MapProvidersConfig = DEFAULT_CONFIG;
     if (raw) {
       try {
-        const parsed = JSON.parse(raw) as Partial<MapProvidersConfig>;
-        const providers = Array.isArray(parsed.providers)
-          ? parsed.providers.filter((p): p is MapProvider => p === "osm" || p === "mapbox")
-          : DEFAULT_CONFIG.providers;
+        const parsed = JSON.parse(raw) as { providers?: string[]; tokens?: Record<string, string | null> };
+        // Migrar config antigua: "osm" → "carto"
+        const rawProviders = Array.isArray(parsed.providers) ? parsed.providers : [];
+        const providers = rawProviders
+          .map((p) => (p === "osm" ? "carto" : p))
+          .filter((p): p is MapProvider => p === "carto" || p === "mapbox");
         config = {
           providers: providers.length > 0 ? providers : DEFAULT_CONFIG.providers,
           tokens: {
-            osm: null,
+            carto: null,
             mapbox: typeof parsed.tokens?.mapbox === "string" ? parsed.tokens.mapbox : null,
           },
         };
@@ -59,16 +63,16 @@ export async function GET() {
 /**
  * POST /api/settings/map-providers
  * Actualiza la configuración de proveedores de mapas.
- * Body: { providers: ["osm", "mapbox"], tokens: { mapbox: "pk..." } }
+ * Body: { providers: ["carto", "mapbox"], tokens: { mapbox: "pk..." } }
  */
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as Partial<MapProvidersConfig>;
     const providers = Array.isArray(body.providers)
-      ? body.providers.filter((p): p is MapProvider => p === "osm" || p === "mapbox")
+      ? body.providers.filter((p): p is MapProvider => p === "carto" || p === "mapbox")
       : DEFAULT_CONFIG.providers;
     const tokens = {
-      osm: null,
+      carto: null,
       mapbox: typeof body.tokens?.mapbox === "string" ? body.tokens.mapbox : null,
     } as Record<MapProvider, string | null>;
 

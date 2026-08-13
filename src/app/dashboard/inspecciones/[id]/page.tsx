@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -34,6 +35,7 @@ import {
  XCircle,
  FileText,
  MapPin,
+ MapPinned,
  User,
  Mail,
  Phone,
@@ -213,6 +215,37 @@ export default function InspectionDetailPage() {
 
  // Realtime: reflejar firmas del asegurado inmediatamente en el dashboard
  useRealtime("inspection_signatures", [["inspection-session", sessionId], ["signatures", sessionId]], !!sessionId);
+
+ // Realtime: detectar cuando el asegurado captura la ubicación (inspección remota)
+ // y mostrar un toast al inspector
+ const prevGeoStatusRef = useRef(session?.geo_status || null);
+ useEffect(() => {
+   if (!sessionId) return;
+   const supabase = getSupabaseClient();
+   const channel = supabase
+     .channel(`geo-status-${sessionId}`)
+     .on(
+       "postgres_changes",
+       { event: "UPDATE", schema: "public", table: "inspection_sessions", filter: `id=eq.${sessionId}` },
+       (payload: { new: Record<string, unknown> }) => {
+         const newGeoStatus = payload.new?.geo_status as string | null;
+         const oldGeoStatus = prevGeoStatusRef.current;
+         if (newGeoStatus && newGeoStatus !== oldGeoStatus && (newGeoStatus === "verified" || newGeoStatus === "out_of_range")) {
+           prevGeoStatusRef.current = newGeoStatus;
+           queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
+           queryClient.invalidateQueries({ queryKey: ["inspection-session-full", sessionId] });
+           queryClient.invalidateQueries({ queryKey: ["inspection-evidences", sessionId] });
+           toast.success("Ubicación capturada", {
+             description: "El asegurado ha capturado su ubicación. Se creó la evidencia de geolocalización.",
+             duration: 8000,
+           });
+         }
+       },
+     )
+     .subscribe();
+   return () => { supabase.removeChannel(channel); };
+   // eslint-disable-next-line react-hooks/exhaustive-deps
+ }, [sessionId]);
 
  const { data: fullSession, isLoading: isFullLoading } = useQuery({
  queryKey: ["inspection-session-full", sessionId],
@@ -798,10 +831,10 @@ export default function InspectionDetailPage() {
  size="sm"
  variant="outline"
  className="h-7 w-7 p-0 shrink-0"
- title="Ver ubicación en el mapa"
+ title="Ver ubicación del siniestro en el mapa"
  onClick={() => setMapViewOpen(true)}
  >
- <MapPin className="h-3.5 w-3.5 text-primary" />
+ <MapPinned className="h-3.5 w-3.5 text-primary" />
  </Button>
  )}
  </div>
@@ -1072,6 +1105,53 @@ export default function InspectionDetailPage() {
  }}
  />
  )}
+
+{/* Geolocalización del asegurado (remota: el asegurado captura desde el Magic Link) */}
+{session.inspection_type === "remote" && session.geo_latitude && session.geo_longitude && (
+ <div className="app-panel">
+   <div className="flex items-center justify-between gap-2 mb-2">
+     <div className="flex items-center gap-2">
+       <MapPin className="h-4 w-4 text-primary" />
+       <h3 className="app-section-title">Ubicación del Asegurado</h3>
+     </div>
+     {session.geo_status && (
+       <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-medium ${
+         session.geo_status === "verified" ? "bg-emerald-500/10 text-emerald-600" :
+         session.geo_status === "out_of_range" ? "bg-amber-500/10 text-amber-600" :
+         session.geo_status === "failed" ? "bg-rose-500/10 text-rose-600" :
+         "bg-muted/40 text-muted-foreground"
+       }`}>
+         {session.geo_status === "verified" ? "Verificada" :
+          session.geo_status === "out_of_range" ? "Fuera de rango" :
+          session.geo_status === "failed" ? "Fallida" : "Pendiente"}
+       </span>
+     )}
+   </div>
+   {session.geo_distance_meters != null && (
+     <p className="text-[11px] text-muted-foreground mb-2">
+       Distancia a la dirección declarada: <span className="font-mono font-medium">{session.geo_distance_meters} m</span>
+     </p>
+   )}
+   <div className="rounded-xl overflow-hidden border border-border/40 shadow-sm">
+     <MapContainer
+       center={[session.geo_latitude, session.geo_longitude]}
+       zoom={16}
+       className="geo-map-container w-full"
+       scrollWheelZoom={false}
+     >
+       <TileLayer
+         url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+       />
+       <Marker position={[session.geo_latitude, session.geo_longitude]} />
+     </MapContainer>
+   </div>
+   <div className="mt-2 flex items-center gap-2 text-[10px] font-mono text-muted-foreground">
+     <MapPin className="h-3 w-3" />
+     {session.geo_latitude.toFixed(6)}, {session.geo_longitude.toFixed(6)}
+   </div>
+ </div>
+)}
  </div>
  )}
 

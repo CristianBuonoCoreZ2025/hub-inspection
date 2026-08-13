@@ -277,12 +277,12 @@ function ReportMaxPhotosSection() {
 // ═══════════════════════════════════════════════════════════
 // Sección: Proveedores de mapas
 // ═══════════════════════════════════════════════════════════
-type MapProvider = "osm" | "mapbox";
+type MapProvider = "carto" | "mapbox";
 
 function MapProvidersSection() {
   const queryClient = useQueryClient();
-  const [primary, setPrimary] = React.useState<MapProvider>("osm");
-  const [secondary, setSecondary] = React.useState<MapProvider | "none">("none");
+  const [primary, setPrimary] = React.useState<MapProvider>("carto");
+  const [secondary, setSecondary] = React.useState<MapProvider | "none">("mapbox");
   const [mapboxToken, setMapboxToken] = React.useState("");
 
   const { data: config, isLoading } = useQuery({
@@ -298,7 +298,7 @@ function MapProvidersSection() {
     if (!config) return;
     const [p, s] = config.providers;
     const id = setTimeout(() => {
-      setPrimary(p || "osm");
+      setPrimary(p || "carto");
       setSecondary(s || "none");
       setMapboxToken(config.tokens?.mapbox || "");
     }, 0);
@@ -337,8 +337,7 @@ function MapProvidersSection() {
         <h2 className="app-body font-semibold">Proveedores de mapas</h2>
       </div>
       <p className="app-body text-muted-foreground">
-        Define el orden de proveedores para geocodificación. Si el primero no encuentra resultados,
-        se intenta con el segundo.
+        Define el orden de proveedores para los mapas. Si el primero falla, se intenta con el segundo.
       </p>
       <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
@@ -351,7 +350,7 @@ function MapProvidersSection() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="osm">OpenStreetMap (gratis)</SelectItem>
+              <SelectItem value="carto">CartoDB (gratis, recomendado)</SelectItem>
               <SelectItem value="mapbox">Mapbox (requiere token)</SelectItem>
             </SelectContent>
           </Select>
@@ -367,7 +366,7 @@ function MapProvidersSection() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">Ninguno</SelectItem>
-              <SelectItem value="osm">OpenStreetMap (gratis)</SelectItem>
+              <SelectItem value="carto">CartoDB (gratis, recomendado)</SelectItem>
               <SelectItem value="mapbox">Mapbox (requiere token)</SelectItem>
             </SelectContent>
           </Select>
