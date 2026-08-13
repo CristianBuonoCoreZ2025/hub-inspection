@@ -15,14 +15,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Falta parámetro url" }, { status: 400 });
     }
 
-    // Solo permitir URLs de R2 (seguridad: evitar SSRF a otros hosts)
+    // Solo permitir URLs de R2, Mapbox y OpenStreetMap (seguridad: evitar SSRF a otros hosts)
     const parsed = new URL(url);
     const allowedHosts = [
       "pub-c3b5a095e0d54343be81175021745490.r2.dev",
       "r2.dev",
+      "api.mapbox.com",
+      "tile.openstreetmap.org",
+      "a.tile.openstreetmap.org",
+      "b.tile.openstreetmap.org",
+      "c.tile.openstreetmap.org",
     ];
     const isAllowed = allowedHosts.some(h => parsed.hostname === h || parsed.hostname.endsWith("." + h));
     if (!isAllowed) {
+      logger.error(`[storage/proxy] Host no permitido: ${parsed.hostname} (url=${url.substring(0, 100)})`);
       return NextResponse.json({ error: "Host no permitido" }, { status: 403 });
     }
 

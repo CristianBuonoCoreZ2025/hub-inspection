@@ -1,22 +1,12 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { GlobalLoadingOverlay } from "@/components/global-loading-overlay";
 import { PerfPanel } from "@/components/perf-panel";
+import { GlassCursorLight } from "@/components/glass-cursor-light";
+import { DialogProvider } from "@/components/ui/alert-context";
 import { useState } from "react";
-
-// next-themes renders an inline <script> to prevent theme flicker (FOUC).
-// React 19 / Next.js 16 warns about script tags inside components.
-// The warning is a false positive — the script runs correctly during SSR.
-if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
-  const origConsoleError = console.error;
-  console.error = (...args: unknown[]) => {
-    if (typeof args[0] === "string" && args[0].includes("Encountered a script tag")) return;
-    origConsoleError.apply(console, args);
-  };
-}
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -34,17 +24,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <NextThemesProvider
-        attribute="class"
-        defaultTheme="system"
-        enableSystem
-        disableTransitionOnChange
-      >
+      <DialogProvider>
         {children}
         <GlobalLoadingOverlay />
+        <GlassCursorLight />
         <Toaster position="top-right" richColors />
         {process.env.NODE_ENV !== "production" && <PerfPanel />}
-      </NextThemesProvider>
+      </DialogProvider>
     </QueryClientProvider>
   );
 }

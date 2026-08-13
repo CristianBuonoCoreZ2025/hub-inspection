@@ -219,7 +219,7 @@ function InspectionsPageContent() {
     <div className="app-page">
       <div className="app-grid-header">
         <div className="app-grid-header-left">
-          <div className="app-grid-icon bg-linear-to-br from-amber-500 to-orange-500">
+          <div className="app-grid-icon icn-amber">
             <ClipboardCheck />
           </div>
           <div className="app-grid-title-row">
@@ -336,10 +336,10 @@ function InspectionsPageContent() {
                     onClick={canOpenSession(session) ? () => router.push(`/dashboard/inspecciones/${session.id}`) : undefined}
                   >
                     <td className="whitespace-nowrap hidden lg:table-cell">
-                      <span className="font-mono text-[11px] font-medium">
+                      <span className="grid-cell-link">
                         {session.claim?.liquidation_number ? (
                           canOpenClaim(session.claim) ? (
-                            <Link href={`/dashboard/claims/${session.claim_id}`} className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
+                            <Link href={`/dashboard/claims/${session.claim_id}`} className="grid-cell-link" onClick={(e) => e.stopPropagation()}>
                               {session.claim.liquidation_number}
                             </Link>
                           ) : (
@@ -355,7 +355,7 @@ function InspectionsPageContent() {
                         {canOpenSession(session) ? (
                           <Link
                             href={`/dashboard/inspecciones/${session.id}`}
-                            className="font-mono text-[11px] font-semibold text-primary hover:underline"
+                            className="grid-cell-link"
                             onClick={(e) => e.stopPropagation()}
                           >
                             {session.claim_action?.code
@@ -363,7 +363,7 @@ function InspectionsPageContent() {
                               : session.inspection_number || session.id.slice(0, 8)}
                           </Link>
                         ) : (
-                          <span className="font-mono text-[11px] font-semibold text-foreground">
+                          <span className="grid-cell-link">
                             {session.claim_action?.code
                               ? session.claim_action.code.split("-").slice(-2).join("-")
                               : session.inspection_number || session.id.slice(0, 8)}
@@ -377,27 +377,27 @@ function InspectionsPageContent() {
                       </div>
                     </td>
                     <td className="whitespace-nowrap hidden sm:table-cell">
-                      <span className="text-[11px] text-muted-foreground">
+                      <span>
                         {session.claim?.client_reference || "—"}
                       </span>
                     </td>
                     <td className="hidden lg:table-cell">
                       <div className="flex items-center gap-1">
                         <User className="h-3 w-3 text-muted-foreground shrink-0" />
-                        <span className="text-[11px]">
+                        <span>
                           {resolveInspectorName(session.inspector_id || session.claim?.inspector_id) || "—"}
                         </span>
                       </div>
                     </td>
                     <td>
-                      <span className="text-[11px]">
+                      <span>
                         {session.claim?.claims_participants?.[0]?.full_name || "—"}
                       </span>
                     </td>
                     <td className="max-w-60 sm:max-w-80 hidden lg:table-cell">
                       <div className="flex items-center gap-1">
                         <MapPin className="h-3 w-3 text-muted-foreground shrink-0" />
-                        <span className="text-[11px] truncate">
+                        <span className="truncate">
                           {session.claim?.claim_address || "—"}
                         </span>
                       </div>
@@ -410,7 +410,7 @@ function InspectionsPageContent() {
                       />
                     </td>
                     <td className="hidden sm:table-cell">
-                      <div className="flex items-center gap-1 text-[11px] whitespace-nowrap">
+                      <div className="flex items-center gap-1 whitespace-nowrap">
                         {session.scheduled_at ? (
                           <>
                             <Calendar className="h-3 w-3 text-muted-foreground" />

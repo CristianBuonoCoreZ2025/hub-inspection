@@ -6,7 +6,7 @@ import type {
   InspectionDamage, InspectionEvidence, InspectionSignature,
 } from "@/types";
 
-const SESSION_SELECT = "id, company_id, claim_id, claim_action_id, action_template_id, inspector_id, inspection_number, scheduled_at, started_at, ended_at, magic_link_token, magic_link_expires_at, magic_link_extended, status, substate, inspection_type, inspection_date, inspection_time, interviewed_name, interviewed_email, interviewed_relationship, police_report_number, police_report_name, police_report_rut, firefighters_company, other_insurances, other_insurance_company, inspector_observations, cancellation_reason_id, cancellation_notes, cancelled_at, cancelled_by, active_tab, acta_step, property_risk, property_materiality, security_measures, insured_statement, third_parties, geo_latitude, geo_longitude, geo_captured_at, geo_captured_by, geo_distance_meters, geo_status, geo_map_url, geo_recapture_enabled, signature_waiver_reason, lock_overridden_by, lock_overridden_at, created_at, updated_at";
+const SESSION_SELECT = "id, company_id, claim_id, claim_action_id, action_template_id, inspector_id, inspection_number, scheduled_at, started_at, ended_at, magic_link_token, magic_link_expires_at, magic_link_extended, status, substate, inspection_type, inspection_date, inspection_time, interviewed_name, interviewed_email, interviewed_relationship, police_report_number, police_report_name, police_report_rut, firefighters_company, other_insurances, other_insurance_company, inspector_observations, cancellation_reason_id, cancellation_notes, cancelled_at, cancelled_by, active_tab, acta_step, property_risk, property_materiality, security_measures, insured_statement, third_parties, geo_latitude, geo_longitude, geo_captured_at, geo_captured_by, geo_distance_meters, geo_status, geo_map_url, geo_recapture_enabled, signature_waiver_reason, started_from_mobile, lock_overridden_by, lock_overridden_at, created_at, updated_at";
 
 // ═══════════════════════════════════════════════════════════════
 // SESSIONS
@@ -144,6 +144,7 @@ export async function getInspectionSessionsLight(claimId?: string) {
     select: `${SESSION_SELECT}, created_at, claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, liquidation_number, client_reference, claim_address, company_id, inspector_id, assigned_adjuster_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name))`,
     ...(claimId ? { eq: { claim_id: claimId } } : {}),
     order: { column: "created_at", ascending: false },
+    limit: 200,
   });
 
   for (const s of sessions) {
@@ -208,21 +209,46 @@ export async function reassignInspectionSession(
   reason: string,
   userId?: string,
 ) {
-  const session = await fetchById<{ id: string; inspector_id: string | null; company_id: string | null }>(
+  const session = await fetchById<{ id: string; claim_id: string | null; inspector_id: string | null; company_id: string | null }>(
     "inspection_sessions",
     sessionId,
-    "id, inspector_id, company_id",
+    "id, claim_id, inspector_id, company_id",
   );
   if (!session) throw new Error("Inspección no encontrada");
 
   const oldInspectorId = session.inspector_id;
 
+  // 1. Actualizar inspector_id en la sesión de inspección
   await updateRow<Pick<InspectionSession, "id" | "inspector_id">>(
     "inspection_sessions",
     sessionId,
     { inspector_id: newInspectorId },
     "id, inspector_id",
   );
+
+  // 2. Actualizar inspector_id en el claim (coordinación) para mantener consistencia
+  //    Si el inspector anterior era el mismo del claim, actualizarlo también.
+  if (session.claim_id) {
+    try {
+      const claim = await fetchById<{ id: string; inspector_id: string | null }>(
+        "claims",
+        session.claim_id,
+        "id, inspector_id",
+      );
+      // Solo actualizar si el claim tenía el mismo inspector que la sesión
+      // (o si el claim no tiene inspector asignado)
+      if (claim && (claim.inspector_id === oldInspectorId || !claim.inspector_id)) {
+        await updateRow<{ id: string; inspector_id: string | null }>(
+          "claims",
+          session.claim_id,
+          { inspector_id: newInspectorId, updated_by: userId || null },
+          "id, inspector_id",
+        );
+      }
+    } catch (e) {
+      console.error("No se pudo actualizar inspector_id del claim al reasignar:", e);
+    }
+  }
 
   try {
     await insertRow(
@@ -731,10 +757,27 @@ export async function openWorkPeriod(sessionId: string, companyId: string) {
 }
 
 /**
+ * Pausa una inspección en curso (status active → scheduled + substate paused).
+ * Cierra el periodo de trabajo activo (modelo reloj de ajedrez).
+ */
+export async function pauseInspection(sessionId: string) {
+  const session = await getInspectionSessionById(sessionId);
+  if (!session) throw new Error("Inspección no encontrada");
+  if (session.status !== "active") {
+    throw new Error("Solo se puede pausar una inspección en curso");
+  }
+  await closeOpenWorkPeriod(sessionId);
+  return updateRow<InspectionSession>("inspection_sessions", sessionId, {
+    status: "scheduled",
+    substate: "paused",
+  }, SESSION_SELECT);
+}
+
+/**
  * Reanuda una inspeccion pausada (scheduled + substate paused).
  * Abre un nuevo work_period y cambia status->active, substate->normal.
  */
-export async function resumeInspection(sessionId: string) {
+export async function resumeInspection(sessionId: string, fromMobile?: boolean) {
   const session = await getInspectionSessionById(sessionId);
   if (!session) throw new Error('Inspeccion no encontrada');
   if (session.status !== 'scheduled' || session.substate !== 'paused') {
@@ -744,6 +787,7 @@ export async function resumeInspection(sessionId: string) {
   return updateRow<InspectionSession>('inspection_sessions', sessionId, {
     status: 'active',
     substate: 'normal',
+    ...(fromMobile ? { started_from_mobile: true } : {}),
   }, SESSION_SELECT);
 }
 
@@ -787,7 +831,7 @@ export async function getInspectionActiveDuration(sessionId: string) {
  * Inicia una inspección: status→active, started_at=ahora, abre work_period.
  * Reemplaza el updateInspectionSession directo para el botón "Iniciar".
  */
-export async function startInspection(sessionId: string) {
+export async function startInspection(sessionId: string, fromMobile?: boolean) {
   const session = await getInspectionSessionById(sessionId);
   if (!session) throw new Error("Inspección no encontrada");
   if (session.status !== "scheduled") {
@@ -804,6 +848,7 @@ export async function startInspection(sessionId: string) {
     started_at: now.toISOString(),
     inspection_date: dateStr,
     inspection_time: timeStr,
+    ...(fromMobile ? { started_from_mobile: true } : {}),
   }, SESSION_SELECT);
 }
 

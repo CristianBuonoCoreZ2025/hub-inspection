@@ -9,6 +9,7 @@ import {
   Tooltip,
   Legend,
 } from "recharts"
+import { useUiThemeId } from "@/hooks/use-ui-theme-id"
 
 interface NestedDonutData {
   outer: Array<{ name: string; value: number; color: string }>
@@ -57,6 +58,9 @@ export function NestedDonutChart({
   showLegend = true,
   label,
 }: NestedDonutChartProps) {
+  const themeId = useUiThemeId()
+  const isNordicDark = themeId === "nordic-air-dark"
+  const isAurora = themeId === "fluid-aurora"
   const uid = React.useId()
   const outerTotal = data.outer.reduce((sum, d) => sum + d.value, 0)
   const innerTotal = data.inner.reduce((sum, d) => sum + d.value, 0)
@@ -97,11 +101,11 @@ export function NestedDonutChart({
             cy="48%"
             innerRadius={hasInner ? 72 : 55}
             outerRadius={hasInner ? 100 : 85}
-            paddingAngle={2}
-            cornerRadius={4}
+            paddingAngle={isNordicDark ? 0 : 2}
+            cornerRadius={isNordicDark ? 0 : 4}
             dataKey="value"
             stroke="none"
-            isAnimationActive={false}
+            isAnimationActive
             label={PieSliceLabel}
             labelLine={false}
             onClick={(entry: { name?: string }) => {
@@ -113,11 +117,15 @@ export function NestedDonutChart({
               return (
                 <Cell
                   key={`outer-cell-${index}`}
-                  fill={`url(#${outerGrad(index)})`}
+                  fill={isNordicDark ? "none" : `url(#${outerGrad(index)})`}
+                  fillOpacity={isAurora ? 0.75 : undefined}
+                  stroke={isNordicDark ? entry.color : "none"}
+                  strokeWidth={isNordicDark ? 1.5 : 0}
                   style={{
                     cursor: onSliceClick ? "pointer" : "default",
                     opacity: isSelected ? 1 : 0.25,
                     transition: "opacity 0.2s ease",
+                    filter: isAurora ? `drop-shadow(0 0 10px ${entry.color}90)` : undefined,
                   }}
                 />
               )
@@ -132,19 +140,24 @@ export function NestedDonutChart({
               cy="48%"
               innerRadius={28}
               outerRadius={64}
-              paddingAngle={2}
-              cornerRadius={3}
+              paddingAngle={isNordicDark ? 0 : 2}
+              cornerRadius={isNordicDark ? 0 : 3}
               dataKey="value"
               stroke="none"
-              isAnimationActive={false}
+              isAnimationActive
               label={PieSliceLabel}
               labelLine={false}
             >
               {data.inner.map((entry, index) => (
                 <Cell
                   key={`inner-cell-${index}`}
-                  fill={`url(#${innerGrad(index)})`}
-                  style={{ filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.08))" }}
+                  fill={isNordicDark ? "none" : `url(#${innerGrad(index)})`}
+                  fillOpacity={isAurora ? 0.75 : undefined}
+                  stroke={isNordicDark ? entry.color : "none"}
+                  strokeWidth={isNordicDark ? 1.5 : 0}
+                  style={{
+                    filter: isAurora ? `drop-shadow(0 0 10px ${entry.color}90)` : "drop-shadow(0 1px 4px rgba(0,0,0,0.08))",
+                  }}
                 />
               ))}
             </Pie>

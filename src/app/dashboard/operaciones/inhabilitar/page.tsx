@@ -82,7 +82,7 @@ export default function InhabilitarPage() {
  <div className="app-page">
  <div className="app-grid-header">
  <div className="app-grid-header-left">
- <div className="app-grid-icon bg-linear-to-br from-rose-500 to-red-500">
+ <div className="app-grid-icon icn-rose">
  <Ban />
  </div>
  <div className="app-grid-title-row">

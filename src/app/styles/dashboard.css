@@ -27,11 +27,11 @@
     height: 48px;
     padding: 0 14px;
     border-radius: 999px;
-    border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent) !important;
+    border: 1px solid color-mix(in srgb, var(--sidebar-foreground) 8%, transparent) !important;
     background: linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.15) 0%,
-      rgba(255, 255, 255, 0.04) 100%
+      color-mix(in srgb, var(--sidebar) var(--glass-topbar-top), transparent) 0%,
+      color-mix(in srgb, var(--sidebar) var(--glass-topbar-bottom), transparent) 100%
     ) padding-box !important;
     backdrop-filter: blur(32px) saturate(200%) brightness(1.06) !important;
     -webkit-backdrop-filter: blur(32px) saturate(200%) brightness(1.06) !important;
@@ -46,8 +46,8 @@
   .dark .topbar-inner {
     background: linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.06) 0%,
-      rgba(255, 255, 255, 0.02) 100%
+      color-mix(in srgb, var(--sidebar) var(--glass-topbar-top), transparent) 0%,
+      color-mix(in srgb, var(--sidebar) var(--glass-topbar-bottom), transparent) 100%
     ) padding-box !important;
     box-shadow:
       0 6px 20px rgba(0, 0, 0, 0.35),
@@ -195,11 +195,11 @@
     min-width: 32px;
     padding: 0 10px;
     border-radius: 999px !important;
-    border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent) !important;
+    border: 1px solid color-mix(in srgb, var(--sidebar-foreground) 8%, transparent) !important;
     background: linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.1) 0%,
-      rgba(255, 255, 255, 0.03) 100%
+      color-mix(in srgb, var(--sidebar) var(--glass-chip-top), transparent) 0%,
+      color-mix(in srgb, var(--sidebar) var(--glass-chip-bottom), transparent) 100%
     ) padding-box !important;
     box-shadow:
       0 2px 8px rgba(0, 0, 0, 0.06),
@@ -211,7 +211,7 @@
     transform: scale(var(--dock-scale, 1));
     transform-origin: center bottom;
     transition:
-      transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1),
+      transform 0.32s cubic-bezier(0.23, 1, 0.32, 1),
       background 0.25s cubic-bezier(0.4, 0, 0.2, 1),
       box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
       color 0.2s ease !important;
@@ -234,8 +234,8 @@
   .dark .topbar-chip {
     background: linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.05) 0%,
-      rgba(255, 255, 255, 0.01) 100%
+      color-mix(in srgb, var(--sidebar) var(--glass-chip-top), transparent) 0%,
+      color-mix(in srgb, var(--sidebar) var(--glass-chip-bottom), transparent) 100%
     ) padding-box !important;
     box-shadow:
       0 2px 10px rgba(0, 0, 0, 0.25),
@@ -247,8 +247,8 @@
     --dock-scale: 1.08;
     background: linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.15) 0%,
-      rgba(255, 255, 255, 0.04) 100%
+      color-mix(in srgb, var(--sidebar) var(--glass-chip-hover-top), transparent) 0%,
+      color-mix(in srgb, var(--sidebar) var(--glass-chip-hover-bottom), transparent) 100%
     ) padding-box !important;
     box-shadow:
       0 6px 18px rgba(0, 0, 0, 0.1),
@@ -259,8 +259,8 @@
   .dark .topbar-chip:hover {
     background: linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.08) 0%,
-      rgba(255, 255, 255, 0.02) 100%
+      color-mix(in srgb, var(--sidebar) var(--glass-chip-hover-top), transparent) 0%,
+      color-mix(in srgb, var(--sidebar) var(--glass-chip-hover-bottom), transparent) 100%
     ) padding-box !important;
     box-shadow:
       0 6px 18px rgba(0, 0, 0, 0.35),
@@ -292,19 +292,19 @@
 
   /* Variantes semánticas */
   .topbar-chip-alert .topbar-chip-icon {
-    color: #f59e0b;
+    color: var(--c-orange);
   }
 
   .topbar-chip-alert .topbar-chip-count {
-    color: #f59e0b;
+    color: var(--c-orange);
   }
 
   .topbar-chip-overdue .topbar-chip-icon {
-    color: #ef4444;
+    color: var(--st-error);
   }
 
   .topbar-chip-overdue .topbar-chip-count {
-    color: #ef4444;
+    color: var(--st-error);
   }
 
   /* ── Derecha: Acciones ── */
@@ -325,11 +325,11 @@
     width: 34px;
     height: 34px;
     border-radius: 999px !important;
-    border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent) !important;
+    border: 1px solid color-mix(in srgb, var(--sidebar-foreground) 8%, transparent) !important;
     background: linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.08) 0%,
-      rgba(255, 255, 255, 0.02) 100%
+      color-mix(in srgb, var(--sidebar) var(--glass-action-top), transparent) 0%,
+      color-mix(in srgb, var(--sidebar) var(--glass-action-bottom), transparent) 100%
     ) padding-box !important;
     box-shadow:
       0 2px 8px rgba(0, 0, 0, 0.06),
@@ -340,7 +340,7 @@
     transform: scale(var(--dock-scale, 1));
     transform-origin: center bottom;
     transition:
-      transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1),
+      transform 0.32s cubic-bezier(0.23, 1, 0.32, 1),
       background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
       box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
       color 0.2s ease !important;
@@ -360,8 +360,8 @@
     --dock-scale: 1.1;
     background: linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.12) 0%,
-      rgba(255, 255, 255, 0.03) 100%
+      color-mix(in srgb, var(--sidebar) var(--glass-action-hover-top), transparent) 0%,
+      color-mix(in srgb, var(--sidebar) var(--glass-chip-bottom), transparent) 100%
     ) padding-box !important;
     box-shadow:
       0 6px 18px rgba(0, 0, 0, 0.1),
@@ -372,8 +372,8 @@
   .dark .topbar-action {
     background: linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.04) 0%,
-      rgba(255, 255, 255, 0.01) 100%
+      color-mix(in srgb, var(--sidebar) var(--glass-action-top), transparent) 0%,
+      color-mix(in srgb, var(--sidebar) var(--glass-action-bottom), transparent) 100%
     ) padding-box !important;
     box-shadow:
       0 2px 10px rgba(0, 0, 0, 0.25),
@@ -385,7 +385,7 @@
     background: linear-gradient(
       135deg,
       rgba(255, 255, 255, 0.06) 0%,
-      rgba(255, 255, 255, 0.02) 100%
+      color-mix(in srgb, var(--sidebar) var(--glass-action-bottom), transparent) 100%
     ) padding-box !important;
     box-shadow:
       0 6px 18px rgba(0, 0, 0, 0.35),
@@ -418,11 +418,11 @@
     min-width: 32px;
     padding: 0 10px;
     border-radius: 999px !important;
-    border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent) !important;
+    border: 1px solid color-mix(in srgb, var(--sidebar-foreground) 8%, transparent) !important;
     background: linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.1) 0%,
-      rgba(255, 255, 255, 0.03) 100%
+      color-mix(in srgb, var(--sidebar) var(--glass-chip-top), transparent) 0%,
+      color-mix(in srgb, var(--sidebar) var(--glass-chip-bottom), transparent) 100%
     ) padding-box !important;
     box-shadow:
       0 2px 8px rgba(0, 0, 0, 0.06),
@@ -433,7 +433,7 @@
     transform: scale(var(--dock-scale, 1));
     transform-origin: center bottom;
     transition:
-      transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1),
+      transform 0.32s cubic-bezier(0.23, 1, 0.32, 1),
       background 0.25s cubic-bezier(0.4, 0, 0.2, 1),
       box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
       color 0.2s ease !important;
@@ -465,8 +465,8 @@
     --dock-scale: 1.08;
     background: linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.15) 0%,
-      rgba(255, 255, 255, 0.04) 100%
+      color-mix(in srgb, var(--sidebar) var(--glass-chip-hover-top), transparent) 0%,
+      color-mix(in srgb, var(--sidebar) var(--glass-chip-hover-bottom), transparent) 100%
     ) padding-box !important;
     box-shadow:
       0 6px 18px rgba(0, 0, 0, 0.1),
@@ -477,8 +477,8 @@
   .dark .topbar-action-recents:hover {
     background: linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.08) 0%,
-      rgba(255, 255, 255, 0.02) 100%
+      color-mix(in srgb, var(--sidebar) var(--glass-action-top), transparent) 0%,
+      color-mix(in srgb, var(--sidebar) var(--glass-action-bottom), transparent) 100%
     ) padding-box !important;
     box-shadow:
       0 6px 18px rgba(0, 0, 0, 0.35),
@@ -608,8 +608,8 @@
 
   .recent-claim-remove:hover {
     opacity: 1;
-    background: color-mix(in srgb, #ef4444 12%, transparent);
-    color: #ef4444;
+    background: color-mix(in srgb, var(--st-error) 12%, transparent);
+    color: var(--st-error);
   }
 
   /* ── Responsive ── */
@@ -622,11 +622,11 @@
     width: 34px;
     height: 34px;
     border-radius: 999px;
-    border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--sidebar-foreground) 8%, transparent);
     background: linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.08) 0%,
-      rgba(255, 255, 255, 0.02) 100%
+      color-mix(in srgb, var(--sidebar) var(--glass-action-top), transparent) 0%,
+      color-mix(in srgb, var(--sidebar) var(--glass-action-bottom), transparent) 100%
     ) padding-box;
     box-shadow:
       0 2px 8px rgba(0, 0, 0, 0.06),
@@ -644,8 +644,8 @@
   .topbar-hamburger:hover {
     background: linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.12) 0%,
-      rgba(255, 255, 255, 0.03) 100%
+      color-mix(in srgb, var(--sidebar) var(--glass-action-hover-top), transparent) 0%,
+      color-mix(in srgb, var(--sidebar) var(--glass-chip-bottom), transparent) 100%
     ) padding-box;
     transform: translateY(-2px) scale(1.06);
     box-shadow:
@@ -670,7 +670,7 @@
     background: linear-gradient(
       135deg,
       rgba(255, 255, 255, 0.06) 0%,
-      rgba(255, 255, 255, 0.02) 100%
+      color-mix(in srgb, var(--sidebar) var(--glass-action-bottom), transparent) 100%
     ) padding-box;
     box-shadow:
       0 6px 18px rgba(0, 0, 0, 0.35),
@@ -837,6 +837,10 @@
   @keyframes mobile-nav-fade-in {
     from { opacity: 0; }
     to { opacity: 1; }
+  }
+
+  .mobile-theme-swatch {
+    background-color: var(--mobile-theme-swatch);
   }
 
   .mobile-nav-drawer {
@@ -1059,8 +1063,8 @@
   }
 
   .mobile-nav-action-logout:hover {
-    background: color-mix(in srgb, #ef4444 8%, transparent);
-    color: #ef4444;
+    background: color-mix(in srgb, var(--st-error) 8%, transparent);
+    color: var(--st-error);
   }
 
   /* ═══════════════════════════════════════════════════════════════
@@ -1132,8 +1136,8 @@
       ) border-box,
       linear-gradient(
         135deg,
-        rgba(255, 255, 255, 0.08) 0%,
-        rgba(255, 255, 255, 0.02) 100%
+        color-mix(in srgb, var(--sidebar) var(--glass-action-top), transparent) 0%,
+        color-mix(in srgb, var(--sidebar) var(--glass-action-bottom), transparent) 100%
       ) padding-box !important;
     backdrop-filter: blur(40px) saturate(180%) brightness(1.05) !important;
     -webkit-backdrop-filter: blur(40px) saturate(180%) brightness(1.05) !important;
@@ -1197,8 +1201,8 @@
     background:
       linear-gradient(
         180deg,
-        rgba(255, 255, 255, 0.1) 0%,
-        rgba(255, 255, 255, 0.02) 100%
+        color-mix(in srgb, var(--sidebar) var(--glass-chip-top), transparent) 0%,
+        color-mix(in srgb, var(--sidebar) var(--glass-action-bottom), transparent) 100%
       ) border-box,
       linear-gradient(
         135deg,
@@ -1275,8 +1279,8 @@
       ) border-box,
       linear-gradient(
         145deg,
-        rgba(255, 255, 255, 0.08) 0%,
-        rgba(255, 255, 255, 0.02) 100%
+        color-mix(in srgb, var(--sidebar) var(--glass-action-top), transparent) 0%,
+        color-mix(in srgb, var(--sidebar) var(--glass-action-bottom), transparent) 100%
       ) padding-box !important;
     backdrop-filter: blur(40px) saturate(180%) brightness(1.05) !important;
     -webkit-backdrop-filter: blur(40px) saturate(180%) brightness(1.05) !important;
@@ -1339,8 +1343,8 @@
     background:
       linear-gradient(
         180deg,
-        rgba(255, 255, 255, 0.1) 0%,
-        rgba(255, 255, 255, 0.02) 100%
+        color-mix(in srgb, var(--sidebar) var(--glass-chip-top), transparent) 0%,
+        color-mix(in srgb, var(--sidebar) var(--glass-action-bottom), transparent) 100%
       ) border-box,
       linear-gradient(
         145deg,
@@ -1379,8 +1383,8 @@
       ) border-box,
       linear-gradient(
         135deg,
-        rgba(255, 255, 255, 0.1) 0%,
-        rgba(255, 255, 255, 0.02) 100%
+        color-mix(in srgb, var(--sidebar) var(--glass-chip-top), transparent) 0%,
+        color-mix(in srgb, var(--sidebar) var(--glass-action-bottom), transparent) 100%
       ) padding-box !important;
     color: var(--foreground) !important;
     backdrop-filter: blur(16px) saturate(160%) !important;
@@ -1589,7 +1593,7 @@
 
   /* Porcentajes dentro de las slices del donut (sutiles, gris) */
   .nested-donut-wrap .recharts-pie-label-text {
-    fill: #ffffff !important;
+    fill: var(--c-paper) !important;
     font-size: 9px !important;
     font-weight: 700 !important;
     text-anchor: middle !important;
@@ -1710,7 +1714,6 @@
     height: 18px;
     min-width: 4px;
     border-radius: 0 6px 6px 0;
-    transition: width 0.5s ease;
     margin: 0;
   }
 
@@ -1756,7 +1759,6 @@
 
   .horizontal-bar-segment {
     height: 100%;
-    transition: width 0.5s ease;
   }
 
   /* ── Header especial para la card de ubicación (leyenda flotante, no empuja el body) ── */
@@ -2027,7 +2029,7 @@
       linear-gradient(
         180deg,
         rgba(255, 255, 255, 0.3) 0%,
-        rgba(255, 255, 255, 0.04) 100%
+        color-mix(in srgb, var(--sidebar) var(--glass-chip-hover-bottom), transparent) 100%
       ) border-box,
       linear-gradient(
         135deg,
@@ -2046,7 +2048,7 @@
     background:
       linear-gradient(
         180deg,
-        rgba(255, 255, 255, 0.08) 0%,
+        color-mix(in srgb, var(--sidebar) var(--glass-action-top), transparent) 0%,
         rgba(255, 255, 255, 0.01) 100%
       ) border-box,
       linear-gradient(
@@ -2091,8 +2093,8 @@
       ) border-box,
       linear-gradient(
         135deg,
-        rgba(255, 255, 255, 0.1) 0%,
-        rgba(255, 255, 255, 0.02) 100%
+        color-mix(in srgb, var(--sidebar) var(--glass-chip-top), transparent) 0%,
+        color-mix(in srgb, var(--sidebar) var(--glass-action-bottom), transparent) 100%
       ) padding-box !important;
     box-shadow:
       0 4px 16px rgba(0, 0, 0, 0.08),
@@ -2111,7 +2113,7 @@
     transition: all 0.2s ease;
     background: linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.15) 0%,
+      color-mix(in srgb, var(--sidebar) var(--glass-chip-hover-top), transparent) 0%,
       rgba(255, 255, 255, 0.05) 100%
     );
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -2154,7 +2156,7 @@
       linear-gradient(
         180deg,
         rgba(255, 255, 255, 0.3) 0%,
-        rgba(255, 255, 255, 0.04) 100%
+        color-mix(in srgb, var(--sidebar) var(--glass-chip-hover-bottom), transparent) 100%
       ) border-box,
       linear-gradient(
         135deg,
@@ -2179,7 +2181,7 @@
     background:
       linear-gradient(
         180deg,
-        rgba(255, 255, 255, 0.08) 0%,
+        color-mix(in srgb, var(--sidebar) var(--glass-action-top), transparent) 0%,
         rgba(255, 255, 255, 0.01) 100%
       ) border-box,
       linear-gradient(
@@ -2289,12 +2291,12 @@
         180deg,
         rgba(255, 255, 255, 0.45) 0%,
         rgba(255, 255, 255, 0.1) 50%,
-        rgba(255, 255, 255, 0.03) 100%
+        color-mix(in srgb, var(--sidebar) var(--glass-chip-bottom), transparent) 100%
       ) border-box,
       linear-gradient(
         135deg,
-        rgba(255, 255, 255, 0.12) 0%,
-        rgba(255, 255, 255, 0.03) 100%
+        color-mix(in srgb, var(--sidebar) var(--glass-action-hover-top), transparent) 0%,
+        color-mix(in srgb, var(--sidebar) var(--glass-chip-bottom), transparent) 100%
       ) padding-box !important;
     backdrop-filter: blur(28px) saturate(180%) brightness(1.05) !important;
     -webkit-backdrop-filter: blur(28px) saturate(180%) brightness(1.05) !important;
@@ -2310,7 +2312,7 @@
     background:
       linear-gradient(
         180deg,
-        rgba(255, 255, 255, 0.12) 0%,
+        color-mix(in srgb, var(--sidebar) var(--glass-action-hover-top), transparent) 0%,
         rgba(255, 255, 255, 0.04) 50%,
         rgba(255, 255, 255, 0.01) 100%
       ) border-box,
@@ -2383,7 +2385,7 @@
       linear-gradient(
         180deg,
         rgba(255, 255, 255, 0.35) 0%,
-        rgba(255, 255, 255, 0.04) 100%
+        color-mix(in srgb, var(--sidebar) var(--glass-chip-hover-bottom), transparent) 100%
       ) border-box,
       linear-gradient(
         135deg,
@@ -2404,7 +2406,7 @@
     background:
       linear-gradient(
         180deg,
-        rgba(255, 255, 255, 0.08) 0%,
+        color-mix(in srgb, var(--sidebar) var(--glass-action-top), transparent) 0%,
         rgba(255, 255, 255, 0.01) 100%
       ) border-box,
       linear-gradient(
@@ -2484,7 +2486,7 @@
       linear-gradient(
         180deg,
         rgba(255, 255, 255, 0.25) 0%,
-        rgba(255, 255, 255, 0.03) 100%
+        color-mix(in srgb, var(--sidebar) var(--glass-chip-bottom), transparent) 100%
       ) border-box !important;
     backdrop-filter: blur(20px) saturate(150%) !important;
     -webkit-backdrop-filter: blur(20px) saturate(150%) !important;
@@ -2514,7 +2516,7 @@
       linear-gradient(
         180deg,
         rgba(255, 255, 255, 0.2) 0%,
-        rgba(255, 255, 255, 0.03) 100%
+        color-mix(in srgb, var(--sidebar) var(--glass-chip-bottom), transparent) 100%
       ) border-box !important;
     backdrop-filter: blur(12px) !important;
     -webkit-backdrop-filter: blur(12px) !important;
@@ -2570,13 +2572,20 @@
   .kpi-glow-slate         { --kpi-glow: rgba(100, 116, 139, 0.08) !important; }
 
   /* ── kpi-icon: gradientes de icono por color ── */
-  .kpi-icon-blue    { background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important; }
-  .kpi-icon-amber   { background: linear-gradient(135deg, #f59e0b, #d97706) !important; }
-  .kpi-icon-emerald { background: linear-gradient(135deg, #10b981, #059669) !important; }
-  .kpi-icon-violet  { background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important; }
-  .kpi-icon-sky     { background: linear-gradient(135deg, #0095DA, #005BBB) !important; }
-  .kpi-icon-pink    { background: linear-gradient(135deg, #ec4899, #be185d) !important; }
+  .kpi-icon-blue    { background: linear-gradient(135deg, var(--st-info), var(--c-sky-deep)) !important; }
+  .kpi-icon-amber   { background: linear-gradient(135deg, var(--c-orange), var(--c-orange)) !important; }
+  .kpi-icon-emerald { background: linear-gradient(135deg, var(--st-success), var(--st-success)) !important; }
+  .kpi-icon-violet  { background: linear-gradient(135deg, var(--c-violet), var(--c-violet)) !important; }
+  .kpi-icon-sky     { background: linear-gradient(135deg, var(--c-sky), var(--c-sky-dark)) !important; }
+  .kpi-icon-pink    { background: linear-gradient(135deg, var(--c-pink), var(--st-error)) !important; }
   .kpi-icon-slate   { background: linear-gradient(135deg, rgba(100, 116, 139, 0.9), rgba(71, 85, 105, 1)) !important; }
+
+  /* ── kpi-icon-outline: SVG outline blanco para modo oscuro ── */
+  .kpi-icon-outline {
+    color: #ffffff;
+    opacity: 0.85;
+    filter: none !important;
+  }
 
   /* ── dash-grid-mt: margin-top estándar para dash-grid ── */
   .dash-grid-mt { margin-top: 12px !important; }

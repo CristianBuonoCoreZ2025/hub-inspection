@@ -3,8 +3,59 @@
 @import "shadcn/tailwind.css";
 @import "leaflet/dist/leaflet.css";
 
-/* Pieles de interfaz (5 skins dinámicos) */
-@import "./ui-style-skins.css";
+/* ═══════════════════════════════════════════════════════════════
+ * FUENTES — DM Sans y Sora cargadas localmente via @font-face.
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* DM Sans — latin-ext */
+@font-face {
+  font-family: "DM Sans";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/dm-sans-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
+    U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
+    U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+
+/* DM Sans — latin */
+@font-face {
+  font-family: "DM Sans";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/dm-sans-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+    U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
+    U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Sora — latin-ext */
+@font-face {
+  font-family: "Sora";
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url("/fonts/sora-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
+    U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
+    U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+
+/* Sora — latin */
+@font-face {
+  font-family: "Sora";
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url("/fonts/sora-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+    U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
+    U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 
 /* Estilos organizados por dominio (de hub-stock-ai) */
 @import "./styles/buttons.css";
@@ -15,6 +66,11 @@
 @import "./styles/dashboard.css";
 @import "./styles/typography.css";
 @import "./styles/sketch-editor.css";
+@import "./styles/mobile.css";
+
+/* Pieles de interfaz — DEBE ir después de todos los estilos
+   para que los overrides por skin ganen en la cascada. */
+@import "./ui-style-skins.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -23,7 +79,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-dm-sans);
+  --font-heading: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -79,78 +135,137 @@
  */
 :root {
   color-scheme: light;
-  --background: #fafafa;
-  --foreground: #0a0a0a;
-  --card: #ffffff;
-  --card-foreground: #0a0a0a;
-  --popover: #ffffff;
-  --popover-foreground: #0a0a0a;
-  --primary: #0a0a0a;
-  --primary-foreground: #ffffff;
-  --secondary: #f4f4f5;
-  --secondary-foreground: #18181b;
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a;
-  --accent: #fff7ed;
-  --accent-foreground: #9a3412;
-  --destructive: #dc2626;
-  --destructive-foreground: #ffffff;
-  --border: #e4e4e7;
-  --input: #e4e4e7;
-  --ring: #a1a1aa;
+  --font-dm-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sora: "Sora", ui-sans-serif, system-ui, sans-serif;
+  /* Paleta base — 9 colores compartidos */
+  --c-canvas:   #FAFAFA;
+  --c-ink:      #0A0A0A;
+  --c-paper:    #FFFFFF;
+  --c-gray-50:  #F4F4F5;
+  --c-gray-700: #18181B;
+  --c-gray-200: #E4E4E7;
+  --c-gray-400: #A1A1AA;
+  --c-slate-600:#3F5969;
+  --c-orange:   #FB923C;
+  --c-pink:     #F472B6;
+  /* Status */
+  --st-error:    #EF4444;
+  --st-success:  #10B981;
+  --st-info:     #0052CC;
+  /* Violet */
+  --c-violet:    #8B5CF6;
+  /* Teal / Sky */
+  --c-teal:      #14B8A6;
+  --c-teal-dark: #0D9488;
+  --c-sky:       #0EA5E9;
+  --c-sky-light: #38BDF8;
+  --c-sky-dark:  #0284C7;
+  /* Accent warm foreground (único hex propio) */
+  --c-accent-warm-fg: #9A3412;
+  /* Overlay/shadow skin */
+  --c-overlay-air:      #1223346B;
+  --c-overlay-arctic:   #0027326B;
+  --c-shadow-air-l:     #2D50782E;
+  --c-shadow-air-d:     #020408B3;
+  --c-shadow-arctic-l:  #2D64782E;
+  --c-shadow-arctic-d:  #000204B3;
+  /* Paleta Neon Skin — deep navy + sky blue + teal (Stitch) */
+  --c-aurora-bg:        #0f1418;
+  --c-aurora-surface:   #1b2024;
+  --c-aurora-surface-low: #171c20;
+  --c-aurora-surface-high: #252b2f;
+  --c-aurora-foreground: #dee3e9;
+  --c-aurora-muted:     #88929b;
+  --c-aurora-primary:   #89ceff;
+  --c-aurora-primary-fg: #00344d;
+  --c-aurora-secondary: #44e2cd;
+  --c-aurora-secondary-fg: #003731;
+  --c-aurora-accent:    #0ea5e9;
+  --c-aurora-glass:     rgba(30, 41, 59, 0.4);
+  --c-aurora-glass-border: rgba(255, 255, 255, 0.08);
+  --c-aurora-glass-input: rgba(255, 255, 255, 0.05);
+  --c-aurora-overlay:   rgba(15, 20, 24, 0.8);
+  --c-aurora-shadow:    rgba(0, 0, 0, 0.6);
+  /* Aurora radiales */
+  --c-aurora-leak-1:    rgba(14, 165, 233, 0.15);
+  --c-aurora-leak-2:    rgba(168, 85, 247, 0.12);
+  --c-aurora-leak-3:    rgba(45, 212, 191, 0.08);
+  /* Tokens semánticos */
+  --background: var(--c-canvas);
+  --foreground: var(--c-ink);
+  --card: var(--c-paper);
+  --card-foreground: var(--c-ink);
+  --popover: var(--c-paper);
+  --popover-foreground: var(--c-ink);
+  --primary: var(--c-ink);
+  --primary-foreground: var(--c-paper);
+  --secondary: var(--c-gray-50);
+  --secondary-foreground: var(--c-gray-700);
+  --muted: var(--c-gray-50);
+  --muted-foreground: var(--c-gray-400);
+  --accent: var(--c-gray-50);
+  --accent-foreground: var(--c-accent-warm-fg);
+  --destructive: var(--st-error);
+  --destructive-foreground: var(--c-paper);
+  --border: var(--c-gray-200);
+  --input: var(--c-gray-200);
+  --ring: var(--c-gray-400);
   --radius: 0.75rem;
-  --chart-1: #fb923c;
-  --chart-2: #f472b6;
-  --chart-3: #a78bfa;
-  --chart-4: #34d399;
-  --chart-5: #60a5fa;
-  --sidebar: #fafafa;
-  --sidebar-foreground: #0a0a0a;
-  --sidebar-primary: #0a0a0a;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f4f4f5;
-  --sidebar-accent-foreground: #18181b;
-  --sidebar-border: #e4e4e7;
-  --sidebar-ring: #a1a1aa;
-  --accent-warm-start: #fb923c;
-  --accent-warm-end: #f472b6;
-  --surface-canvas: #fafafa;
-  --surface-elevated: #ffffff;
+  --chart-1: var(--c-orange);
+  --chart-2: var(--c-pink);
+  --chart-3: var(--c-violet);
+  --chart-4: var(--st-success);
+  --chart-5: var(--c-sky-light);
+  --sidebar: var(--c-canvas);
+  --sidebar-foreground: var(--c-ink);
+  --sidebar-primary: var(--c-ink);
+  --sidebar-primary-foreground: var(--c-paper);
+  --sidebar-accent: var(--c-gray-50);
+  --sidebar-accent-foreground: var(--c-gray-700);
+  --sidebar-border: var(--c-gray-200);
+  --sidebar-ring: var(--c-gray-400);
+  --accent-warm-start: var(--c-orange);
+  --accent-warm-end: var(--c-pink);
+  --surface-canvas: var(--c-canvas);
+  --surface-elevated: var(--c-paper);
   --shadow-card: 0 1px 2px rgb(0 0 0 / 0.04), 0 4px 12px rgb(0 0 0 / 0.04);
 }
 
 .dark {
   color-scheme: dark;
-  --background: #0c0c0e;
-  --foreground: #fafafa;
-  --card: #141416;
-  --card-foreground: #fafafa;
-  --popover: #18181b;
-  --popover-foreground: #fafafa;
-  --primary: #fafafa;
-  --primary-foreground: #0a0a0a;
-  --secondary: #27272a;
-  --secondary-foreground: #fafafa;
-  --muted: #27272a;
-  --muted-foreground: #a1a1aa;
-  --accent: #27272a;
-  --accent-foreground: #fed7aa;
-  --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
-  --border: rgb(255 255 255 / 0.1);
-  --input: rgb(255 255 255 / 0.12);
-  --ring: #52525b;
-  --surface-canvas: #0c0c0e;
-  --surface-elevated: #141416;
+  /* Paleta dark — reutiliza variables light + 1 hex nuevo */
+  --c-canvas-dark:   #0C0C0E;
+  /* Tokens semánticos dark */
+  --background: var(--c-canvas-dark);
+  --foreground: var(--c-canvas);
+  --card: var(--c-canvas-dark);
+  --card-foreground: var(--c-canvas);
+  --popover: var(--c-gray-700);
+  --popover-foreground: var(--c-canvas);
+  --primary: var(--c-canvas);
+  --primary-foreground: var(--c-ink);
+  --secondary: var(--c-gray-700);
+  --secondary-foreground: var(--c-canvas);
+  --muted: var(--c-gray-700);
+  --muted-foreground: var(--c-gray-400);
+  --accent: var(--c-gray-700);
+  --accent-foreground: var(--c-orange);
+  --destructive: var(--st-error);
+  --destructive-foreground: var(--c-paper);
+  --border: var(--c-gray-700);
+  --input: var(--c-gray-700);
+  --ring: var(--c-gray-400);
+  --surface-canvas: var(--c-canvas-dark);
+  --surface-elevated: var(--c-canvas-dark);
   --shadow-card: 0 4px 24px rgb(0 0 0 / 0.45);
-  --sidebar: #141416;
-  --sidebar-foreground: #fafafa;
-  --sidebar-primary: #fafafa;
-  --sidebar-primary-foreground: #0a0a0a;
-  --sidebar-accent: #27272a;
-  --sidebar-accent-foreground: #fafafa;
-  --sidebar-border: rgb(255 255 255 / 0.1);
-  --sidebar-ring: #52525b;
+  --sidebar: var(--c-canvas-dark);
+  --sidebar-foreground: var(--c-canvas);
+  --sidebar-primary: var(--c-canvas);
+  --sidebar-primary-foreground: var(--c-ink);
+  --sidebar-accent: var(--c-gray-700);
+  --sidebar-accent-foreground: var(--c-canvas);
+  --sidebar-border: var(--c-gray-700);
+  --sidebar-ring: var(--c-gray-400);
 }
 
 @layer base {
@@ -159,22 +274,17 @@
   }
   body {
     @apply bg-background text-foreground;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
     font-size: 0.875rem;
     line-height: 1.5;
     letter-spacing: -0.01em;
-    /* Mesh gradient sutil — para que el Liquid Glass se vea de verdad */
-    background-image:
-      radial-gradient(ellipse 80% 50% at 20% 0%, rgba(0, 122, 255, 0.06) 0%, transparent 50%),
-      radial-gradient(ellipse 60% 50% at 80% 20%, rgba(175, 82, 222, 0.05) 0%, transparent 50%),
-      radial-gradient(ellipse 70% 60% at 50% 100%, rgba(255, 159, 10, 0.04) 0%, transparent 50%);
-    background-attachment: fixed;
-    background-repeat: no-repeat;
+    /* El body mesh se define por skin en ui-style-skins.css */
+    background-image: none;
   }
   .dark body {
-    background-image:
-      radial-gradient(ellipse 80% 50% at 20% 0%, rgba(0, 122, 255, 0.1) 0%, transparent 50%),
-      radial-gradient(ellipse 60% 50% at 80% 20%, rgba(175, 82, 222, 0.08) 0%, transparent 50%),
-      radial-gradient(ellipse 70% 60% at 50% 100%, rgba(255, 159, 10, 0.06) 0%, transparent 50%);
+    background-image: none;
   }
   html {
     @apply font-sans;

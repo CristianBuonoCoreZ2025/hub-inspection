@@ -247,6 +247,24 @@ Reglas:
 
 ---
 
+## -1. FK prohibido en producción — NUNCA subir
+
+### Regla
+```
+El FK `profiles.profiles_role_user_type_data_access_fkey` (profiles.role → user_type_data_access.user_type)
+NUNCA debe subirse a producción. Solo existe en local para desarrollo.
+
+Prohibido:
+- Crear migraciones que agreguen este FK a producción.
+- Incluir este FK en scripts de sincronización hacia producción.
+- Modificar o eliminar este FK sin autorización explícita.
+
+Motivo: Este FK existe solo en el entorno local de desarrollo. Subirlo a producción
+puede causar conflictos con los datos existentes y políticas de RLS de producción.
+```
+
+---
+
 ## 0. Identificación de Siniestros
 
 ### Regla

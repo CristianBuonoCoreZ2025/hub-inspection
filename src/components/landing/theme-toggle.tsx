@@ -1,17 +1,31 @@
 "use client";
 
 import { Moon, Sun } from "lucide-react";
-import { useTheme } from "next-themes";
+import { useSyncExternalStore } from "react";
+import {
+  getUiThemeSnapshot,
+  getUiStyleServerSnapshot,
+  subscribeUiTheme,
+  persistUiThemeChoice,
+  UI_THEMES,
+  type UiThemeId,
+} from "@/lib/ui-style-client-store";
 import { Button } from "@/components/ui/button";
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
+  const themeId = useSyncExternalStore(subscribeUiTheme, getUiThemeSnapshot, getUiStyleServerSnapshot);
+  const isDark = UI_THEMES[themeId]?.dark ?? false;
+
+  const toggle = () => {
+    const next: UiThemeId = isDark ? "nordic-air-light" : "nordic-air-dark";
+    persistUiThemeChoice(next);
+  };
 
   return (
     <Button
       variant="ghost"
       size="icon"
-      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      onClick={toggle}
       aria-label="Cambiar tema"
       className="shrink-0"
     >

@@ -260,7 +260,7 @@ function TiposCambioContent() {
  <div className="app-page">
  <div className="app-page-header">
  <div className="flex items-center gap-3">
- <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-emerald-500 to-teal-500 text-white shadow-sm">
+ <div className="flex h-10 w-10 items-center justify-center rounded-xl icn-emerald text-white shadow-sm">
  <ArrowRightLeft className="h-5 w-5" />
  </div>
  <div>
@@ -579,7 +579,7 @@ function TiposCambioContent() {
  <DialogContent className="modal-sm" showCloseButton={false}>
  <div className="modal-header">
  <DialogTitle className="modal-title flex items-center gap-2.5">
- <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-emerald-500 to-teal-500 text-white shadow-sm">
+ <div className="flex h-8 w-8 items-center justify-center rounded-lg icn-emerald text-white shadow-sm">
  <ArrowRightLeft className={`h-4 w-4 ${syncState.active ? "animate-spin" : ""}`} />
  </div>
  {syncState.active ? "Sincronizando BCCh" : "Sincronización Completada"}
@@ -646,7 +646,7 @@ function TiposCambioContent() {
  <DialogContent className="modal-md" showCloseButton={false}>
  <div className="modal-header">
  <DialogTitle className="modal-title flex items-center gap-2.5">
- <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-emerald-500 to-teal-500 text-white shadow-sm">
+ <div className="flex h-8 w-8 items-center justify-center rounded-lg icn-emerald text-white shadow-sm">
  <ArrowRightLeft className="h-4 w-4" />
  </div>
  {editingId ? "Editar" : "Nuevo"} Tipo de Cambio

@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useNavLinks } from "@/hooks/use-nav-links";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ThemeToggle } from "@/components/layout/theme-toggle";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,14 +24,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  getUiStyleSnapshot,
-  subscribeUiStyle,
-  persistUiStyleChoice,
-  UI_STYLE_LABELS,
-  UI_STYLE_SWATCHES,
-  type UiStyleSkin,
+  getUiThemeSnapshot,
+  getUiStyleServerSnapshot,
+  subscribeUiTheme,
+  persistUiThemeChoice,
+  UI_THEME_LIST,
+  UI_THEMES,
+  type UiThemeId,
 } from "@/lib/ui-style-client-store";
 import { useSyncExternalStore } from "react";
+import { useMounted } from "@/hooks/use-mounted";
 
 function getInitials(email?: string | null) {
   if (!email) return "U";
@@ -41,12 +43,14 @@ function getInitials(email?: string | null) {
 }
 
 function MobileSkinToggle() {
-  const skin = useSyncExternalStore(subscribeUiStyle, getUiStyleSnapshot, getUiStyleSnapshot);
+  const themeId = useSyncExternalStore(subscribeUiTheme, getUiThemeSnapshot, getUiStyleServerSnapshot);
+  const mounted = useMounted();
 
-  const handleSelect = (value: UiStyleSkin) => {
-    persistUiStyleChoice(value);
-    document.documentElement.setAttribute("data-ui-style", value);
+  const handleSelect = (value: UiThemeId) => {
+    persistUiThemeChoice(value);
   };
+
+  const currentTheme = UI_THEMES[themeId];
 
   return (
     <DropdownMenu>
@@ -54,19 +58,19 @@ function MobileSkinToggle() {
         render={
           <button type="button" className="mobile-nav-action">
             <Palette className="size-4 shrink-0" />
-            <span className="text-[13px] font-medium flex-1 text-left">Color</span>
+            <span className="text-[13px] font-medium flex-1 text-left">{mounted ? (currentTheme?.label ?? "Tema") : "Tema"}</span>
           </button>
         }
       />
       <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuRadioGroup value={skin} onValueChange={(value) => handleSelect(value as UiStyleSkin)}>
-          {(Object.keys(UI_STYLE_LABELS) as UiStyleSkin[]).map((key) => (
-            <DropdownMenuRadioItem key={key} value={key} className="text-xs">
+        <DropdownMenuRadioGroup value={themeId} onValueChange={(value) => handleSelect(value as UiThemeId)}>
+          {UI_THEME_LIST.map((theme) => (
+            <DropdownMenuRadioItem key={theme.id} value={theme.id} className="text-xs">
               <span
-                className="mr-2 size-2.5 rounded-full border border-white/20 shadow-sm"
-                style={{ backgroundColor: UI_STYLE_SWATCHES[key] }}
+                className="mr-2 size-2.5 rounded-full border border-white/20 shadow-sm mobile-theme-swatch"
+                style={{ "--mobile-theme-swatch": theme.swatch } as React.CSSProperties}
               />
-              <span>{UI_STYLE_LABELS[key]}</span>
+              <span>{theme.label}</span>
             </DropdownMenuRadioItem>
           ))}
         </DropdownMenuRadioGroup>
@@ -122,6 +126,9 @@ export function MobileNav({ open, onClose }: { open: boolean; onClose: () => voi
       <div
         ref={drawerRef}
         className={cn("mobile-nav-drawer", open && "mobile-nav-drawer-open")}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Menú de navegación"
         aria-hidden={!open}
       >
         <div className="mobile-nav-drawer-inner">
@@ -177,6 +184,7 @@ export function MobileNav({ open, onClose }: { open: boolean; onClose: () => voi
                     href={link.href}
                     onClick={onClose}
                     className={cn("mobile-nav-link mobile-nav-link-lg", isActive && "mobile-nav-link-active")}
+                    aria-current={isActive ? "page" : undefined}
                   >
                     <Icon className="size-5 shrink-0" />
                     <span className="text-[15px] font-medium flex-1">{link.label}</span>
@@ -190,7 +198,6 @@ export function MobileNav({ open, onClose }: { open: boolean; onClose: () => voi
           {/* Acciones inferiores */}
           <div className="mobile-nav-footer">
             <MobileSkinToggle />
-            <ThemeToggle />
             <button
               type="button"
               onClick={() => signOut()}

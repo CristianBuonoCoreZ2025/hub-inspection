@@ -1,8 +1,16 @@
 "use client"
 
-import { useTheme } from "next-themes"
-import { Sun, Moon, Monitor } from "lucide-react"
+import { useSyncExternalStore } from "react"
+import { Sun, Moon } from "lucide-react"
 import { useMounted } from "@/hooks/use-mounted"
+import {
+  getUiThemeSnapshot,
+  getUiStyleServerSnapshot,
+  subscribeUiTheme,
+  persistUiThemeChoice,
+  UI_THEMES,
+  type UiThemeId,
+} from "@/lib/ui-style-client-store"
 
 import {
   DropdownMenu,
@@ -13,17 +21,19 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 export function ThemeToggle() {
-  const { setTheme, resolvedTheme, theme } = useTheme()
+  const themeId = useSyncExternalStore(subscribeUiTheme, getUiThemeSnapshot, getUiStyleServerSnapshot)
   const mounted = useMounted()
+  const isDark = UI_THEMES[themeId]?.dark ?? false
 
-  const currentIcon =
-    mounted && resolvedTheme === "dark" ? (
-      <Moon className="size-4 shrink-0" />
-    ) : (
-      <Sun className="size-4 shrink-0" />
-    )
+  const currentIcon = mounted && isDark ? (
+    <Moon className="size-4 shrink-0" />
+  ) : (
+    <Sun className="size-4 shrink-0" />
+  )
 
-  const currentValue = mounted ? theme ?? "system" : "system"
+  const handleSelect = (value: UiThemeId) => {
+    persistUiThemeChoice(value)
+  }
 
   return (
     <DropdownMenu>
@@ -36,18 +46,18 @@ export function ThemeToggle() {
         }
       />
       <DropdownMenuContent align="end" side="right" className="w-48">
-        <DropdownMenuRadioGroup value={currentValue} onValueChange={setTheme}>
-          <DropdownMenuRadioItem value="light" className="text-xs">
+        <DropdownMenuRadioGroup value={themeId} onValueChange={(v) => handleSelect(v as UiThemeId)}>
+          <DropdownMenuRadioItem value="nordic-air-light" className="text-xs">
             <Sun className="mr-2 size-4" />
-            <span>Claro</span>
+            <span>Play Skin</span>
           </DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="dark" className="text-xs">
+          <DropdownMenuRadioItem value="nordic-air-dark" className="text-xs">
             <Moon className="mr-2 size-4" />
-            <span>Oscuro</span>
+            <span>Tron Skin</span>
           </DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="system" className="text-xs">
-            <Monitor className="mr-2 size-4" />
-            <span>Sistema</span>
+          <DropdownMenuRadioItem value="fluid-aurora" className="text-xs">
+            <Moon className="mr-2 size-4" />
+            <span>Neon Skin</span>
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>

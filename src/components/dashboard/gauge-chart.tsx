@@ -56,6 +56,8 @@ export function GaugeChart({
             cornerRadius={10}
             background={{ fill: "rgba(128,128,128,0.1)" }}
             style={{ filter: "drop-shadow(0 2px 12px rgba(0,0,0,0.1))" }}
+            isAnimationActive
+            animationDuration={800}
           />
         </RadialBarChart>
       </ResponsiveContainer>

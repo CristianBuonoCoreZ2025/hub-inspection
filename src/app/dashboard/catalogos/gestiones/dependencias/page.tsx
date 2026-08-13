@@ -311,7 +311,7 @@ const colorFor = (code: string) => codeMap.find(c => c.code === code)?.color;
  <DialogContent className="modal-sm !bg-white/80 dark:!bg-zinc-900/80 !backdrop-blur-xl !border-white/20 dark:!border-white/10 !shadow-2xl">
  <div className="modal-header">
  <DialogTitle className="flex items-center gap-2.5">
- <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-violet-500 to-sky-500 text-white shadow-sm">
+ <div className="flex h-8 w-8 items-center justify-center rounded-lg icn-violet text-white shadow-sm">
  <Link2 className="h-4 w-4" />
  </div>
  Nueva Dependencia

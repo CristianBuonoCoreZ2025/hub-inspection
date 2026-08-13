@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { editClaimSchema, type EditClaimInput } from "@/lib/validations";
@@ -2208,7 +2208,7 @@ setValue("claimAddress", candidate.displayName || candidate.label);
  <DialogContent className="modal-md" showCloseButton>
  <div className="modal-header">
  <DialogTitle className="modal-title flex items-center gap-2.5">
- <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
+ <div className="flex h-8 w-8 items-center justify-center rounded-lg icn-sky text-white shadow-sm">
  <FileCheck className="h-4 w-4" />
  </div>
  Crear Póliza

@@ -132,7 +132,7 @@ export default function ScreenBuilder({ screen, open, onOpenChange, onSave, isPe
  {/* Header */}
  <div className="flex items-center justify-between border-b px-4 py-3">
  <div className="flex items-center gap-3">
- <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
+ <div className="flex h-9 w-9 items-center justify-center rounded-lg icn-sky text-white shadow-sm">
  <LayoutTemplate className="h-5 w-5" />
  </div>
  <div>

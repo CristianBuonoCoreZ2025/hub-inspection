@@ -9,6 +9,7 @@ import {
   Tooltip,
   Legend,
 } from "recharts"
+import { useUiThemeId } from "@/hooks/use-ui-theme-id"
 
 interface DonutChartProps {
   data: Array<{ name: string; value: number; color: string }>
@@ -23,6 +24,8 @@ export function DonutChart({
   innerRadius = 55,
   outerRadius = 85,
 }: DonutChartProps) {
+  const themeId = useUiThemeId()
+  const isNordicDark = themeId === "nordic-air-dark"
   const total = data.reduce((sum, d) => sum + d.value, 0)
 
   return (
@@ -43,16 +46,20 @@ export function DonutChart({
             cy="50%"
             innerRadius={innerRadius}
             outerRadius={outerRadius}
-            paddingAngle={3}
-            cornerRadius={6}
+            paddingAngle={isNordicDark ? 0 : 3}
+            cornerRadius={isNordicDark ? 0 : 6}
             dataKey="value"
             stroke="none"
+            isAnimationActive
+            animationDuration={800}
           >
-            {data.map((_, index) => (
+            {data.map((entry, index) => (
               <Cell
                 key={`cell-${index}`}
-                fill={`url(#donut-grad-${index})`}
-                style={{ filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.1))" }}
+                fill={isNordicDark ? "none" : `url(#donut-grad-${index})`}
+                stroke={isNordicDark ? entry.color : "none"}
+                strokeWidth={isNordicDark ? 1.5 : 0}
+                style={isNordicDark ? undefined : { filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.1))" }}
               />
             ))}
           </Pie>

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { requestLogger, installFetchInterceptor, uninstallFetchInterceptor } from "@/lib/request-logger";
 import { RequestLogViewer } from "@/components/request-log-viewer";
 import { useClaimsAppHeartbeat } from "@/hooks/use-claims-app-presence";
+import { DashboardMobileRedirect } from "@/components/mobile/dashboard-redirect";
 
 export function DashboardClientWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -37,6 +38,7 @@ export function DashboardClientWrapper({ children }: { children: React.ReactNode
 
   return (
     <>
+      <DashboardMobileRedirect />
       {children}
       {logEnabled && <RequestLogViewer />}
     </>

@@ -223,11 +223,11 @@ export default function InformesPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-4 p-4 lg:p-6">
+    <div className="app-page">
       {/* Header */}
       <div className="app-grid-header">
         <div className="app-grid-header-left">
-          <div className="app-grid-icon bg-linear-to-br from-blue-500 to-cyan-500">
+          <div className="app-grid-icon icn-cyan">
             <BarChart3 />
           </div>
           <div className="app-grid-title-row">

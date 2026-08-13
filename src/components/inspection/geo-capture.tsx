@@ -7,6 +7,7 @@ import { MapPin, Navigation, CheckCircle2, AlertTriangle, XCircle, Loader2 } fro
 import {
   GEO_THRESHOLD_METERS,
   validateGeoProximity,
+  generateStaticMapUrl,
   type LatLng,
   type GeoValidationResult,
 } from "@/lib/geo";
@@ -88,6 +89,10 @@ export function GeoCapture({
   onCapture,
   disabled,
   title,
+  sessionId,
+  sessionToken,
+  replaceEvidence,
+  capturedBy,
 }: GeoCaptureProps) {
   const { data: threshold = GEO_THRESHOLD_METERS } = useQuery({
     queryKey: ["geo-threshold"],
@@ -120,9 +125,26 @@ export function GeoCapture({
       if (provider === "mapbox" && mapboxToken) {
         return `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`;
       }
-      return "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+      // OpenStreetMap tiles proxyados via /api/storage/proxy para que
+      // html2canvas-pro pueda capturarlos (OSM no envía CORS headers).
+      // Leaflet reemplaza {s}, {z}, {x}, {y} en la URL antes de hacer el request.
+      // El proxy recibe la URL final ya construida y la devuelve con CORS headers.
+      return "/api/storage/proxy?url=https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
     },
     [mapboxToken],
+  );
+
+  // Función custom para construir la URL del tile proxyado.
+  // Leaflet reemplaza {s}, {z}, {x}, {y} en la URL, pero el proxy necesita
+  // la URL final codificada. Esta función hace el reemplazo manualmente.
+  const buildTileUrl = React.useCallback(
+    (data: { x: number; y: number; z: number }) => {
+      const subdomains = ["a", "b", "c"];
+      const s = subdomains[Math.abs(data.x + data.y) % subdomains.length];
+      const osmUrl = `https://${s}.tile.openstreetmap.org/${data.z}/${data.x}/${data.y}.png`;
+      return `/api/storage/proxy?url=${encodeURIComponent(osmUrl)}`;
+    },
+    [],
   );
 
   const getAttribution = React.useCallback(
@@ -130,7 +152,7 @@ export function GeoCapture({
       if (provider === "mapbox" && mapboxToken) {
         return '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
       }
-      return '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+      return '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
     },
     [mapboxToken],
   );
@@ -144,6 +166,7 @@ export function GeoCapture({
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const autoCaptureRef = React.useRef(false);
+  const mapContainerRef = React.useRef<HTMLDivElement | null>(null);
 
   // Sincronizar con coordenadas iniciales cuando cambian (recaptura habilitada desde dashboard)
   React.useEffect(() => {
@@ -160,6 +183,33 @@ export function GeoCapture({
     }, 0);
     return () => clearTimeout(id);
   }, [initialCoords, initialDistance, initialStatus, threshold]);
+
+  // Capturar el mapa de Leaflet como imagen usando html2canvas-pro
+  // Esto genera una imagen real del mapa que ve el inspector, sin depender
+  // de servicios externos de mapas estáticos.
+  const captureMapAsBlob = React.useCallback(async (): Promise<Blob | null> => {
+    if (!mapContainerRef.current) return null;
+    try {
+      const html2canvas = (await import("html2canvas-pro")).default;
+      // Esperar a que los tiles del mapa terminen de cargar
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const canvas = await html2canvas(mapContainerRef.current, {
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff",
+        scale: 2,
+        imageTimeout: 15000,
+      });
+      const blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob(resolve, "image/png", 0.9);
+      });
+      return blob;
+    } catch (err) {
+      console.error("[geo-capture] Error capturando mapa:", err);
+      return null;
+    }
+  }, []);
+
   const handleCapture = React.useCallback(() => {
     if (!navigator.geolocation) {
       setError("Tu navegador no soporta geolocalización.");
@@ -190,12 +240,95 @@ export function GeoCapture({
             setCaptured(coords);
             setValidation(result);
 
-            // Solo guardar lat/long/status. No se almacenan imágenes de mapa.
+            // Subir el mapa como evidencia (source: geo_map)
+            let mapUrl = "";
+            if (sessionId) {
+              try {
+                // Si replaceEvidence, borrar evidencias geo_map anteriores
+                if (replaceEvidence && sessionToken) {
+                  await fetch("/api/inspection/geo/reset-geo", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ token: sessionToken }),
+                  }).catch(() => {});
+                }
+
+                // Esperar a que el mapa de Leaflet se renderice
+                // (setCaptured lo monta, pero los tiles tardan en cargar)
+                await new Promise((resolve) => setTimeout(resolve, 3000));
+
+                // Estrategia de captura del mapa:
+                // 1. Si hay token de Mapbox válido → usar Mapbox Static API (imagen real)
+                // 2. Si no hay token → intentar capturar el mapa visible con html2canvas-pro
+                // 3. Si html2canvas falla → usar save-map con SVG fallback
+                const mapboxToken = mapProviders?.tokens?.mapbox || process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+
+                if (mapboxToken) {
+                  // Mapbox Static API: imagen real del mapa con marcador
+                  mapUrl = `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+f74e4e(${coords.lng},${coords.lat})/${coords.lng},${coords.lat},16,0/600x400?access_token=${mapboxToken}`;
+
+                  await fetch("/api/inspection/geo/save-map", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      sessionId,
+                      lat: coords.lat,
+                      lng: coords.lng,
+                      mapUrl,
+                      capturedBy,
+                      label: inspectionType === "onsite" ? "inspector" : "asegurado",
+                    }),
+                  });
+                } else {
+                  // Sin token de Mapbox: intentar capturar el mapa visible
+                  const mapBlob = await captureMapAsBlob();
+
+                  if (mapBlob) {
+                    const formData = new FormData();
+                    formData.append("file", new File([mapBlob], `geo_map_${Date.now()}.png`, { type: "image/png" }));
+                    formData.append("sessionId", sessionId);
+                    formData.append("lat", String(coords.lat));
+                    formData.append("lng", String(coords.lng));
+                    formData.append("source", "geo_map");
+                    formData.append("label", inspectionType === "onsite" ? "inspector" : "asegurado");
+                    if (capturedBy) formData.append("capturedBy", capturedBy);
+
+                    await fetch("/api/inspection/evidences/upload", {
+                      method: "POST",
+                      body: formData,
+                    });
+                  } else {
+                    // Fallback final: SVG con coordenadas
+                    mapUrl = generateStaticMapUrl(coords.lat, coords.lng, {
+                      zoom: 16,
+                      width: 600,
+                      height: 400,
+                    });
+
+                    await fetch("/api/inspection/geo/save-map", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        sessionId,
+                        lat: coords.lat,
+                        lng: coords.lng,
+                        mapUrl,
+                        capturedBy,
+                        label: inspectionType === "onsite" ? "inspector" : "asegurado",
+                      }),
+                    });
+                  }
+                }
+              } catch (mapErr) {
+                console.error("[geo-capture] Error subiendo mapa como evidencia:", mapErr);
+              }
+            }
+
             onCapture({
               coords,
               distance: result.distance,
               status: result.status,
-              mapUrl: "",
+              mapUrl,
             });
           } catch (err) {
             const message = err instanceof Error ? err.message : "Error al guardar la ubicación";
@@ -219,7 +352,7 @@ export function GeoCapture({
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     );
-  }, [claimCoords, onCapture, threshold]);
+  }, [claimCoords, onCapture, threshold, sessionId, sessionToken, replaceEvidence, capturedBy, inspectionType, captureMapAsBlob]);
 
   // ── Auto-captura para inspecciones presenciales ──
   // El inspector no necesita presionar ningún botón: al montar el componente
@@ -286,9 +419,10 @@ export function GeoCapture({
         </div>
       )}
 
-      {/* Botón de captura — SOLO para inspecciones remotas.
-          En presenciales, la captura es automática al montar el componente. */}
-      {inspectionType === "remote" && (
+      {/* Botón de captura — para inspecciones remotas Y presenciales.
+          En presenciales, la captura es automática al montar el componente,
+          pero se permite recapturar manualmente si el inspector lo necesita. */}
+      {(inspectionType === "remote" || (inspectionType === "onsite" && captured)) && (
         <>
           <button
             type="button"
@@ -308,7 +442,7 @@ export function GeoCapture({
                   {captured && disabled
                     ? "Ubicación ya registrada"
                     : captured
-                      ? "Volver a establecer mi ubicación"
+                      ? "Recapturar ubicación"
                       : "Establecer mi ubicación"}
                 </span>
               </>
@@ -327,6 +461,14 @@ export function GeoCapture({
         <div className="flex items-center gap-2 mb-3 text-[11px] text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           Capturando ubicación automáticamente...
+        </div>
+      )}
+
+      {/* Confirmación de captura exitosa (presencial) */}
+      {inspectionType === "onsite" && captured && !loading && (
+        <div className="flex items-center gap-2 mb-3 text-[11px] text-emerald-600 dark:text-emerald-400">
+          <CheckCircle2 className="h-4 w-4" />
+          Ubicación capturada y mapa guardado como evidencia
         </div>
       )}
 
@@ -368,16 +510,17 @@ export function GeoCapture({
 
       {/* Mapa interactivo */}
       {captured && (
-        <div className="rounded-xl overflow-hidden border border-border/40 shadow-sm">
+        <div ref={mapContainerRef} className="rounded-xl overflow-hidden border border-border/40 shadow-sm">
           <MapContainer
             center={[captured.lat, captured.lng]}
             zoom={16}
-            className="h-75 w-full"
+            className="geo-map-container w-full"
             scrollWheelZoom={false}
           >
             <TileLayer
               url={getTileUrl(activeProvider)}
               attribution={getAttribution(activeProvider)}
+              crossOrigin={true}
               eventHandlers={{
                 tileerror: () => {
                   if (activeProvider !== primary || secondary === "none" || failedPrimary) return;

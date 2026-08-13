@@ -100,7 +100,7 @@ export default function PromptsPage() {
     <div className="app-page">
       <div className="app-grid-header">
         <div className="app-grid-header-left">
-          <div className="app-grid-icon bg-linear-to-br from-violet-500 to-purple-500">
+          <div className="app-grid-icon icn-violet">
             <Sparkles />
           </div>
           <div className="app-grid-title-row">
@@ -183,7 +183,7 @@ export default function PromptsPage() {
         <DialogContent className="modal-lg" showCloseButton={false}>
           <div className="modal-header">
             <DialogTitle className="modal-title flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-violet-500 to-purple-500 text-white shadow-sm">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg icn-violet text-white shadow-sm">
                 <Sparkles className="h-4 w-4" />
               </div>
               Editar Prompt

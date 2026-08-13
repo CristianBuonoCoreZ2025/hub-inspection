@@ -75,7 +75,7 @@ export default function ReabrirPage() {
  <div className="app-page">
  <div className="app-grid-header">
  <div className="app-grid-header-left">
- <div className="app-grid-icon bg-linear-to-br from-purple-500 to-fuchsia-500">
+ <div className="app-grid-icon icn-purple">
  <LockOpen />
  </div>
  <div className="app-grid-title-row">

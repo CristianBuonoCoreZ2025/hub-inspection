@@ -19,6 +19,8 @@ import {
   Circle,
   Square,
   UserCheck,
+  Trash2,
+  X,
 } from "lucide-react";
 import { joinSignalingChannel, ICE_SERVERS, type SignalingRole, type SignalingMessage } from "@/lib/webrtc/signaling";
 import { cn } from "@/lib/utils";
@@ -132,6 +134,7 @@ export function LiveVideoCall({
   const [screenshotting, setScreenshotting] = React.useState(false);
   const [lastScreenshot, setLastScreenshot] = React.useState<SavedEvidence | null>(null);
   const [screenshotCount, setScreenshotCount] = React.useState(0);
+  const [deletingScreenshot, setDeletingScreenshot] = React.useState(false);
   const [recording, setRecording] = React.useState(false);
   const [recordingTime, setRecordingTime] = React.useState(0);
   const [peers, setPeers] = React.useState<ConnectedPeer[]>([]);
@@ -154,7 +157,9 @@ export function LiveVideoCall({
 
   // ── Inicializar media local ──
   const initLocalMedia = React.useCallback(async () => {
-    // Preferimos video + audio. Si falla, intentamos audio solo. Si falla, entramos sin media.
+    // Estrategia: intentar video+audio primero. Si la cámara falla (ej: en uso
+    // por otro navegador), hacer fallback a solo audio para no bloquear la cámara
+    // del asegurado si están en el mismo equipo.
     let stream: MediaStream;
     let cameraPerm: "granted" | "denied" | "error" = "error";
     let microphonePerm: "granted" | "denied" | "error" = "error";
@@ -178,7 +183,8 @@ export function LiveVideoCall({
         microphonePerm = "denied";
       }
 
-      // Fallback a audio solo
+      // Fallback a audio solo — no pedir video para no bloquear la cámara
+      // del asegurado si están en el mismo equipo
       try {
         stream = await navigator.mediaDevices.getUserMedia({
           audio: { echoCancellation: true, noiseSuppression: true },
@@ -549,6 +555,31 @@ export function LiveVideoCall({
     if (videoTrack) {
       videoTrack.enabled = !videoTrack.enabled;
       setVideoOn(videoTrack.enabled);
+    } else {
+      // No hay video track (cámara no disponible) — liberar el stream actual
+      // y volver a pedir video+audio
+      stream.getTracks().forEach((t) => t.stop());
+      localStreamRef.current = null;
+      setVideoOn(false);
+      // Re-intentar obtener cámara
+      navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
+        audio: { echoCancellation: true, noiseSuppression: true },
+      }).then((newStream) => {
+        localStreamRef.current = newStream;
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = newStream;
+        }
+        setVideoOn(true);
+        // Agregar tracks al peer connection existente
+        if (pcRef.current) {
+          newStream.getVideoTracks().forEach((track) => {
+            pcRef.current!.addTrack(track, newStream);
+          });
+        }
+      }).catch(() => {
+        setError("No se pudo acceder a la cámara. Puede estar en uso por otra aplicación.");
+      });
     }
   };
 
@@ -586,9 +617,15 @@ export function LiveVideoCall({
 
   // ── Capturar screenshot del video remoto ──
   const captureScreenshot = async () => {
-    const video = remoteVideoRef.current;
-    if (!video || !video.videoWidth) {
-      setError("No hay video remoto para capturar.");
+    // Priorizar video remoto (lo que muestra el asegurado), pero si no está
+    // disponible (ej: WebRTC aún conectando), usar video local como fallback
+    const remoteVideo = remoteVideoRef.current;
+    const localVideo = localVideoRef.current;
+    const hasRemoteFrame = remoteVideo && remoteVideo.readyState >= 2 && remoteVideo.videoWidth > 0;
+    const hasLocalFrame = localVideo && localVideo.readyState >= 2 && localVideo.videoWidth > 0;
+    const video: HTMLVideoElement | null = hasRemoteFrame ? remoteVideo : (hasLocalFrame ? localVideo : null);
+    if (!video) {
+      setError("No hay video disponible para capturar.");
       return;
     }
     setScreenshotting(true);
@@ -644,6 +681,28 @@ export function LiveVideoCall({
       setError(err instanceof Error ? err.message : "Error al capturar foto");
     } finally {
       setScreenshotting(false);
+    }
+  };
+
+  // ── Borrar screenshot capturado (lo elimina de evidencias) ──
+  const deleteScreenshot = async () => {
+    if (!lastScreenshot) return;
+    setDeletingScreenshot(true);
+    try {
+      const res = await fetch(`/api/inspection/evidences/${lastScreenshot.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+      setScreenshotCount((c) => Math.max(0, c - 1));
+      setLastScreenshot(null);
+      onScreenshotSaved?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al borrar foto");
+    } finally {
+      setDeletingScreenshot(false);
     }
   };
 
@@ -709,15 +768,6 @@ export function LiveVideoCall({
 
   // ── Pantalla completa / ampliar video remoto ──
   const goFullscreen = async () => {
-    const video = remoteVideoRef.current;
-    if (video && video.requestFullscreen) {
-      try {
-        await video.requestFullscreen();
-        return;
-      } catch {
-        // fallback a expandir el componente
-      }
-    }
     setExpanded(true);
   };
 
@@ -742,7 +792,7 @@ export function LiveVideoCall({
   const [expanded, setExpanded] = React.useState(false);
   const [showPeersPanel, setShowPeersPanel] = React.useState(false);
   const compact = (compactProp || minimizedProp) && !expanded;
-  const minimized = minimizedProp;
+  const minimized = minimizedProp && !expanded;
 
   // Peers cliente conectados (solo relevantes para el inspector)
   const clientPeers = peers.filter((p) => p.role === "client");
@@ -795,7 +845,7 @@ export function LiveVideoCall({
       {!minimized && (
         <>
           {/* Header */}
-          <div className={cn("flex items-center justify-between bg-black/40 border-b border-white/10", compact ? "px-3 py-2" : "px-4 py-3")}>
+          <div className={cn("flex items-center justify-between bg-black/40 border-b border-white/10 shrink-0", compact ? "px-3 py-2" : "px-4 py-3")}>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             {state === "connected" ? (
@@ -893,7 +943,7 @@ export function LiveVideoCall({
       )}
 
       {/* Cuerpo: video remoto + local en PiP */}
-      <div className="flex-1 relative bg-black flex items-center justify-center">
+      <div className="flex-1 min-h-0 relative bg-black flex items-center justify-center">
         {/* Video remoto (grande) */}
         <video
           ref={remoteVideoRef}
@@ -974,11 +1024,45 @@ export function LiveVideoCall({
         )}
       </div>
 
-      {/* Notificación de screenshot */}
+      {/* Notificación de screenshot con preview y botón de borrar */}
       {!minimized && lastScreenshot && (
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-emerald-600/90 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-pulse">
-          <CheckCircle2 className="h-4 w-4" />
-          <span className="app-body font-medium">Foto capturada: {lastScreenshot.description}</span>
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-white/95 dark:bg-zinc-900/95 rounded-xl shadow-2xl flex items-center gap-3 p-2 max-w-md">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={lastScreenshot.url}
+            alt="Foto capturada"
+            className="w-16 h-16 object-cover rounded-lg border border-zinc-200 dark:border-zinc-700 shrink-0"
+          />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+              <span className="app-body font-medium truncate">Foto capturada</span>
+            </div>
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">{lastScreenshot.description}</p>
+            <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-0.5">Subida como evidencia — revisa y borra si no sirve</p>
+          </div>
+          <button
+            type="button"
+            onClick={deleteScreenshot}
+            disabled={deletingScreenshot}
+            className="shrink-0 flex items-center gap-1 px-2 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-900/30 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 transition-colors disabled:opacity-50"
+            title="Borrar esta foto de evidencias"
+          >
+            {deletingScreenshot ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Trash2 className="h-3.5 w-3.5" />
+            )}
+            <span className="text-[11px] font-medium">Borrar</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setLastScreenshot(null)}
+            className="shrink-0 p-1 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
+            title="Cerrar notificación"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
         </div>
       )}
 
@@ -993,7 +1077,7 @@ export function LiveVideoCall({
       {!minimized && (
         <>
           {/* Controles inferiores */}
-          <div className={cn("flex items-center justify-center bg-black/40 border-t border-white/10", compact ? "gap-2 px-2 py-2" : "gap-3 px-4 py-4")}>
+          <div className={cn("flex items-center justify-center bg-black/40 border-t border-white/10 shrink-0", compact ? "gap-2 px-2 py-2" : "gap-3 px-4 py-4")}>
         {state !== "rejected" && (
         <>
         <button
@@ -1022,9 +1106,9 @@ export function LiveVideoCall({
           <button
             type="button"
             onClick={captureScreenshot}
-            disabled={!peerJoined || screenshotting}
+            disabled={screenshotting}
             className={`${ctrlBtn} rounded-full bg-amber-500 hover:bg-amber-600 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
-            title="Capturar foto del video en vivo"
+            title={peerJoined ? "Capturar foto del video en vivo" : "Esperando video del asegurado..."}
           >
             {screenshotting ? (
               <Loader2 className={cn(ctrlIcon, "animate-spin")} />

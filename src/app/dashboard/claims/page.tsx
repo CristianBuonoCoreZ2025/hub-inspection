@@ -1235,7 +1235,7 @@ const paginatedData = sortedClaims ?? [];
  {/* Header unificado: icono + "Siniestros" + contador + botones Exportar/Nuevo */}
  <div className="app-grid-header">
  <div className="app-grid-header-left">
- <div className="app-grid-icon bg-linear-to-br from-violet-500 to-sky-500">
+ <div className="app-grid-icon icn-violet">
  <Shield />
  </div>
  <div className="app-grid-title-row">
@@ -1363,7 +1363,7 @@ const paginatedData = sortedClaims ?? [];
  <div
  className={cn(
  "flex h-5 w-5 items-center justify-center rounded-full app-body font-bold transition-colors",
- step > s.id ? "bg-emerald-500 text-white" : step === s.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+ step > s.id ? "bg-emerald-500 text-white" : step === s.id ? "pagination-page-active" : "bg-muted text-muted-foreground"
  )}
  >
  {step > s.id ? <Check className="h-3 w-3" /> : s.id}
@@ -1487,18 +1487,18 @@ const paginatedData = sortedClaims ?? [];
  <Label className="app-body text-muted-foreground">
  Fecha Siniestro <span className="text-red-500">*</span>
  </Label>
- <FormDatePicker control={form.control} name="claimDate" className="w-[130px]" />
+ <FormDatePicker control={form.control} name="claimDate" className="w-col-date" />
  <FieldError message={form.formState.errors.claimDate?.message} />
  </div>
 
  <div className="flex flex-col gap-1">
  <Label className="app-body text-muted-foreground">Fecha Denuncio</Label>
- <FormDatePicker control={form.control} name="reportDate" className="w-[130px]" />
+ <FormDatePicker control={form.control} name="reportDate" className="w-col-date" />
  </div>
 
  <div className="flex flex-col gap-1">
  <Label className="app-body text-muted-foreground">Fecha Asignación</Label>
- <FormDatePicker control={form.control} name="assignmentDate" className="w-[130px]" />
+ <FormDatePicker control={form.control} name="assignmentDate" className="w-col-date" />
  </div>
  </div>
  </div>
@@ -1910,7 +1910,7 @@ const paginatedData = sortedClaims ?? [];
  type="button"
  variant="outline"
  size="sm"
- className={`h-6 app-body w-[150px] justify-center ${contractorLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
+ className={`h-6 app-body w-col-name justify-center ${contractorLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
  onClick={() => toggleContractorLink()}
  >
  {contractorLinked ? "Desligar" : "Copiar"}
@@ -2070,7 +2070,7 @@ const paginatedData = sortedClaims ?? [];
  type="button"
  variant="outline"
  size="sm"
- className={`h-6 app-body w-[150px] justify-center ${beneficiaryLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
+ className={`h-6 app-body w-col-name justify-center ${beneficiaryLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
  onClick={() => toggleBeneficiaryLink()}
  >
  {beneficiaryLinked ? "Desligar" : "Copiar"}
@@ -2326,7 +2326,7 @@ const paginatedData = sortedClaims ?? [];
  type="button"
  variant="outline"
  size="sm"
- className={`h-6 app-body w-[150px] justify-center ${claimAddressLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
+ className={`h-6 app-body w-col-name justify-center ${claimAddressLinked ? "bg-emerald-200/80 text-emerald-800 border-emerald-300 hover:bg-emerald-200" : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"}`}
  onClick={() => toggleClaimAddressLink()}
  >
  {claimAddressLinked ? "Desligar" : "Copiar"}
@@ -2534,7 +2534,7 @@ const paginatedData = sortedClaims ?? [];
  ))}
  </FormSelect>
  </td>
- <td className="app-body text-muted-foreground truncate max-w-[180px]">
+ <td className="app-body text-muted-foreground truncate max-col-name">
  {doc.file.name}
  </td>
  <td>
@@ -2751,14 +2751,14 @@ const paginatedData = sortedClaims ?? [];
  <tr>
  <SortableTh sortKey="liquidation_number" currentKey={sortKey} direction={sortDir} onSort={toggleSort} className="w-[130px]">N° Liquidación</SortableTh>
  <SortableTh sortKey="client_reference" currentKey={sortKey} direction={sortDir} onSort={toggleSort} className="w-[130px] hidden sm:table-cell">N° Ref Cliente</SortableTh>
- <SortableTh sortKey="claim_number" currentKey={sortKey} direction={sortDir} onSort={toggleSort} className="w-[130px] hidden lg:table-cell">N° Siniestro Cía</SortableTh>
+ <SortableTh sortKey="claim_number" currentKey={sortKey} direction={sortDir} onSort={toggleSort} className="w-[130px] hidden md:table-cell">N° Siniestro Cía</SortableTh>
  <SortableTh sortKey="insured" currentKey={sortKey} direction={sortDir} onSort={toggleSort} className="min-w-[200px]">Asegurado</SortableTh>
- <SortableTh sortKey="address" currentKey={sortKey} direction={sortDir} onSort={toggleSort} className="min-w-[250px] hidden lg:table-cell">Dirección</SortableTh>
+ <SortableTh sortKey="address" currentKey={sortKey} direction={sortDir} onSort={toggleSort} className="min-w-[250px] hidden md:table-cell">Dirección</SortableTh>
  <SortableTh sortKey="status" currentKey={sortKey} direction={sortDir} onSort={toggleSort} className="w-[110px]">Estado</SortableTh>
- <SortableTh sortKey="claim_date" currentKey={sortKey} direction={sortDir} onSort={toggleSort} className="w-[100px] hidden lg:table-cell">Siniestro</SortableTh>
- <SortableTh sortKey="report_date" currentKey={sortKey} direction={sortDir} onSort={toggleSort} className="w-[100px] hidden lg:table-cell">Denuncio</SortableTh>
- <SortableTh sortKey="created_at" currentKey={sortKey} direction={sortDir} onSort={toggleSort} className="w-[100px] hidden lg:table-cell">Creación</SortableTh>
- <th className="w-[70px] text-center hidden lg:table-cell">Tipo/País</th>
+ <SortableTh sortKey="claim_date" currentKey={sortKey} direction={sortDir} onSort={toggleSort} className="w-[100px] hidden md:table-cell">Siniestro</SortableTh>
+ <SortableTh sortKey="report_date" currentKey={sortKey} direction={sortDir} onSort={toggleSort} className="w-[100px] hidden md:table-cell">Denuncio</SortableTh>
+ <SortableTh sortKey="created_at" currentKey={sortKey} direction={sortDir} onSort={toggleSort} className="w-[100px] hidden md:table-cell">Creación</SortableTh>
+ <th className="w-[70px] text-center hidden md:table-cell">Tipo/País</th>
  </tr>
  </thead>
  <tbody>
@@ -2780,7 +2780,7 @@ const paginatedData = sortedClaims ?? [];
  className={openClaim ? "row-clickable" : ""}
  onClick={openClaim ? () => router.push(`/dashboard/claims/${claim.id}?edit=1`) : undefined}
  >
- <td className="font-mono font-semibold text-primary">
+ <td className="grid-cell-link">
  <div className="flex items-center gap-2">
  {search && matchLabels.length > 0 ? (
  <Tooltip>
@@ -2800,23 +2800,23 @@ const paginatedData = sortedClaims ?? [];
  <FileText className="h-4 w-4 text-muted-foreground" />
  )}
  {openClaim ? (
- <Link href={`/dashboard/claims/${claim.id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>
+ <Link href={`/dashboard/claims/${claim.id}`} className="grid-cell-link" onClick={(e) => e.stopPropagation()}>
  <Highlight text={claim.liquidation_number || "—"} term={search} />
  </Link>
  ) : (
- <span className="text-foreground"><Highlight text={claim.liquidation_number || "—"} term={search} /></span>
+ <span><Highlight text={claim.liquidation_number || "—"} term={search} /></span>
  )}
  </div>
  </td>
  <td className="hidden sm:table-cell"><Highlight text={claim.client_reference || "—"} term={search} /></td>
- <td className="hidden lg:table-cell"><Highlight text={claim.claim_number || "—"} term={search} /></td>
+ <td className="hidden md:table-cell"><Highlight text={claim.claim_number || "—"} term={search} /></td>
  <td><Highlight text={getParticipant(claim, 'insured')?.full_name || "—"} term={search} /></td>
- <td className="truncate hidden lg:table-cell"><Highlight text={`${getParticipant(claim, 'insured')?.address || ""}${getParticipant(claim, 'insured')?.city ? `, ${getParticipant(claim, 'insured')?.city}` : ""}${getParticipant(claim, 'insured')?.commune ? `, ${getParticipant(claim, 'insured')?.commune}` : ""}` || "—"} term={search} /></td>
+ <td className="truncate hidden md:table-cell"><Highlight text={`${getParticipant(claim, 'insured')?.address || ""}${getParticipant(claim, 'insured')?.city ? `, ${getParticipant(claim, 'insured')?.city}` : ""}${getParticipant(claim, 'insured')?.commune ? `, ${getParticipant(claim, 'insured')?.commune}` : ""}` || "—"} term={search} /></td>
  <td><StatusBadge status={statusCode(claim.status_id) ?? ""} label={statusLabel(claim.status_id) || "—"} /></td>
- <td className="hidden lg:table-cell">{new Date(claim.claim_date).toLocaleDateString("es-CL")}</td>
- <td className="hidden lg:table-cell">{claim.report_date ? new Date(claim.report_date).toLocaleDateString("es-CL") : "—"}</td>
- <td className="hidden lg:table-cell">{new Date(claim.created_at).toLocaleDateString("es-CL")}</td>
- <td className="text-center hidden lg:table-cell">
+ <td className="hidden md:table-cell">{new Date(claim.claim_date).toLocaleDateString("es-CL")}</td>
+ <td className="hidden md:table-cell">{claim.report_date ? new Date(claim.report_date).toLocaleDateString("es-CL") : "—"}</td>
+ <td className="hidden md:table-cell">{new Date(claim.created_at).toLocaleDateString("es-CL")}</td>
+ <td className="text-center hidden md:table-cell">
  <div className="flex items-center justify-center gap-1.5">
  <span title={claimType?.name ?? "Tipo de Siniestro"}>
  <BlIcon className="size-3.5 text-muted-foreground" />

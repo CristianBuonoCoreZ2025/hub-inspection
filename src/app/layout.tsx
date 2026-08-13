@@ -1,99 +1,21 @@
 import type { Metadata } from "next";
-import {
-  DM_Sans,
-  Oswald,
-  Barlow,
-  Sora,
-  Quicksand,
-  Manrope,
-  Nunito,
-  Space_Grotesk,
-  Syne,
-  Bricolage_Grotesque,
-} from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { UiStyleInjector } from "@/components/ui-style-injector";
 
-const dmSans = DM_Sans({
-  variable: "--font-dm-sans",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
-
-const oswald = Oswald({
-  variable: "--font-oswald",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
-
-const barlow = Barlow({
-  variable: "--font-barlow",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-});
-
-const sora = Sora({
-  variable: "--font-sora",
-  subsets: ["latin"],
-  weight: ["400", "600", "700", "800"],
-});
-
-const quicksand = Quicksand({
-  variable: "--font-quicksand",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
-
-const manrope = Manrope({
-  variable: "--font-manrope",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-});
-
-const nunito = Nunito({
-  variable: "--font-nunito",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-});
-
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
-
-const syne = Syne({
-  variable: "--font-syne",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-});
-
-const bricolage = Bricolage_Grotesque({
-  variable: "--font-bricolage",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-});
-
-const fontVars = [
-  dmSans.variable,
-  oswald.variable,
-  barlow.variable,
-  sora.variable,
-  quicksand.variable,
-  manrope.variable,
-  nunito.variable,
-  spaceGrotesk.variable,
-  syne.variable,
-  bricolage.variable,
-].join(" ");
-
 export const metadata: Metadata = {
   title: "Claims Hub — Gestión Integral de Siniestros",
   description:
     "Plataforma empresarial para la gestión del ciclo de vida de siniestros. Inspecciones remotas, gestión documental, asignaciones y liquidación en un solo lugar.",
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+    apple: "/claims-hub-mark.svg",
+  },
 };
+
+const THEME_BOOTSTRAP = `(function(){try{var t=localStorage.getItem('claimshub-ui-theme');var s=localStorage.getItem('claimshub-ui-style');var dark=false;var skin='nordic-air';if(t==='nordic-air-dark'){dark=true;skin='nordic-air'}else if(t==='fluid-aurora'){dark=true;skin='fluid-aurora'}else if(t==='nordic-air-light'){dark=false;skin='nordic-air'}else if(s==='fluid-aurora'){dark=true;skin='fluid-aurora';t='fluid-aurora'}else if(s==='nordic-air'){dark=document.documentElement.classList.contains('dark');t=dark?'nordic-air-dark':'nordic-air-light';skin='nordic-air'}else{t='nordic-air-light'}document.documentElement.setAttribute('data-ui-style',skin);if(dark){document.documentElement.classList.add('dark');document.documentElement.style.colorScheme='dark'}else{document.documentElement.classList.remove('dark');document.documentElement.style.colorScheme='light'}}catch(e){}})()`;
 
 export default function RootLayout({
   children,
@@ -101,12 +23,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="es"
-      className={`${fontVars} h-full antialiased`}
-      suppressHydrationWarning
-    >
-      <body className="min-h-full flex flex-col">
+    <html lang="es" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
+      </head>
+      <body>
         <UiStyleInjector />
         <Providers>
           <ErrorBoundary>{children}</ErrorBoundary>

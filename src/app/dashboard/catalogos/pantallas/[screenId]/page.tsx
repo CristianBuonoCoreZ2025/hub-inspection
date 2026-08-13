@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -315,7 +315,7 @@ export default function ScreenBuilderPage() {
             <ArrowLeft className="h-4 w-4" />
           </button>
           <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
+            <div className="flex h-7 w-7 items-center justify-center rounded-md icn-sky text-white shadow-sm">
               <LayoutTemplate className="h-4 w-4" />
             </div>
             <div className="leading-tight">

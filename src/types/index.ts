@@ -123,6 +123,7 @@ export interface Profile {
   timezone: string | null;
   role: UserRole;
   is_active: boolean;
+  mobile_enabled: boolean;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -450,6 +451,7 @@ export interface InspectionSession {
   lock_overridden_by: string | null;
   lock_overridden_at: string | null;
   signature_waiver_reason: string | null;
+  started_from_mobile: boolean;
   property_risk?: ActaPropertyRisk | null;
   property_materiality?: ActaPropertyMateriality | null;
   security_measures?: ActaSecurityMeasures | null;

@@ -693,7 +693,7 @@ function DocumentTable({
   sessionId: string;
 }) {
   const queryClient = useQueryClient();
-  const [ConfirmDialog, confirmDelete] = useConfirm();
+  const confirmDelete = useConfirm();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
   const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
@@ -717,7 +717,7 @@ function DocumentTable({
 
   return (
     <div className="app-panel">
-      <ConfirmDialog />
+      
       <div className="app-grid-toolbar">
         <div className="app-grid-toolbar-left">
           <h3 className="app-section-title">
@@ -929,7 +929,7 @@ function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, sessionId, s
   maxReport?: number;
 }) {
   const queryClient = useQueryClient();
-  const [ConfirmDialog, confirmDelete] = useConfirm();
+  const confirmDelete = useConfirm();
   const isDoc = evidence.type === "pdf" || evidence.type === "document";
   const isVideo = evidence.type === "video";
   const isPhoto = evidence.type === "photo";
@@ -1054,7 +1054,7 @@ function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, sessionId, s
 
   return (
     <>
-      <ConfirmDialog />
+      
       <ImageCard
         imageUrl={evidence.url}
         imageAlt={evidence.description || ""}

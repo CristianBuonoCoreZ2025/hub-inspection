@@ -49,14 +49,13 @@ export async function POST(
     // 1b. Validar que la pantalla de la gestión soporte flujo de templates.
     // Si la pantalla no tiene un campo "document_templates" en su form_schema,
     // no se puede generar un documento desde template.
+    // Retornamos 200 (no 400) para que el fire-and-forget no genere errores
+    // de consola en gestiones que simplemente no usan templates.
     const supportsTemplates = await actionSupportsDocumentTemplates(actionId);
     if (!supportsTemplates) {
       return NextResponse.json(
-        {
-          error:
-            "La pantalla asociada a esta gestión no soporta templates. Solo las gestiones con pantalla «Pantalla + Templates» pueden generar documentos desde template.",
-        },
-        { status: 400 }
+        { skipped: true, message: "La gestión no soporta templates — no se genera documento." },
+        { status: 200 }
       );
     }
 

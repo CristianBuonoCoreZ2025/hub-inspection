@@ -381,7 +381,10 @@ export function generateStaticMapUrl(
     return `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=${zoom}&size=${width}x${height}&markers=color:${markerColor}|${lat},${lng}&key=${googleKey}`;
   }
 
-  // Default: OpenStreetMap Static Map (via staticmap.openstreetmap.de)
+  // Default: OpenStreetMap Static Map (gratis, sin API key)
+  // Nota: OSM no tiene un servicio oficial de mapas estáticos.
+  // El mapa se captura del Leaflet visible via html2canvas-pro en geo-capture.tsx.
+  // Esta URL se usa solo como fallback cuando la captura del navegador falla.
   return `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lng}&zoom=${zoom}&size=${width}x${height}&markers=${lat},${lng},red-pushpin`;
 }
 

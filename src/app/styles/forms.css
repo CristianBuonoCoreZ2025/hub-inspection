@@ -41,7 +41,7 @@
     opacity: 0.6 !important;
   }
   [data-slot="input"]:focus-visible {
-    border-color: #0095DA !important;
+    border-color: var(--c-sky) !important;
     box-shadow: 0 0 0 3px rgba(0, 149, 218, 0.12) !important;
   }
   [data-slot="input"]:disabled {
@@ -58,12 +58,26 @@
     color: var(--foreground) !important;
     border-color: var(--input) !important;
   }
+
+  /* Select content (dropdown) — mismo glass que el flyout panel del menú */
+  [data-slot="select-content"] {
+    background: rgba(255, 255, 255, 0.88) !important;
+    border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent) !important;
+    backdrop-filter: blur(24px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
+    box-shadow: 0 8px 28px rgba(15, 23, 42, 0.06), inset 0 1px 2px rgba(255, 255, 255, 0.90) !important;
+  }
+  .dark [data-slot="select-content"] {
+    background: rgba(20, 22, 30, 0.88) !important;
+    border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent) !important;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.06) !important;
+  }
   [data-slot="select-trigger"]:hover:not(:disabled) {
     border-color: color-mix(in srgb, var(--input) 70%, var(--foreground) 30%) !important;
   }
   [data-slot="select-trigger"]:focus-visible {
-    border-color: #0095DA !important;
-    box-shadow: 0 0 0 3px rgba(0, 149, 218, 0.12) !important;
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent) !important;
   }
   [data-slot="select-trigger"]:disabled {
     background: color-mix(in srgb, var(--muted) 50%, transparent) !important;
@@ -84,7 +98,7 @@
     opacity: 0.6 !important;
   }
   [data-slot="textarea"]:focus-visible {
-    border-color: #0095DA !important;
+    border-color: var(--c-sky) !important;
     box-shadow: 0 0 0 3px rgba(0, 149, 218, 0.12) !important;
   }
   [data-slot="textarea"]:disabled {
@@ -96,6 +110,9 @@
   /* Select items en el dropdown — tipografía */
   [data-slot="select-item"] {
     font-size: 12px !important;
+    font-weight: 500 !important;
+    line-height: 1.25 !important;
+    border: 1px solid transparent !important;
   }
 
   /* ═══════════════════════════════════════════════════════════════
@@ -127,18 +144,18 @@
   }
 
   .app-input:focus {
-    border-color: #0095DA !important;
+    border-color: var(--c-sky) !important;
     box-shadow: 0 0 0 3px rgba(0, 149, 218, 0.12) !important;
   }
 
   /* Campo que requiere completarse (ej: aclaración en daños).
      Fondo amarillo muy sutil + borde ámbar para que no parezca desactivado. */
   .app-input.app-input-required {
-    background: color-mix(in srgb, #FEF9C3 35%, transparent) !important;
-    border-color: color-mix(in srgb, #F59E0B 50%, var(--input)) !important;
+    background: color-mix(in srgb, var(--c-orange) 35%, transparent) !important;
+    border-color: color-mix(in srgb, var(--c-orange) 50%, var(--input)) !important;
   }
   .app-input.app-input-required:focus {
-    border-color: #F59E0B !important;
+    border-color: var(--c-orange) !important;
     box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15) !important;
   }
 
@@ -287,7 +304,7 @@
   }
 
   .liquid-search:focus-visible {
-    border-color: #0095DA !important;
+    border-color: var(--c-sky) !important;
     box-shadow:
       0 0 0 3px rgba(0, 149, 218, 0.12),
       inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
@@ -326,7 +343,7 @@
 
   .liquid-date-picker:focus-visible,
   .liquid-date-picker[data-popup-open] {
-    border-color: #0095DA !important;
+    border-color: var(--c-sky) !important;
     box-shadow: 0 0 0 3px rgba(0, 149, 218, 0.12) !important;
   }
 
@@ -433,7 +450,7 @@
 
 .selector_pages[data-slot="select-trigger"]:focus-visible {
   border-color: var(--primary) !important;
-  box-shadow: 0 0 0 2px rgba(0, 149, 218, 0.1) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 10%, transparent) !important;
   outline: none !important;
 }
 
@@ -465,14 +482,48 @@
   line-height: 1.4 !important;
 }
 
-/* Item seleccionado — fondo celeste (regla global de la app) */
+/* Item seleccionado — borde sutil del menú, sin background, color primary */
 [data-slot="select-content"] [data-slot="select-item"][data-selected] {
-  background-color: #dbeafe !important;
-  color: #1e40af !important;
+  color: var(--primary) !important;
+  background-color: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  outline: 1px solid color-mix(in srgb, var(--primary) 12%, transparent) !important;
+  outline-offset: -1px !important;
+  margin-block: 1px !important;
+}
+[data-slot="select-content"] [data-slot="select-item"][data-selected]:hover {
+  color: var(--primary) !important;
+  background-color: transparent !important;
+  outline: 1px solid color-mix(in srgb, var(--primary) 12%, transparent) !important;
+  outline-offset: -1px !important;
+  margin-block: 1px !important;
 }
 .dark [data-slot="select-content"] [data-slot="select-item"][data-selected] {
-  background-color: rgba(59, 130, 246, 0.18) !important;
-  color: #93c5fd !important;
+  color: var(--primary) !important;
+  background-color: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  outline: 1px solid color-mix(in srgb, var(--primary) 12%, transparent) !important;
+  outline-offset: -1px !important;
+  margin-block: 1px !important;
+}
+.dark [data-slot="select-content"] [data-slot="select-item"][data-selected]:hover {
+  color: var(--primary) !important;
+  background-color: transparent !important;
+  outline: 1px solid color-mix(in srgb, var(--primary) 12%, transparent) !important;
+  outline-offset: -1px !important;
+  margin-block: 1px !important;
+}
+
+/* Hover normal del item (no seleccionado) — background primary 8%, borde transparent anti-salto */
+[data-slot="select-content"] [data-slot="select-item"]:hover:not([data-selected]) {
+  background-color: color-mix(in srgb, var(--primary) 8%, transparent) !important;
+  color: var(--primary) !important;
+  border: 1px solid transparent !important;
+  border-radius: 8px !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -505,21 +556,21 @@
   border-radius: 8px !important;
   padding: 6px !important;
   border: 1px solid transparent !important;
-  background: color-mix(in srgb, #dbeafe 35%, transparent) !important;
-  border-color: color-mix(in srgb, #93c5fd 45%, transparent) !important;
+  background: color-mix(in srgb, var(--st-info) 35%, transparent) !important;
+  border-color: color-mix(in srgb, var(--st-info) 45%, transparent) !important;
 }
 
 .dark .damage-dimension-unit {
-  background: color-mix(in srgb, #1e3a8a 18%, transparent) !important;
-  border-color: color-mix(in srgb, #3b82f6 35%, transparent) !important;
+  background: color-mix(in srgb, var(--st-info) 18%, transparent) !important;
+  border-color: color-mix(in srgb, var(--st-info) 35%, transparent) !important;
 }
 
 .damage-dimension-unit .damage-dimension-title {
-  color: #1e40af !important;
+  color: var(--st-info) !important;
 }
 
 .dark .damage-dimension-unit .damage-dimension-title {
-  color: #93c5fd !important;
+  color: var(--st-info) !important;
 }
 
 .damage-dimension-unit .app-field-label {
@@ -538,31 +589,31 @@
 }
 
 .damage-dimension-block-surface {
-  background: color-mix(in srgb, #dcfce7 30%, transparent) !important;
-  border-color: color-mix(in srgb, #86efac 40%, transparent) !important;
+  background: color-mix(in srgb, var(--st-success) 30%, transparent) !important;
+  border-color: color-mix(in srgb, var(--st-success) 40%, transparent) !important;
 }
 
 .dark .damage-dimension-block-surface {
-  background: color-mix(in srgb, #14532d 16%, transparent) !important;
-  border-color: color-mix(in srgb, #22c55e 30%, transparent) !important;
+  background: color-mix(in srgb, var(--st-success) 16%, transparent) !important;
+  border-color: color-mix(in srgb, var(--st-success) 30%, transparent) !important;
 }
 
 .damage-dimension-block-damage {
-  background: color-mix(in srgb, #ffedd5 35%, transparent) !important;
-  border-color: color-mix(in srgb, #fdba74 45%, transparent) !important;
+  background: color-mix(in srgb, var(--c-orange) 35%, transparent) !important;
+  border-color: color-mix(in srgb, var(--c-orange) 45%, transparent) !important;
 }
 
 .dark .damage-dimension-block-damage {
-  background: color-mix(in srgb, #7c2d12 18%, transparent) !important;
-  border-color: color-mix(in srgb, #f97316 35%, transparent) !important;
+  background: color-mix(in srgb, var(--c-orange) 18%, transparent) !important;
+  border-color: color-mix(in srgb, var(--c-orange) 35%, transparent) !important;
 }
 
 .damage-dimension-block-damage .damage-dimension-title {
-  color: #9a3412 !important;
+  color: var(--c-orange) !important;
 }
 
 .dark .damage-dimension-block-damage .damage-dimension-title {
-  color: #fdba74 !important;
+  color: var(--c-orange) !important;
 }
 
 .damage-dimension-title {
@@ -593,19 +644,19 @@
 }
 
 .damage-dimension-block-surface .damage-dimension-title {
-  color: #166534 !important;
+  color: var(--st-success) !important;
 }
 
 .dark .damage-dimension-block-surface .damage-dimension-title {
-  color: #86efac !important;
+  color: var(--st-success) !important;
 }
 
 .damage-dimension-block-damage .damage-dimension-title {
-  color: #9a3412 !important;
+  color: var(--c-orange) !important;
 }
 
 .dark .damage-dimension-block-damage .damage-dimension-title {
-  color: #fdba74 !important;
+  color: var(--c-orange) !important;
 }
 
 .damage-dimension-row {
@@ -661,6 +712,47 @@
   opacity: 0.9 !important;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+ * Responsive móvil — Daños (touch-friendly)
+ * En móvil (<640px), los inputs deben ser más grandes para touch
+ * y las filas de dimensiones se simplifican a 2 columnas máximo.
+ * ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 639px) {
+  .damage-dimension-field input {
+    height: 36px !important;
+    font-size: 13px !important;
+    padding: 0 14px 0 8px !important;
+  }
+
+  .damage-dimension-field label {
+    font-size: 10px !important;
+  }
+
+  .damage-dimension-title {
+    font-size: 11px !important;
+  }
+
+  .damage-dimension-title small {
+    font-size: 9px !important;
+  }
+
+  .damage-dimension-suffix {
+    font-size: 10px !important;
+    bottom: 8px !important;
+  }
+
+  .damage-dimension-row.cols-3,
+  .damage-dimension-row.cols-4 {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .damage-dimension-unit {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+}
+
 .damage-dimension-total {
   position: relative !important;
 }
@@ -706,4 +798,137 @@
 .selector_pages[data-slot="select-content"] [data-slot="select-item"] [data-slot="select-item-indicator"] span,
 .selector_pages[data-slot="select-content"] [data-slot="select-item"] [data-slot="select-item-indicator"] svg {
   display: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * WIZARD DEL ACTA — Stepper horizontal con pasos laterales
+ * ═══════════════════════════════════════════════════════════════ */
+.acta-wizard {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  margin-bottom: 12px !important;
+}
+
+.acta-wizard-steps {
+  display: flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+  overflow-x: auto !important;
+  padding-bottom: 4px !important;
+}
+
+.acta-wizard-step {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 6px 10px !important;
+  border-radius: 8px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  border: 1px solid transparent !important;
+  background: color-mix(in srgb, var(--muted) 60%, transparent) !important;
+  color: var(--muted-foreground) !important;
+  transition: all 0.15s ease !important;
+  cursor: pointer !important;
+}
+
+.acta-wizard-step:hover {
+  background: color-mix(in srgb, var(--muted) 80%, transparent) !important;
+}
+
+.acta-wizard-step-active {
+  background: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  border-color: var(--primary) !important;
+}
+
+.acta-wizard-step-done {
+  background: color-mix(in srgb, var(--primary) 12%, transparent) !important;
+  color: var(--primary) !important;
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent) !important;
+}
+
+.acta-wizard-step-num {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 20px !important;
+  height: 20px !important;
+  border-radius: 50% !important;
+  flex-shrink: 0 !important;
+}
+
+.acta-wizard-step-active .acta-wizard-step-num {
+  background: color-mix(in srgb, var(--primary-foreground) 20%, transparent) !important;
+}
+
+.acta-wizard-step-done .acta-wizard-step-num {
+  background: color-mix(in srgb, var(--primary) 20%, transparent) !important;
+}
+
+.acta-wizard-step-label {
+  display: inline !important;
+}
+
+@media (max-width: 640px) {
+  .acta-wizard-step-label {
+    display: none !important;
+  }
+  .acta-wizard-step {
+    padding: 8px !important;
+  }
+}
+
+.acta-wizard-step-line {
+  flex: 1 !important;
+  min-width: 12px !important;
+  height: 2px !important;
+  background: color-mix(in srgb, var(--muted) 60%, transparent) !important;
+  border-radius: 1px !important;
+}
+
+.acta-wizard-step-line-done {
+  background: var(--primary) !important;
+}
+
+.acta-wizard-progress {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.acta-wizard-progress-text {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  color: var(--muted-foreground) !important;
+  white-space: nowrap !important;
+}
+
+.acta-wizard-progress-bar {
+  flex: 1 !important;
+  height: 4px !important;
+  border-radius: 2px !important;
+  background: color-mix(in srgb, var(--muted) 60%, transparent) !important;
+  overflow: hidden !important;
+}
+
+.acta-wizard-progress-fill {
+  height: 100% !important;
+  border-radius: 2px !important;
+  background: var(--primary) !important;
+  transition: width 0.3s ease !important;
+}
+
+/* Navegación del wizard */
+.acta-wizard-nav {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  border-top: 1px solid var(--border) !important;
+  padding-top: 12px !important;
+  margin-top: 8px !important;
+  gap: 8px !important;
 }

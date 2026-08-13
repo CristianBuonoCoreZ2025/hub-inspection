@@ -115,16 +115,20 @@ export default function SupervisionPage() {
 
   // Lista de inspecciones remotas activas
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-center gap-3">
-        <Radio className="h-6 w-6 text-emerald-500" />
-        <div>
-          <h1 className="app-page-title">Supervisión de inspecciones</h1>
-          <p className="app-body text-muted-foreground mt-1">
-            Inspecciones remotas en curso. Entre a supervisar sin activar cámara ni micrófono.
-          </p>
+    <div className="app-page">
+      <div className="app-grid-header">
+        <div className="app-grid-header-left">
+          <div className="app-grid-icon icn-emerald">
+            <Radio />
+          </div>
+          <div className="app-grid-title-row">
+            <h1 className="app-page-title shrink-0">Supervisión de inspecciones</h1>
+          </div>
         </div>
       </div>
+      <p className="app-body text-muted-foreground mt-1">
+            Inspecciones remotas en curso. Entre a supervisar sin activar cámara ni micrófono.
+          </p>
 
       {isLoading && (
         <div className="flex items-center justify-center py-20">

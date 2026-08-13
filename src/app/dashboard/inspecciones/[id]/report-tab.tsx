@@ -38,6 +38,16 @@ function fmtSingleQuantity(quantity: number | null, length: number | null, width
   return `${quantity.toLocaleString("es-CL")} ${unit || ""}${dimension}`.trim();
 }
 
+// Helper: convertir URL de R2/Mapbox a URL via proxy interno para evitar CORS
+function proxyR2Url(url: string | null | undefined): string {
+  if (!url) return "";
+  // Proxyar URLs de R2 (pub-*.r2.dev) y Mapbox (api.mapbox.com)
+  if (url.includes("r2.dev") || url.includes("api.mapbox.com")) {
+    return `/api/storage/proxy?url=${encodeURIComponent(url)}`;
+  }
+  return url;
+}
+
 function fmtQuantity(d: { quantity: number | null; unit: string | null; length: number | null; width: number | null; height: number | null; damage_quantity?: number | null; damage_length?: number | null; damage_width?: number | null; damage_height?: number | null }): React.ReactNode {
   return (
     <span className="text-[10px] leading-tight">
@@ -88,6 +98,7 @@ export default function ReportTab({
   cancellationReason,
   cancellationNotes,
   cancelledAt,
+  hideZip = false,
 }: {
   session: SessionDetail;
   profile?: { id?: string; company?: { name?: string | null; logo_url?: string | null; phone?: string | null; email?: string | null; address?: string | null } | null } | null;
@@ -104,6 +115,7 @@ export default function ReportTab({
   cancellationReason?: string | null;
   cancellationNotes?: string | null;
   cancelledAt?: string | null;
+  hideZip?: boolean;
 }) {
   const queryClient = useQueryClient();
   const printRef = useRef<HTMLDivElement>(null);
@@ -165,16 +177,24 @@ export default function ReportTab({
       const html2canvas = (await import("html2canvas-pro")).default;
 
       // Convertir todas las imágenes a data URLs para evitar problemas de CORS
-      // html2canvas no puede capturar imágenes de R2 si no tiene CORS configurado
-      // Se hace secuencial y con timeout por imagen para no saturar el navegador
+      // Las imágenes del reporte ya usan el proxy interno (/api/storage/proxy)
+      // por lo que el fetch es same-origin y no tiene problemas de CORS.
       const images = content.querySelectorAll("img");
       const originalSrcs: string[] = [];
       for (const img of Array.from(images)) {
         try {
           const controller = new AbortController();
           const timeout = setTimeout(() => controller.abort(), 8000);
-          const res = await fetch(img.src, { signal: controller.signal });
+          // Detectar si la URL ya pasa por el proxy (relativa o con /api/storage/proxy)
+          const isAlreadyProxied = img.src.includes("/api/storage/proxy");
+          // Si ya está proxyada, hacer fetch directo (same-origin)
+          // Si es URL absoluta de R2, proxyarla
+          const fetchUrl = isAlreadyProxied
+            ? img.src
+            : `/api/storage/proxy?url=${encodeURIComponent(img.src)}`;
+          const res = await fetch(fetchUrl, { signal: controller.signal });
           clearTimeout(timeout);
+          if (!res.ok) throw new Error(`Fetch respondió ${res.status}`);
           const blob = await res.blob();
           const dataUrl = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
@@ -376,48 +396,7 @@ export default function ReportTab({
       <html>
         <head>
           <title>Acta de Inspección - ${claimLiquidationNumber || claimNumber || ""}</title>
-          <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { font-family: 'Segoe UI', system-ui, sans-serif; padding: 30px 40px; max-width: 800px; margin: 0 auto; color: #222; font-size: 11px; line-height: 1.6; }
-            .report-acta-header { display: flex; align-items: flex-start; justify-content: space-between; border-bottom: 3px solid #1a1a1a; padding-bottom: 12px; margin-bottom: 16px; }
-            .report-acta-header .report-logo { max-height: 50px; max-width: 180px; }
-            .report-acta-header .report-logo-text { font-size: 14px; font-weight: 700; color: #1a1a1a; }
-            .report-acta-header .report-header-info { text-align: right; font-size: 10px; color: #555; }
-            .report-acta-header .report-header-info .report-acta-h1 { font-size: 16px; font-weight: 700; color: #1a1a1a; margin-bottom: 2px; }
-            .report-acta-title { font-size: 13px; font-weight: 700; text-transform: uppercase; color: #1a1a1a; background: #f0f0f0; padding: 6px 10px; margin: 18px 0 8px; border-left: 4px solid #1a1a1a; }
-            .report-field-row { display: flex; margin-bottom: 2px; }
-            .report-field-label { font-weight: 600; color: #444; min-width: 200px; font-size: 10px; text-transform: uppercase; }
-            .report-field-value { flex: 1; font-size: 10px; color: #222; }
-            .report-statement { color: #222; line-height: 1.6; margin-bottom: 12px; }
-            .report-statement p { margin: 0 0 8px; }
-            .report-statement div { margin: 0 0 8px; }
-            table.report-table { width: 100%; border-collapse: collapse; margin: 6px 0; }
-            .report-table th.report-th, .report-table th.report-th-right { text-align: left; padding: 5px 6px; background: #f0f0f0; border: 1px solid #ccc; font-size: 9px; font-weight: 700; text-transform: uppercase; }
-            .report-table th.report-th-right { text-align: right; }
-            .report-table td.report-td, .report-table td.report-td-right { padding: 5px 6px; border: 1px solid #ccc; font-size: 9px; }
-            .report-table td.report-td-right { text-align: right; }
-            .report-photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 6px 0; }
-            .report-photo-grid .report-photo-img { width: 100%; height: 130px; object-fit: contain; }
-            .report-photo-label { font-size: 8px; color: #666; text-align: center; margin-top: 2px; }
-            .report-sketch-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin: 6px 0; }
-            .report-sketch-grid .report-sketch-img { width: 100%; height: 140px; object-fit: contain; border: 1px solid #ccc; background: #fff; }
-            .report-sig-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 24px; }
-            .report-sig-box { text-align: center; }
-            .report-sig-box .report-sig-img { max-height: 60px; max-width: 180px; border-bottom: 1px solid #333; padding-bottom: 3px; margin: 0 auto; }
-            .report-sig-box .report-sig-name { font-size: 10px; font-weight: 600; margin-top: 3px; }
-            .report-sig-box .report-sig-role { font-size: 9px; color: #666; }
-            .report-footer { margin-top: 30px; padding-top: 10px; border-top: 1px solid #ccc; text-align: center; font-size: 8px; color: #999; }
-            .report-cancellation-box { border: 2px solid #c0392b; background: #fdf2f2; padding: 10px; margin: 10px 0; border-radius: 4px; }
-            .report-cancellation-box .report-cancellation-title { color: #c0392b; font-size: 12px; margin-bottom: 4px; }
-            .report-doc-item { border: 1px solid #ccc; padding: 8px; margin-bottom: 8px; background: #fafafa; }
-            .report-doc-item .report-doc-title { font-weight: 600; color: #444; font-size: 10px; margin-bottom: 4px; }
-            .report-doc-item .report-doc-desc { color: #666; font-size: 9px; margin-bottom: 4px; }
-            .report-doc-item .report-doc-summary { color: #444; font-style: italic; font-size: 9px; margin-bottom: 4px; border-left: 2px solid #ccc; padding-left: 8px; }
-            .report-doc-item .report-doc-img { width: 100%; max-height: 190px; object-fit: contain; border: 1px solid #e0e0e0; }
-            .report-doc-item .report-doc-placeholder { color: #888; font-style: italic; font-size: 9px; }
-            .report-watermark { display: none; }
-            @media print { body { padding: 15px 20px; } }
-          </style>
+          <link rel="stylesheet" href="${window.location.origin}/report-print.css" media="all" />
         </head>
         <body>${content.innerHTML}</body>
       </html>
@@ -436,7 +415,7 @@ export default function ReportTab({
       setTimeout(() => {
         if (!printWindow.closed) printWindow.close();
       }, 1000);
-    }, 300);
+    }, 800);
   };
 
   const evidences = useMemo(() => session.inspection_evidences || [], [session.inspection_evidences]);
@@ -449,7 +428,17 @@ export default function ReportTab({
   const isPhoto = (t: string) => ["photo", "image", "jpg", "jpeg", "png"].includes(t.toLowerCase());
   const isVideo = (t: string) => ["video", "mp4", "mov"].includes(t.toLowerCase());
   const isDoc = (t: string) => ["document", "pdf", "doc", "docx", "file"].includes(t.toLowerCase());
-  const photos = useMemo(() => evidences.filter(e => isPhoto(e.type) && e.include_in_report !== false).slice(0, reportMaxPhotos ?? 18), [evidences, reportMaxPhotos]);
+  const photos = useMemo(() => evidences
+    .filter(e => isPhoto(e.type) && e.include_in_report !== false)
+    .sort((a, b) => {
+      // Evidencias geo_map van primero (mapa de geolocalización)
+      const aGeo = a.source === "geo_map" ? 0 : 1;
+      const bGeo = b.source === "geo_map" ? 0 : 1;
+      if (aGeo !== bGeo) return aGeo - bGeo;
+      // Dentro del mismo grupo, ordenar por created_at
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    })
+    .slice(0, reportMaxPhotos ?? 18), [evidences, reportMaxPhotos]);
   const videos = useMemo(() => evidences.filter(e => isVideo(e.type)), [evidences]);
   const docs = useMemo(() => evidences.filter(e => isDoc(e.type)), [evidences]);
   const otherEvidences = useMemo(() => evidences.filter(e => !isPhoto(e.type) && !isVideo(e.type) && !isDoc(e.type)), [evidences]);
@@ -561,7 +550,19 @@ export default function ReportTab({
     }
   }, [report, generatePdf, photos, videos, docs, otherEvidences, sketches, claimLiquidationNumber, claimNumber, sessionId]);
   const companyName = profile?.company?.name || "—";
-  const companyLogo = profile?.company?.logo_url || null;
+  const companyLogoRaw = profile?.company?.logo_url || null;
+  // Validar que logo_url sea una URL válida con extensión de imagen.
+  // Evita que se rendericen URLs inválidas o fotos subidas por error.
+  const isValidLogoUrl = (url: string | null): url is string => {
+    if (!url) return false;
+    try {
+      const parsed = new URL(url, typeof window !== "undefined" ? window.location.origin : "http://localhost");
+      return /\.(png|jpg|jpeg|svg|webp|gif)$/i.test(parsed.pathname);
+    } catch {
+      return false;
+    }
+  };
+  const companyLogo = isValidLogoUrl(companyLogoRaw) ? companyLogoRaw : null;
   const companyPhone = profile?.company?.phone || null;
   const companyAddress = profile?.company?.address || null;
   const companyEmail = profile?.company?.email || null;
@@ -637,7 +638,7 @@ export default function ReportTab({
               )}
               </button>
             )}
-            <button type="button" onClick={handleDownloadZip} disabled={zipPending} className="pg-btn-platinum">
+            <button type="button" onClick={handleDownloadZip} disabled={zipPending} className="pg-btn-platinum" style={{ display: hideZip ? "none" : undefined }}>
               <Archive className="mr-2 h-4 w-4" /> {zipPending ? "Comprimiendo..." : "ZIP"}
             </button>
             <div className="report-final-badge">
@@ -685,7 +686,7 @@ export default function ReportTab({
             <div>
               {companyLogo ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={companyLogo} alt={companyName} className="report-logo" />
+                <img src={proxyR2Url(companyLogo)} alt={companyName} className="report-logo" />
               ) : (
                 <div className="report-logo-text app-body">{companyName}</div>
               )}
@@ -980,7 +981,7 @@ export default function ReportTab({
                 {photos.map((ev, idx) => (
                   <div key={ev.id} className="report-photo-item">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={ev.url} alt={`Foto ${idx + 1}`} className="report-photo-img" />
+                    <img src={proxyR2Url(ev.url)} alt={`Foto ${idx + 1}`} className="report-photo-img" />
                     <p className="report-photo-label app-body">
                       Foto {idx + 1}{ev.description ? ` — ${ev.description}` : ""}
                     </p>
@@ -1045,7 +1046,7 @@ export default function ReportTab({
                     )}
                     {isImage ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
-                      <img src={d.url} alt={fileName} className="report-doc-img" />
+                      <img src={proxyR2Url(d.url)} alt={fileName} className="report-doc-img" />
                     ) : !pdfSummary && (
                       <p className="report-doc-placeholder app-body">
                         Documento {mimeType || "adjunto"} — {d.metadata?.fileSize ? `${(d.metadata.fileSize as number / 1024).toFixed(0)} KB` : ""}
@@ -1096,7 +1097,7 @@ export default function ReportTab({
                 {sketches.map((sk, idx) => (
                   <div key={sk.id}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={sk.sketch_url} alt={`Croquis ${idx + 1}`} className="report-sketch-img" />
+                    <img src={proxyR2Url(sk.sketch_url)} alt={`Croquis ${idx + 1}`} className="report-sketch-img" />
                     <p className="report-photo-label app-body">
                       Croquis {idx + 1}{sk.label ? ` — ${sk.label}` : ""}
                     </p>
@@ -1122,7 +1123,7 @@ export default function ReportTab({
                     {sig ? (
                       <>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={sig.signature_url} alt={`Firma ${label}`} className="report-sig-img h-16 object-contain" />
+                        <img src={proxyR2Url(sig.signature_url)} alt={`Firma ${label}`} className="report-sig-img h-16 object-contain" />
                         <p className="report-sig-name app-body">{label}</p>
                         <p className="report-sig-role app-body">{fmtDateTime(sig.signed_at)}</p>
                       </>

@@ -31,10 +31,10 @@ const ROLE_ICONS: Record<ClaimRole, typeof FilePen> = {
 };
 
 const ROLE_GRADIENTS: Record<ClaimRole, string> = {
-  liquidador: "from-sky-500 to-blue-600",
-  inspector: "from-violet-500 to-purple-600",
-  despachador: "from-emerald-500 to-teal-600",
-  auditor: "from-amber-500 to-orange-600",
+  liquidador: "icn-sky",
+  inspector: "icn-violet",
+  despachador: "icn-emerald",
+  auditor: "icn-amber",
 };
 
 const ROLE_GLOWS: Record<ClaimRole, string> = {
@@ -100,7 +100,7 @@ function MisCasosContent() {
       {/* ── Header ── */}
       <div className="app-grid-header">
         <div className="app-grid-header-left">
-          <div className={`app-grid-icon bg-linear-to-br ${gradient}`}>
+          <div className={`app-grid-icon ${gradient}`}>
             <Icon />
           </div>
           <div className="app-grid-title-row">

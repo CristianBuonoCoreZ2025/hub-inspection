@@ -413,7 +413,7 @@ export function TemparioManager() {
       {/* Header unificado */}
       <div className="app-grid-header">
         <div className="app-grid-header-left">
-          <div className="app-grid-icon bg-linear-to-br from-amber-500 to-orange-600">
+          <div className="app-grid-icon icn-amber">
             <HardHat className="h-5 w-5" />
           </div>
           <div className="app-grid-title-row">
@@ -638,7 +638,7 @@ export function TemparioManager() {
         <DialogContent className="modal-xl" showCloseButton={false}>
           <div className="modal-header">
             <DialogTitle className="modal-title flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-amber-500 to-orange-600 text-white shadow-sm">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg icn-amber text-white shadow-sm">
                 <HardHat className="h-4 w-4" />
               </div>
               {editingId ? "Editar" : "Nueva"} Partida

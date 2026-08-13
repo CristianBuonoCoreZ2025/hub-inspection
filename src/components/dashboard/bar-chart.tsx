@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts"
+import { useUiThemeId } from "@/hooks/use-ui-theme-id"
 
 interface BarChartGlassProps {
   data: Array<{ name: string; value: number; color?: string; label?: string }>
@@ -56,7 +57,6 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
 function getReadableTextColor(backgroundColor: string): string {
   const rgb = hexToRgb(backgroundColor)
   if (!rgb) return "#ffffff"
-  // Luminancia relativa (WCAG simplificado)
   const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255
   return luminance > 0.55 ? "#1f2937" : "#ffffff"
 }
@@ -70,6 +70,9 @@ export function BarChartGlass({
   tickFormatter,
   seriesName = "Cantidad",
 }: BarChartGlassProps) {
+  const themeId = useUiThemeId()
+  const isNordicDark = themeId === "nordic-air-dark"
+  const isAurora = themeId === "fluid-aurora"
   const uid = React.useId()
   const baseGradId = `bar-grad-${uid}`
   const itemGradId = (i: number) => `bar-grad-item-${uid}-${i}`
@@ -83,7 +86,7 @@ export function BarChartGlass({
   if (horizontal) {
     return (
       <div
-        className={`dash-chart-wrap horizontal-bar-list${valueInside ? " horizontal-bar-list-inside-values" : ""}`}
+        className={`dash-chart-wrap horizontal-bar-list${valueInside ? " horizontal-bar-list-inside-values" : ""}${isNordicDark ? " horizontal-bar-list-outline" : ""}`}
         style={{
           ...(height ? { height } : {}),
           "--horizontal-bar-label-width": labelColumnWidth,
@@ -107,15 +110,32 @@ export function BarChartGlass({
                 >
                   <div
                     className="horizontal-bar-fill"
-                    style={{
-                      width: `${pct}%`,
-                      background: `linear-gradient(90deg, ${fill}e6, ${fill}80)`,
-                    }}
+                    style={
+                      isNordicDark
+                        ? {
+                            width: `${pct}%`,
+                            background: "transparent",
+                            border: `1.5px solid ${fill}`,
+                            borderRadius: "6px",
+                          }
+                        : isAurora
+                        ? {
+                            width: `${pct}%`,
+                            background: `linear-gradient(90deg, ${fill}cc, ${fill}66)`,
+                            border: `1px solid ${fill}80`,
+                            borderRadius: "6px",
+                            boxShadow: `0 0 12px ${fill}60`,
+                          }
+                        : {
+                            width: `${pct}%`,
+                            background: `linear-gradient(90deg, ${fill}e6, ${fill}80)`,
+                          }
+                    }
                   >
                     {valueInside && (
                       <span
                         className="horizontal-bar-value horizontal-bar-value-inside"
-                        style={{ color: getReadableTextColor(fill) }}
+                        style={{ color: isNordicDark ? fill : getReadableTextColor(fill) }}
                       >
                         {display}
                       </span>
@@ -182,14 +202,22 @@ export function BarChartGlass({
         <Bar
           dataKey="value"
           name={seriesName}
-          fill={`url(#${baseGradId})`}
+          fill={isNordicDark ? "none" : `url(#${baseGradId})`}
+          stroke={isNordicDark ? color : undefined}
+          strokeWidth={isNordicDark ? 1.5 : undefined}
+          fillOpacity={isAurora ? 0.75 : (isNordicDark ? 0 : undefined)}
           radius={[6, 6, 0, 0]}
           maxBarSize={50}
+          isAnimationActive
+          animationDuration={800}
         >
           {data.map((entry, index) => (
             <Cell
               key={`bar-cell-${index}`}
-              fill={entry.color ? `url(#${itemGradId(index)})` : `url(#${baseGradId})`}
+              fill={isNordicDark ? "none" : (entry.color ? `url(#${itemGradId(index)})` : `url(#${baseGradId})`)}
+              stroke={isNordicDark ? (entry.color || color) : undefined}
+              strokeWidth={isNordicDark ? 1.5 : undefined}
+              fillOpacity={isAurora ? 0.75 : undefined}
             />
           ))}
         </Bar>

@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { KpiTodayIcon, KpiActiveIcon, KpiScheduledIcon, KpiCompletedIcon, KpiOverdueIcon, KpiTimeIcon } from "@/components/dashboard/kpi-icons";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
+import { useUiThemeId } from "@/hooks/use-ui-theme-id";
 import type { UserRole } from "@/types";
 import type { LightClaim, LightSession } from "@/services/dashboard";
 import {
@@ -41,14 +42,7 @@ import {
 import { BarChartGlass } from "@/components/dashboard/bar-chart";
 import { BarChartQuad } from "@/components/dashboard/bar-chart-quad";
 import { NestedDonutChart } from "@/components/dashboard/nested-donut-chart";
-
-const STATUS_COLORS: Record<string, string> = {
-  created: "#3b82f6",
-  adjustment: "#f59e0b",
-  dispatchment: "#8b5cf6",
-  closed: "#10b981",
-  reopened: "#ef4444",
-};
+import { SplineAreaChart } from "@/components/dashboard/spline-area-chart";
 
 const STATUS_LABELS: Record<string, string> = {
   created: "Creado",
@@ -57,6 +51,53 @@ const STATUS_LABELS: Record<string, string> = {
   closed: "Cerrado",
   reopened: "Reabierto",
 };
+
+/* ── Paletas de colores por tema ──
+ * Aurora usa tonos neon (brillantes, saturados) */
+const STATUS_COLORS_NORDIC: Record<string, string> = {
+  created: "#3b82f6",
+  adjustment: "#f59e0b",
+  dispatchment: "#8b5cf6",
+  closed: "#10b981",
+  reopened: "#ef4444",
+};
+
+const STATUS_COLORS_AURORA: Record<string, string> = {
+  created: "#00f2ff",
+  adjustment: "#f59e0b",
+  dispatchment: "#a855f7",
+  closed: "#10b981",
+  reopened: "#ef4444",
+};
+
+const LOCATION_COLORS_NORDIC = ["#0095DA", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444", "#06b6d4", "#ec4899", "#6366f1"];
+const LOCATION_COLORS_AURORA = ["#00f2ff", "#a855f7", "#f59e0b", "#10b981", "#ef4444", "#38bdf8", "#ec4899", "#6366f1"];
+
+/* Mapeo de colores corporativos a neon para Aurora */
+const BUSINESS_COLOR_MAP_AURORA: Record<string, string> = {
+  "#0095DA": "#00f2ff",
+  "#0ea5e9": "#00f2ff",
+  "#3b82f6": "#38bdf8",
+  "#8b5cf6": "#a855f7",
+  "#f59e0b": "#f59e0b",
+  "#10b981": "#10b981",
+  "#ef4444": "#ef4444",
+  "#ec4899": "#ec4899",
+  "#06b6d4": "#00f2ff",
+  "#6366f1": "#6366f1",
+  "#f97316": "#f97316",
+  "#22c55e": "#10b981",
+};
+
+function mapBusinessColor(color: string | null, fallback: string, isAurora: boolean): string {
+  if (!color) return fallback;
+  if (!isAurora) return color;
+  return BUSINESS_COLOR_MAP_AURORA[color.toLowerCase()] || color;
+}
+
+/* Colores de estados de inspección (inner donut) */
+const INSPECTION_STATUS_NORDIC = { scheduled: "#3b82f6", inProgress: "#f59e0b", completed: "#10b981", cancelled: "#ef4444" };
+const INSPECTION_STATUS_AURORA = { scheduled: "#38bdf8", inProgress: "#f97316", completed: "#10b981", cancelled: "#f43f5e" };
 
 type KpiDetailRow = {
   id: string;
@@ -111,11 +152,16 @@ function filterClaimsForUser(
 }
 
 // Paleta de colores para los donuts de ubicación (constante del módulo)
-const LOCATION_COLORS = ["#0095DA", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444", "#06b6d4", "#ec4899", "#6366f1"];
+// Se selecciona según tema en runtime
 
 export default function DashboardPage() {
   const { profile } = useAuth();
   const { statusCode } = useClaimStatuses();
+  const themeId = useUiThemeId();
+  const isAurora = themeId === "fluid-aurora";
+  const STATUS_COLORS = isAurora ? STATUS_COLORS_AURORA : STATUS_COLORS_NORDIC;
+  const LOCATION_COLORS = isAurora ? LOCATION_COLORS_AURORA : LOCATION_COLORS_NORDIC;
+  const INSPECTION_STATUS = isAurora ? INSPECTION_STATUS_AURORA : INSPECTION_STATUS_NORDIC;
 
   const isGlobalUser = profile?.role === "internal";
   const roleLabel = profile ? userTypeLabels[profile.role] : "";
@@ -265,7 +311,7 @@ export default function DashboardPage() {
     });
     const topCompanies = Object.entries(claimsByCompany)
       .sort((a, b) => b[1].claims - a[1].claims)
-      .slice(0, 8)
+      .slice(0, 6)
       .map(([name, v]) => ({ name, value: v.claims, inspections: v.inspections }));
 
     // Claims por ramo / línea de negocio
@@ -277,11 +323,11 @@ export default function DashboardPage() {
       claimsByRamo[name].count++;
       if (!claimsByRamo[name].color && color) claimsByRamo[name].color = color;
     });
-    const ramoFallbackColors = ["#0095DA", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444", "#06b6d4"];
+    const ramoFallbackColors = LOCATION_COLORS;
     const topRamos = Object.entries(claimsByRamo)
       .sort((a, b) => b[1].count - a[1].count)
       .slice(0, 6)
-      .map(([name, v], i) => ({ name, value: v.count, color: v.color || ramoFallbackColors[i % ramoFallbackColors.length] }));
+      .map(([name, v], i) => ({ name, value: v.count, color: mapBusinessColor(v.color, ramoFallbackColors[i % ramoFallbackColors.length], isAurora) }));
 
     // Top responsables (liquidador, despachador, revisor)
     const buildTopUsers = (field: "assigned_adjuster_id" | "adjuster_id" | "dispatcher_id" | "auditor_id") => {
@@ -298,7 +344,7 @@ export default function DashboardPage() {
         if (!map[id]) map[id] = { id, name, count: 0 };
         map[id].count++;
       });
-      return Object.values(map).sort((a, b) => b.count - a.count).slice(0, 5);
+      return Object.values(map).sort((a, b) => b.count - a.count).slice(0, 6);
     };
     const topAdjusters = buildTopUsers("adjuster_id");
     const topDispatchers = buildTopUsers("dispatcher_id");
@@ -550,7 +596,7 @@ export default function DashboardPage() {
       myScheduledSessions,
       myCompletedSessions,
     };
-  }, [myClaims, sessionList, companiesCount, users, statusCode, isGlobalUser, profile]);
+  }, [myClaims, sessionList, companiesCount, users, statusCode, isGlobalUser, profile, STATUS_COLORS, isAurora, LOCATION_COLORS]);
 
   // Setear el país inicial al primero que tenga inspecciones
   // Patrón render-time (evita setState-in-effect): ajustamos el estado cuando
@@ -587,15 +633,15 @@ export default function DashboardPage() {
     const selectedPercent = selectedEntry && totalValue > 0 ? (selectedEntry.value / totalValue) * 100 : 0;
     const inner = selectedData
       ? [
-          { name: "Agendadas", value: selectedData.agendadas, color: "#3b82f6" },
-          { name: "En curso", value: selectedData.enProceso, color: "#f59e0b" },
-          { name: "Completadas", value: selectedData.completadas, color: "#10b981" },
-          { name: "Canceladas", value: selectedData.canceladas, color: "#ef4444" },
+          { name: "Agendadas", value: selectedData.agendadas, color: INSPECTION_STATUS.scheduled },
+          { name: "En curso", value: selectedData.enProceso, color: INSPECTION_STATUS.inProgress },
+          { name: "Completadas", value: selectedData.completadas, color: INSPECTION_STATUS.completed },
+          { name: "Canceladas", value: selectedData.canceladas, color: INSPECTION_STATUS.cancelled },
         ].filter((d) => d.value > 0)
       : [];
 
     return { outer, inner, selectedName: selected, selectedPercent };
-  }, []);
+  }, [LOCATION_COLORS, INSPECTION_STATUS]);
 
   const locationDonuts = useMemo(() => {
     const claimMap = new Map(myClaims.map((c) => [c.id, c]));
@@ -691,7 +737,7 @@ export default function DashboardPage() {
     setPrevSiniestroCountryInit(firstCountryId);
   }
   const siniestrosDonuts = useMemo(() => {
-    const businessFallbackColors = ["#0095DA", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444", "#06b6d4"];
+    const businessFallbackColors = LOCATION_COLORS;
 
     const addClaim = (
       targetMap: Record<string, { value: number; color: string }>,
@@ -718,7 +764,7 @@ export default function DashboardPage() {
       const outer = Object.entries(targetMap)
         .sort((a, b) => b[1].value - a[1].value)
         .slice(0, 6)
-        .map(([name, v]) => ({ name, value: v.value, color: v.color }));
+        .map(([name, v]) => ({ name, value: v.value, color: mapBusinessColor(v.color, v.color, isAurora) }));
 
       const selected = outer.find((o) => o.name === selectedName)?.name || outer[0]?.name || null;
       const selectedEntry = selected ? outer.find((o) => o.name === selected) : null;
@@ -732,7 +778,7 @@ export default function DashboardPage() {
         .map(([name, v], i) => ({
           name,
           value: v.value,
-          color: v.color || businessFallbackColors[i % businessFallbackColors.length],
+          color: mapBusinessColor(v.color, businessFallbackColors[i % businessFallbackColors.length], isAurora),
         }));
 
       return { outer, inner, selectedName: selected, selectedPercent };
@@ -797,7 +843,7 @@ export default function DashboardPage() {
       commune: buildBusinessDonut(finalCommuneMap, finalBusinessByCommune, selectedSiniestroCommune),
       hasData: claimsForCountry.length > 0,
     };
-  }, [myClaims, selectedSiniestroCountryId, selectedSiniestroRegion, selectedSiniestroCity, selectedSiniestroCommune]);
+  }, [myClaims, selectedSiniestroCountryId, selectedSiniestroRegion, selectedSiniestroCity, selectedSiniestroCommune, LOCATION_COLORS, isAurora]);
 
   // KPIs globales: foco en inspecciones
   const kpis = isGlobalUser
@@ -1099,9 +1145,9 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="glass-panel-body">
-                <BarChartGlass
+                <SplineAreaChart
                   data={stats.inspectionsByDay}
-                  color="#ec4899"
+                  color={isAurora ? "#00f2ff" : "#ec4899"}
                 />
               </div>
             </div>
@@ -1266,7 +1312,7 @@ export default function DashboardPage() {
               <div className="glass-panel-body">
                 {stats.topInspectors.length > 0 ? (
                   <BarChartQuad
-                    data={stats.topInspectors.slice(0, 8).map((i) => ({
+                    data={stats.topInspectors.slice(0, 6).map((i) => ({
                       name: i.name,
                       agendadas: i.scheduled,
                       enProceso: i.active,
@@ -1362,8 +1408,8 @@ export default function DashboardPage() {
                   {siniestrosDonuts.region.inner.map((entry) => (
                     <span key={entry.name} className="dash-location-legend-item">
                       <span
-                        className="dash-location-legend-dot"
-                        style={{ background: entry.color }}
+                        className="dash-location-legend-dot dash-siniestros-legend-dot"
+                        style={{ background: entry.color, boxShadow: isAurora ? `0 0 8px ${entry.color}80` : undefined }}
                       />
                       {entry.name}
                     </span>

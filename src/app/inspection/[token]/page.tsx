@@ -171,6 +171,7 @@ export default function MagicLinkPage() {
   const [chatPanelOpen, setChatPanelOpen] = useState(false);
   const [videoCallOpen, setVideoCallOpen] = useState(false);
   const [videoCallKey, setVideoCallKey] = useState(0);
+  const [clientTab, setClientTab] = useState<string | null>(null);
   const autoVideoOpenedRef = useRef(false);
   // Ref para el ID del log de conexión del asegurado
   const connectionLogIdRef = useRef<string | null>(null);
@@ -216,6 +217,17 @@ export default function MagicLinkPage() {
       setVideoCallOpen(true);
     }
   }, [session]);
+
+  // Resetear clientTab cuando el inspector cambia de tab activa
+  // (el asegurado vuelve a seguir al inspector)
+  const lastInspectorTabRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!session?.active_tab) return;
+    if (lastInspectorTabRef.current !== session.active_tab) {
+      lastInspectorTabRef.current = session.active_tab;
+      setClientTab(null);
+    }
+  }, [session?.active_tab]);
 
   // ── Log de conexión del asegurado ──
   // Registra un evento "connecting" al cargar la sesión, y "disconnected" al desmontar.
@@ -475,7 +487,10 @@ export default function MagicLinkPage() {
   ];
 
   // Si está completado pero falta firmar (y no hay waiver), forzar tab de firmas
-  const effectiveTab = isCompleted && !hasInsuredSignature && !hasWaiver ? "firmas" : activeTab;
+  // Si el asegurado navegó a una tab libremente (evidencias, firmas, resumen), respetar su elección
+  const effectiveTab = isCompleted && !hasInsuredSignature && !hasWaiver
+    ? "firmas"
+    : clientTab || activeTab;
 
   // Label del step interno del acta (para el footer)
   const actaStepLabels: Record<string, string> = {
@@ -509,24 +524,34 @@ export default function MagicLinkPage() {
         </div>
       </header>
 
-      {/* Indicador de progreso (read-only, no clickeable) */}
+      {/* Indicador de progreso — el asegurado puede navegar libremente a Evidencias y Firmas */}
       <div className="max-w-5xl mx-auto px-4 pt-4">
         <div className="flex gap-1 overflow-x-auto pb-2 border-b border-slate-800">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const active = tab.id === effectiveTab;
+            // Tabs que el asegurado puede navegar libremente (sin depender del inspector)
+            const clientNavigable = ["evidencias", "firmas", "resumen"].includes(tab.id);
+            const isClickable = clientNavigable && session.status === "active";
             return (
-              <div
+              <button
                 key={tab.id}
-                className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 app-body font-medium ${
+                type="button"
+                disabled={!isClickable}
+                onClick={() => {
+                  if (isClickable) setClientTab(tab.id);
+                }}
+                className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 app-body font-medium transition-colors ${
                   active
                     ? "bg-sky-500/15 text-sky-400"
-                    : "text-slate-600"
+                    : isClickable
+                      ? "text-slate-400 hover:text-sky-400 hover:bg-sky-500/10 cursor-pointer"
+                      : "text-slate-600 cursor-default"
                 }`}
               >
                 <Icon className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">{tab.label}</span>
-              </div>
+              </button>
             );
           })}
         </div>
@@ -1267,16 +1292,35 @@ function EvidencesTab({
             className="hidden"
             onChange={(e) => handleFiles(e.target.files)}
           />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className="flex items-center gap-2 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white px-3 py-2 app-body"
+          {/* Área de drop más visible para el asegurado */}
+          <div
+            onDragOver={(e) => { e.preventDefault(); }}
+            onDrop={(e) => {
+              e.preventDefault();
+              if (!isReadOnly) handleFiles(e.dataTransfer.files);
+            }}
+            onClick={() => !uploading && fileInputRef.current?.click()}
+            className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-sky-500/40 bg-sky-500/5 hover:border-sky-500 hover:bg-sky-500/10 p-6 text-center cursor-pointer transition-colors"
           >
-            {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
-            {uploading
-              ? `Subiendo ${progress.completed + progress.failed + 1} de ${progress.total}...`
-              : "Subir foto / video / PDF"}
-          </button>
+            {uploading ? (
+              <>
+                <Loader2 className="h-6 w-6 animate-spin text-sky-400" />
+                <p className="app-body text-sky-400 font-medium">
+                  Subiendo {progress.completed + progress.failed + 1} de {progress.total}...
+                </p>
+              </>
+            ) : (
+              <>
+                <Camera className="h-6 w-6 text-sky-400" />
+                <p className="app-body font-medium text-sky-400">
+                  Subir foto / video / PDF
+                </p>
+                <p className="app-body text-slate-500 text-xs">
+                  Haz clic o arrastra tus archivos aquí
+                </p>
+              </>
+            )}
+          </div>
           {failedFiles.length > 0 && !uploading && (
             <button
               type="button"
@@ -1300,7 +1344,7 @@ function EvidencesTab({
             </p>
           )}
           <p className="app-body text-slate-500 mt-2">
-            La evidencia se sube inmediatamente. El análisis con IA lo hará el inspector después.
+            Puedes subir fotos o videos del lugar del siniestro. El inspector las revisará durante la inspección.
           </p>
         </div>
       )}

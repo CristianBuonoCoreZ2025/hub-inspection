@@ -1,32 +1,28 @@
-/**
- * Pieles de interfaz: `html[data-ui-style="…"]`.
- * Tipografía (--font-app-* + tokens --ui-*), modales y rejillas (--app-main-grid-gap).
- */
-
-/* --- Aire nórdico: lectura amplia, rejilla holgada, modal sobrio --- */
-[data-ui-style-skin='nordic-air'],
-html[data-ui-style='nordic-air'] {
+[data-ui-style='nordic-air'],html[data-ui-style='nordic-air'] {
   --font-app-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
   --font-app-heading: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
   --radius: 1rem;
-  --background: oklch(0.985 0.012 230);
-  --foreground: oklch(0.22 0.04 240);
-  --card: oklch(1 0.008 230);
-  --card-foreground: oklch(0.22 0.04 240);
-  --primary: oklch(0.52 0.12 230);
-  --primary-foreground: oklch(0.99 0.01 230);
-  --secondary: oklch(0.94 0.02 230);
-  --muted: oklch(0.93 0.025 220);
-  --muted-foreground: oklch(0.45 0.04 235);
-  --accent: oklch(0.9 0.04 210);
-  --accent-foreground: oklch(0.25 0.06 230);
-  --border: oklch(0.88 0.03 230);
-  --input: oklch(0.88 0.03 230);
-  --ring: oklch(0.55 0.1 230);
-  --sidebar: oklch(0.96 0.02 225);
-  --sidebar-foreground: oklch(0.22 0.04 240);
-  --sidebar-primary: oklch(0.52 0.12 230);
-  --sidebar-accent: oklch(0.91 0.03 225);
+  --background: var(--c-canvas);
+  --foreground: var(--c-ink);
+  --card-foreground: var(--c-ink);
+  --primary: var(--c-sky-dark);
+  --primary-foreground: var(--c-paper);
+  --secondary: var(--c-gray-50);
+  --muted: var(--c-gray-50);
+  --muted-foreground: var(--c-slate-600);
+  --accent: var(--c-gray-50);
+  --accent-foreground: var(--c-gray-700);
+  --border: var(--c-gray-50);
+  --input: var(--c-gray-50);
+  --ring: var(--c-sky-dark);
+  --sidebar: var(--c-gray-50);
+  --logo-surface: var(--c-paper);
+  --topbar-foreground: var(--sidebar-foreground);
+  --topbar-muted-foreground: color-mix(in srgb, var(--sidebar-foreground) 70%, transparent);
+  --topbar-border-alpha: 8%;
+  --sidebar-foreground: var(--c-slate-600);
+  --sidebar-primary: var(--c-sky-dark);
+  --sidebar-accent: var(--c-gray-50);
   --ui-font-size-body: 0.9375rem;
   --ui-leading-body: 1.68;
   --ui-tracking-body: 0.018em;
@@ -41,244 +37,724 @@ html[data-ui-style='nordic-air'] {
   --ui-modal-leading: 1.62;
   --ui-modal-tracking: 0.015em;
   --ui-modal-border-width: 1px;
-  --ui-modal-shadow: 0 28px 56px -18px oklch(0.45 0.08 240 / 0.18);
+  --ui-modal-shadow: 0 28px 56px -18px var(--c-shadow-air-l);
   --ui-modal-backdrop: blur(6px);
-  --ui-modal-overlay-bg: oklch(0.25 0.04 250 / 0.42);
+  --ui-modal-overlay-bg: var(--c-overlay-air);
+  /* Glass opacity — controlado por skin */
+  --glass-sidebar-top: 10%;
+  --glass-sidebar-bottom: 3%;
+  --glass-sidebar-shine: 20%;
+  --glass-topbar-top: 15%;
+  --glass-topbar-bottom: 4%;
+  --glass-chip-top: 10%;
+  --glass-chip-bottom: 3%;
+  --glass-chip-hover-top: 15%;
+  --glass-chip-hover-bottom: 4%;
+  --glass-action-top: 8%;
+  --glass-action-bottom: 2%;
+  --glass-action-hover-top: 12%;
+  --glass-action-hover-bottom: 3%;
+  --glass-flyout: 90%;
 }
 
-.dark [data-ui-style-skin='nordic-air'],
-html.dark[data-ui-style='nordic-air'] {
-  --background: oklch(0.14 0.015 250);
-  --foreground: oklch(0.97 0.01 240);
-  --card: oklch(0.18 0.02 250);
-  --card-foreground: oklch(0.97 0.01 240);
-  --primary: oklch(0.72 0.12 250);
-  --primary-foreground: oklch(0.14 0.02 250);
-  --secondary: oklch(0.22 0.02 250);
-  --muted: oklch(0.20 0.02 250);
-  --muted-foreground: oklch(0.62 0.03 245);
-  --accent: oklch(0.24 0.03 250);
-  --accent-foreground: oklch(0.97 0.01 240);
-  --border: oklch(0.30 0.02 250 / 50%);
-  --input: oklch(0.22 0.02 250);
-  --ring: oklch(0.72 0.12 250);
-  --sidebar: oklch(0.16 0.02 250);
-  --sidebar-foreground: oklch(0.97 0.01 240);
-  --ui-modal-shadow: 0 36px 70px -24px oklch(0.02 0.01 260 / 0.7);
-  --ui-modal-overlay-bg: oklch(0.06 0.015 260 / 0.75);
+.dark [data-ui-style='nordic-air'],html.dark[data-ui-style='nordic-air'] {
+  --background: var(--c-canvas-dark);
+  --foreground: var(--c-gray-50);
+  --card: var(--c-canvas-dark);
+  --card-foreground: var(--c-gray-50);
+  --primary: var(--c-sky-dark);
+  --primary-foreground: var(--c-gray-50);
+  --secondary: var(--c-gray-700);
+  --muted: var(--c-gray-700);
+  --muted-foreground: var(--c-gray-400);
+  --accent: var(--c-gray-700);
+  --accent-foreground: var(--c-gray-50);
+  --border: var(--c-gray-700);
+  --input: var(--c-gray-700);
+  --ring: var(--c-sky-dark);
+  --sidebar: var(--c-canvas-dark);
+  --logo-surface: var(--c-canvas-dark);
+  --topbar-foreground: var(--sidebar-foreground);
+  --topbar-muted-foreground: color-mix(in srgb, var(--sidebar-foreground) 70%, transparent);
+  --topbar-border-alpha: 8%;
+  --sidebar-foreground: var(--c-gray-50);
+  --sidebar-primary: var(--c-sky-dark);
+  --sidebar-primary-foreground: var(--c-gray-700);
+  --sidebar-accent: var(--c-gray-700);
+  --sidebar-accent-foreground: var(--c-gray-50);
+  --sidebar-border: var(--c-gray-700);
+  --sidebar-ring: var(--c-sky-light);
+  --ui-modal-shadow: 0 36px 70px -24px var(--c-shadow-air-d);
+  --ui-modal-overlay-bg: var(--c-canvas-dark);
+  /* Glass opacity — dark mode */
+  --glass-sidebar-top: 8%;
+  --glass-sidebar-bottom: 2%;
+  --glass-sidebar-shine: 8%;
+  --glass-topbar-top: 6%;
+  --glass-topbar-bottom: 2%;
+  --glass-chip-top: 5%;
+  --glass-chip-bottom: 1%;
+  --glass-chip-hover-top: 8%;
+  --glass-chip-hover-bottom: 2%;
+  --glass-action-top: 4%;
+  --glass-action-bottom: 1%;
+  --glass-action-hover-top: 8%;
+  --glass-action-hover-bottom: 2%;
+  --glass-flyout: 90%;
 }
 
-/* --- Pastel dream: cuerpo suave, rejilla muy separada, modal etéreo --- */
-[data-ui-style-skin='pastel-dream'],
-html[data-ui-style='pastel-dream'] {
-  --font-app-sans: var(--font-quicksand), ui-sans-serif, system-ui, sans-serif;
-  --font-app-heading: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
-  --radius: 1.45rem;
-  --background: oklch(0.97 0.03 280);
-  --foreground: oklch(0.28 0.06 280);
-  --card: oklch(0.99 0.025 290);
-  --card-foreground: oklch(0.28 0.06 280);
-  --primary: oklch(0.6 0.14 200);
-  --primary-foreground: oklch(0.99 0.02 200);
-  --secondary: oklch(0.94 0.04 290);
-  --muted: oklch(0.92 0.04 285);
-  --muted-foreground: oklch(0.48 0.06 285);
-  --accent: oklch(0.9 0.08 310);
-  --accent-foreground: oklch(0.3 0.08 300);
-  --border: oklch(0.88 0.05 285);
-  --input: oklch(0.88 0.05 285);
-  --ring: oklch(0.6 0.14 200);
-  --sidebar: oklch(0.96 0.035 288);
-  --sidebar-primary: oklch(0.6 0.14 200);
-  --sidebar-accent: oklch(0.92 0.06 295);
-  --ui-font-size-body: 0.875rem;
-  --ui-leading-body: 1.72;
-  --ui-tracking-body: 0.035em;
-  --ui-heading-weight: 700;
-  --ui-heading-tracking: -0.02em;
-  --ui-heading-leading: 1.28;
-  --ui-heading-size: clamp(1.35rem, 1.2rem + 0.45vw, 1.65rem);
-  --app-main-grid-gap: 2rem;
-  --ui-modal-radius: 1.65rem;
-  --ui-modal-padding: 2.1rem;
-  --ui-modal-font-size: 0.875rem;
-  --ui-modal-leading: 1.72;
-  --ui-modal-tracking: 0.025em;
-  --ui-modal-border-width: 1px;
-  --ui-modal-shadow:
-    0 32px 64px -20px oklch(0.55 0.12 290 / 0.22), 0 0 0 1px oklch(0.95 0.04 300 / 0.5);
-  --ui-modal-backdrop: blur(10px);
-  --ui-modal-overlay-bg: oklch(0.45 0.1 300 / 0.35);
+[data-ui-style='nordic-air'] .premium-bg-mesh, html[data-ui-style='nordic-air'] .premium-bg-mesh {
+  background-image:
+    radial-gradient(ellipse 80% 70% at 10% 15%, color-mix(in srgb, var(--c-violet) 22%, transparent), transparent 55%),
+    radial-gradient(ellipse 70% 60% at 90% 10%, color-mix(in srgb, var(--c-sky-light) 18%, transparent), transparent 50%),
+    radial-gradient(ellipse 80% 70% at 50% 95%, color-mix(in srgb, var(--c-pink) 16%, transparent), transparent 55%),
+    radial-gradient(ellipse 60% 50% at 95% 85%, color-mix(in srgb, var(--st-success) 12%, transparent), transparent 45%),
+    radial-gradient(ellipse 60% 50% at 25% 65%, color-mix(in srgb, var(--c-orange) 10%, transparent), transparent 45%),
+    radial-gradient(ellipse 50% 40% at 70% 40%, color-mix(in srgb, var(--st-info) 8%, transparent), transparent 40%);
 }
 
-.dark [data-ui-style-skin='pastel-dream'],
-html.dark[data-ui-style='pastel-dream'] {
-  --background: oklch(0.18 0.04 285);
-  --foreground: oklch(0.96 0.03 290);
-  --card: oklch(0.22 0.045 290);
-  --primary: oklch(0.72 0.12 200);
-  --muted: oklch(0.26 0.04 285);
-  --border: oklch(0.94 0.03 290 / 14%);
-  --sidebar: oklch(0.2 0.045 288);
-  --ui-modal-shadow: 0 40px 80px -28px oklch(0.15 0.06 300 / 0.55);
+.dark [data-ui-style='nordic-air'] .premium-bg-mesh, html.dark[data-ui-style='nordic-air'] .premium-bg-mesh {
+  background-image:
+    radial-gradient(ellipse 80% 70% at 10% 15%, color-mix(in srgb, var(--c-violet) 12%, transparent), transparent 55%),
+    radial-gradient(ellipse 70% 60% at 90% 10%, color-mix(in srgb, var(--c-sky-light) 10%, transparent), transparent 50%),
+    radial-gradient(ellipse 80% 70% at 50% 95%, color-mix(in srgb, var(--c-pink) 8%, transparent), transparent 55%),
+    radial-gradient(ellipse 60% 50% at 95% 85%, color-mix(in srgb, var(--st-success) 6%, transparent), transparent 45%),
+    radial-gradient(ellipse 60% 50% at 25% 65%, color-mix(in srgb, var(--c-orange) 5%, transparent), transparent 45%),
+    radial-gradient(ellipse 50% 40% at 70% 40%, color-mix(in srgb, var(--st-info) 6%, transparent), transparent 40%);
 }
 
-/* --- Bubble play: formas redondeadas, modal grueso, rejilla media-alta --- */
-[data-ui-style-skin='bubble-play'],
-html[data-ui-style='bubble-play'] {
-  --font-app-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
-  --font-app-heading: var(--font-fredoka), ui-sans-serif, system-ui, sans-serif;
-  --radius: 1.85rem;
-  --background: oklch(0.985 0.02 330);
-  --foreground: oklch(0.22 0.06 310);
-  --card: oklch(1 0.025 325);
-  --card-foreground: oklch(0.22 0.06 310);
-  --primary: oklch(0.63 0.22 350);
-  --primary-foreground: oklch(0.99 0.01 330);
-  --secondary: oklch(0.94 0.04 330);
-  --muted: oklch(0.93 0.04 325);
-  --muted-foreground: oklch(0.45 0.07 315);
-  --accent: oklch(0.9 0.08 340);
-  --accent-foreground: oklch(0.25 0.08 310);
-  --border: oklch(0.88 0.06 330);
-  --input: oklch(0.88 0.06 330);
-  --ring: oklch(0.63 0.22 350);
-  --sidebar: oklch(0.97 0.03 328);
-  --sidebar-primary: oklch(0.63 0.22 350);
-  --sidebar-accent: oklch(0.93 0.06 335);
+html[data-ui-style='nordic-air'] body {
+  background-image:
+    radial-gradient(ellipse 80% 50% at 20% 0%, color-mix(in srgb, var(--primary) 8%, transparent) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 50% at 80% 20%, color-mix(in srgb, var(--primary) 6%, transparent) 0%, transparent 50%),
+    radial-gradient(ellipse 70% 60% at 50% 100%, color-mix(in srgb, var(--primary) 5%, transparent) 0%, transparent 50%);
+}
+
+html.dark[data-ui-style='nordic-air'] body {
+  background-image:
+    radial-gradient(ellipse 80% 50% at 20% 0%, color-mix(in srgb, var(--primary) 14%, transparent) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 50% at 80% 20%, color-mix(in srgb, var(--primary) 10%, transparent) 0%, transparent 50%),
+    radial-gradient(ellipse 70% 60% at 50% 100%, color-mix(in srgb, var(--primary) 8%, transparent) 0%, transparent 50%);
+}
+
+html[data-ui-style='nordic-air'] .premium-orbs::before {
+  background-image:
+    radial-gradient(circle 180px at 15% 25%, color-mix(in srgb, var(--c-violet) 35%, transparent), transparent 70%),
+    radial-gradient(circle 220px at 80% 20%, color-mix(in srgb, var(--c-sky-light) 30%, transparent), transparent 70%),
+    radial-gradient(circle 200px at 60% 80%, color-mix(in srgb, var(--c-pink) 25%, transparent), transparent 70%),
+    radial-gradient(circle 160px at 30% 70%, color-mix(in srgb, var(--st-success) 18%, transparent), transparent 70%);
+}
+
+html.dark[data-ui-style='nordic-air'] .premium-orbs::before {
+  background-image:
+    radial-gradient(circle 180px at 15% 25%, color-mix(in srgb, var(--c-violet) 18%, transparent), transparent 70%),
+    radial-gradient(circle 220px at 80% 20%, color-mix(in srgb, var(--c-sky-light) 15%, transparent), transparent 70%),
+    radial-gradient(circle 200px at 60% 80%, color-mix(in srgb, var(--c-pink) 12%, transparent), transparent 70%),
+    radial-gradient(circle 160px at 30% 70%, color-mix(in srgb, var(--st-success) 8%, transparent), transparent 70%);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * Neon Skin — Skin basado en Stitch Liquid Glass Enterprise
+ * Fondo atmosférico animado, glass panels translúcidos,
+ * topbar transparente, cards con glow footer.
+ * Paleta: deep navy (#0f1418) + sky blue (#89ceff) + teal (#44e2cd)
+ * ═══════════════════════════════════════════════════════════════ */
+
+[data-ui-style='fluid-aurora'],html[data-ui-style='fluid-aurora'] {
+  --font-app-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-app-heading: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+  --radius: 0.5rem;
+  --background: var(--c-aurora-bg);
+  --foreground: var(--c-aurora-foreground);
+  --card: var(--c-aurora-surface);
+  --card-foreground: var(--c-aurora-foreground);
+  --primary: var(--c-aurora-primary);
+  --primary-foreground: var(--c-aurora-primary-fg);
+  --secondary: var(--c-aurora-secondary);
+  --secondary-foreground: var(--c-aurora-secondary-fg);
+  --muted: var(--c-aurora-surface-high);
+  --muted-foreground: var(--c-aurora-muted);
+  --accent: var(--c-aurora-accent);
+  --accent-foreground: var(--c-aurora-primary-fg);
+  --border: var(--c-aurora-glass-border);
+  --input: var(--c-aurora-glass-input);
+  --ring: var(--c-aurora-primary);
+  --sidebar: var(--c-aurora-surface-low);
+  --logo-surface: var(--c-aurora-surface);
+  --topbar-foreground: var(--c-aurora-foreground);
+  --topbar-muted-foreground: var(--c-aurora-muted);
+  --topbar-border-alpha: 8%;
+  --sidebar-foreground: var(--c-aurora-foreground);
+  --sidebar-primary: var(--c-aurora-primary);
+  --sidebar-primary-foreground: var(--c-aurora-primary-fg);
+  --sidebar-accent: var(--c-aurora-surface-high);
+  --sidebar-accent-foreground: var(--c-aurora-primary);
+  --sidebar-border: var(--c-aurora-glass-border);
+  --sidebar-ring: var(--c-aurora-primary);
+  --sidebar-active-bg: #0ea5e9;
+  --sidebar-active-color: #003751;
+  --sidebar-active-border: transparent;
+  --sidebar-active-shadow: 0 0 15px rgba(14, 165, 233, 0.3);
   --ui-font-size-body: 0.9375rem;
-  --ui-leading-body: 1.58;
-  --ui-tracking-body: 0.01em;
-  --ui-heading-weight: 700;
-  --ui-heading-tracking: -0.015em;
-  --ui-heading-leading: 1.18;
-  --ui-heading-size: clamp(1.4rem, 1.25rem + 0.5vw, 1.75rem);
-  --app-main-grid-gap: 1.75rem;
-  --ui-modal-radius: 2.25rem;
-  --ui-modal-padding: 2.25rem;
-  --ui-modal-font-size: 0.9375rem;
-  --ui-modal-leading: 1.55;
-  --ui-modal-tracking: 0.012em;
-  --ui-modal-border-width: 3px;
-  --ui-modal-shadow: 0 40px 56px -16px oklch(0.55 0.18 320 / 0.35);
-  --ui-modal-backdrop: blur(8px);
-  --ui-modal-overlay-bg: oklch(0.4 0.12 320 / 0.38);
-}
-
-.dark [data-ui-style-skin='bubble-play'],
-html.dark[data-ui-style='bubble-play'] {
-  --background: oklch(0.17 0.05 310);
-  --foreground: oklch(0.97 0.03 325);
-  --card: oklch(0.21 0.055 315);
-  --primary: oklch(0.74 0.2 350);
-  --muted: oklch(0.26 0.05 315);
-  --border: oklch(0.94 0.04 325 / 14%);
-  --sidebar: oklch(0.19 0.055 312);
-}
-
-/* --- Kinetic pop: compacto, denso, modal afilado --- */
-[data-ui-style-skin='kinetic-pop'],
-html[data-ui-style='kinetic-pop'] {
-  --font-app-sans: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
-  --font-app-heading: var(--font-syne), var(--font-space-grotesk), ui-sans-serif, sans-serif;
-  --radius: 0.45rem;
-  --background: oklch(0.99 0.02 300);
-  --foreground: oklch(0.16 0.05 300);
-  --card: oklch(1 0.025 305);
-  --card-foreground: oklch(0.16 0.05 300);
-  --primary: oklch(0.72 0.28 145);
-  --primary-foreground: oklch(0.14 0.05 300);
-  --secondary: oklch(0.94 0.04 300);
-  --muted: oklch(0.92 0.05 305);
-  --muted-foreground: oklch(0.4 0.08 300);
-  --accent: oklch(0.88 0.12 330);
-  --accent-foreground: oklch(0.18 0.06 310);
-  --border: oklch(0.82 0.06 300);
-  --input: oklch(0.82 0.06 300);
-  --ring: oklch(0.72 0.28 145);
-  --sidebar: oklch(0.96 0.03 302);
-  --sidebar-primary: oklch(0.72 0.28 145);
-  --sidebar-accent: oklch(0.9 0.08 310);
-  --ui-font-size-body: 0.8125rem;
-  --ui-leading-body: 1.45;
-  --ui-tracking-body: -0.025em;
-  --ui-heading-weight: 700;
-  --ui-heading-tracking: -0.065em;
-  --ui-heading-leading: 1.12;
-  --ui-heading-size: clamp(1.2rem, 1rem + 0.55vw, 1.55rem);
-  --app-main-grid-gap: 0.65rem;
-  --ui-modal-radius: 0.35rem;
-  --ui-modal-padding: 1.25rem;
-  --ui-modal-font-size: 0.8125rem;
-  --ui-modal-leading: 1.45;
-  --ui-modal-tracking: -0.03em;
-  --ui-modal-border-width: 1px;
-  --ui-modal-shadow: 0 16px 40px -8px oklch(0.25 0.2 300 / 0.45);
-  --ui-modal-backdrop: blur(3px);
-  --ui-modal-overlay-bg: oklch(0.12 0.05 300 / 0.65);
-}
-
-.dark [data-ui-style-skin='kinetic-pop'],
-html.dark[data-ui-style='kinetic-pop'] {
-  --background: oklch(0.14 0.04 300);
-  --foreground: oklch(0.97 0.02 300);
-  --card: oklch(0.18 0.05 305);
-  --primary: oklch(0.78 0.26 145);
-  --muted: oklch(0.24 0.05 305);
-  --border: oklch(0.94 0.03 300 / 15%);
-  --sidebar: oklch(0.16 0.045 302);
-}
-
-/* --- Neo playful: titulares display, rejilla intermedia, modal con personalidad --- */
-[data-ui-style-skin='neo-playful'],
-html[data-ui-style='neo-playful'] {
-  --font-app-sans: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
-  --font-app-heading: var(--font-unbounded), ui-sans-serif, system-ui, sans-serif;
-  --radius: 1.15rem;
-  --background: oklch(0.97 0.025 30);
-  --foreground: oklch(0.2 0.06 30);
-  --card: oklch(1 0.02 28);
-  --card-foreground: oklch(0.2 0.06 30);
-  --primary: oklch(0.55 0.22 15);
-  --primary-foreground: oklch(0.99 0.01 15);
-  --secondary: oklch(0.93 0.04 30);
-  --muted: oklch(0.92 0.04 28);
-  --muted-foreground: oklch(0.45 0.06 30);
-  --accent: oklch(0.88 0.1 40);
-  --accent-foreground: oklch(0.2 0.06 30);
-  --border: oklch(0.86 0.06 30);
-  --input: oklch(0.86 0.06 30);
-  --ring: oklch(0.55 0.22 15);
-  --sidebar: oklch(0.96 0.03 28);
-  --sidebar-primary: oklch(0.55 0.22 15);
-  --sidebar-accent: oklch(0.9 0.06 32);
-  --ui-font-size-body: 0.875rem;
   --ui-leading-body: 1.6;
-  --ui-tracking-body: 0.005em;
-  --ui-heading-weight: 700;
-  --ui-heading-tracking: -0.045em;
-  --ui-heading-leading: 1.18;
-  --ui-heading-size: clamp(1.3rem, 1.15rem + 0.5vw, 1.6rem);
-  --app-main-grid-gap: 1.25rem;
-  --ui-modal-radius: 1.35rem;
+  --ui-tracking-body: 0.01em;
+  --ui-heading-weight: 600;
+  --ui-heading-tracking: -0.02em;
+  --ui-heading-leading: 1.3;
+  --ui-heading-size: clamp(1.25rem, 1.1rem + 0.4vw, 1.5rem);
+  --app-main-grid-gap: 1rem;
+  --ui-modal-radius: 1rem;
   --ui-modal-padding: 1.75rem;
   --ui-modal-font-size: 0.875rem;
   --ui-modal-leading: 1.6;
   --ui-modal-tracking: 0.01em;
   --ui-modal-border-width: 1px;
-  --ui-modal-shadow: 0 28px 52px -16px oklch(0.4 0.14 25 / 0.32);
-  --ui-modal-backdrop: blur(7px);
-  --ui-modal-overlay-bg: oklch(0.35 0.1 25 / 0.4);
+  --ui-modal-shadow: 0 36px 70px -24px var(--c-aurora-shadow);
+  --ui-modal-backdrop: blur(12px);
+  --ui-modal-overlay-bg: var(--c-aurora-overlay);
+  /* Glass opacity — Neon Skin: translúcido como Stitch */
+  --glass-sidebar-top: 40%;
+  --glass-sidebar-bottom: 40%;
+  --glass-sidebar-shine: 10%;
+  --glass-topbar-top: 0%;
+  --glass-topbar-bottom: 0%;
+  --glass-chip-top: 10%;
+  --glass-chip-bottom: 3%;
+  --glass-chip-hover-top: 15%;
+  --glass-chip-hover-bottom: 4%;
+  --glass-action-top: 8%;
+  --glass-action-bottom: 2%;
+  --glass-action-hover-top: 12%;
+  --glass-action-hover-bottom: 3%;
+  --glass-flyout: 90%;
 }
 
-.dark [data-ui-style-skin='neo-playful'],
-html.dark[data-ui-style='neo-playful'] {
-  --background: oklch(0.17 0.04 25);
-  --foreground: oklch(0.96 0.025 28);
-  --card: oklch(0.21 0.045 28);
-  --primary: oklch(0.72 0.2 15);
-  --muted: oklch(0.26 0.045 28);
-  --border: oklch(0.94 0.03 28 / 14%);
-  --sidebar: oklch(0.19 0.045 26);
-  --ui-modal-shadow: 0 36px 64px -22px oklch(0.15 0.06 25 / 0.55);
+.dark [data-ui-style='fluid-aurora'],html.dark[data-ui-style='fluid-aurora'] {
+  --background: var(--c-aurora-bg);
+  --foreground: var(--c-aurora-foreground);
+  --card: var(--c-aurora-surface);
+  --card-foreground: var(--c-aurora-foreground);
+  --primary: var(--c-aurora-primary);
+  --primary-foreground: var(--c-aurora-primary-fg);
+  --secondary: var(--c-aurora-secondary);
+  --muted: var(--c-aurora-surface-high);
+  --muted-foreground: var(--c-aurora-muted);
+  --accent: var(--c-aurora-accent);
+  --border: var(--c-aurora-glass-border);
+  --input: var(--c-aurora-glass-input);
+  --ring: var(--c-aurora-primary);
+  --sidebar: var(--c-aurora-surface-low);
+  --logo-surface: var(--c-aurora-surface);
+  --topbar-foreground: var(--c-aurora-foreground);
+  --topbar-muted-foreground: var(--c-aurora-muted);
+  --topbar-border-alpha: 8%;
+  --sidebar-foreground: var(--c-aurora-foreground);
+  --sidebar-primary: var(--c-aurora-primary);
+  --sidebar-accent: var(--c-aurora-surface-high);
+  --sidebar-border: var(--c-aurora-glass-border);
+  --sidebar-ring: var(--c-aurora-primary);
+  --sidebar-active-bg: #0ea5e9;
+  --sidebar-active-color: #003751;
+  --sidebar-active-border: transparent;
+  --sidebar-active-shadow: 0 0 15px rgba(14, 165, 233, 0.3);
+  --ui-modal-shadow: 0 36px 70px -24px var(--c-aurora-shadow);
+  --ui-modal-overlay-bg: var(--c-aurora-overlay);
+  /* Glass opacity — dark mode: más translúcido */
+  --glass-sidebar-top: 40%;
+  --glass-sidebar-bottom: 40%;
+  --glass-sidebar-shine: 8%;
+  --glass-topbar-top: 0%;
+  --glass-topbar-bottom: 0%;
+  --glass-chip-top: 8%;
+  --glass-chip-bottom: 2%;
+  --glass-chip-hover-top: 12%;
+  --glass-chip-hover-bottom: 3%;
+  --glass-action-top: 6%;
+  --glass-action-bottom: 1%;
+  --glass-action-hover-top: 10%;
+  --glass-action-hover-bottom: 2%;
+  --glass-flyout: 90%;
 }
+
+/* ── Fondo aurora animado — radiales que se mueven lento ── */
+[data-ui-style='fluid-aurora'] .premium-bg-mesh,
+html[data-ui-style='fluid-aurora'] .premium-bg-mesh {
+  background-image:
+    radial-gradient(circle at 0% 0%, var(--c-aurora-leak-1), transparent 40%),
+    radial-gradient(circle at 100% 100%, var(--c-aurora-leak-2), transparent 40%),
+    radial-gradient(circle at 50% 50%, var(--c-aurora-leak-3), transparent 50%);
+  background-color: var(--c-aurora-bg);
+  background-size: 200% 200%;
+  animation: fluid-aurora-drift 15s ease infinite alternate;
+}
+
+.dark [data-ui-style='fluid-aurora'] .premium-bg-mesh,
+html.dark[data-ui-style='fluid-aurora'] .premium-bg-mesh {
+  background-image:
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--c-aurora-leak-1) 80%, transparent), transparent 40%),
+    radial-gradient(circle at 100% 100%, color-mix(in srgb, var(--c-aurora-leak-2) 80%, transparent), transparent 40%),
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--c-aurora-leak-3) 75%, transparent), transparent 50%);
+  background-color: var(--c-aurora-bg);
+  background-size: 200% 200%;
+  animation: fluid-aurora-drift 15s ease infinite alternate;
+}
+
+@keyframes fluid-aurora-drift {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 100%; }
+}
+
+html[data-ui-style='fluid-aurora'] body {
+  background-color: var(--c-aurora-bg);
+}
+html.dark[data-ui-style='fluid-aurora'] body {
+  background-color: var(--c-aurora-bg);
+}
+
+/* Orbs sutiles para profundidad */
+html[data-ui-style='fluid-aurora'] .premium-orbs::before {
+  background-image:
+    radial-gradient(circle 200px at 15% 25%, color-mix(in srgb, var(--c-aurora-leak-1) 53%, transparent), transparent 70%),
+    radial-gradient(circle 240px at 85% 20%, color-mix(in srgb, var(--c-aurora-leak-3) 75%, transparent), transparent 70%),
+    radial-gradient(circle 220px at 60% 80%, color-mix(in srgb, var(--c-aurora-leak-2) 42%, transparent), transparent 70%);
+}
+html.dark[data-ui-style='fluid-aurora'] .premium-orbs::before {
+  background-image:
+    radial-gradient(circle 200px at 15% 25%, color-mix(in srgb, var(--c-aurora-leak-1) 40%, transparent), transparent 70%),
+    radial-gradient(circle 240px at 85% 20%, color-mix(in srgb, var(--c-aurora-leak-3) 50%, transparent), transparent 70%),
+    radial-gradient(circle 220px at 60% 80%, color-mix(in srgb, var(--c-aurora-leak-2) 25%, transparent), transparent 70%);
+}
+
+/* ── Topbar transparente — sin cápsula, solo glass-panel en acciones ── */
+/* (definido más abajo con surface-container-low/40) */
+
+/* ── Glass panel translúcido — para cards y contenedores ── */
+[data-ui-style='fluid-aurora'] .glass-panel,
+html[data-ui-style='fluid-aurora'] .glass-panel {
+  background: var(--c-aurora-glass) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  border: 1px solid var(--c-aurora-glass-border) !important;
+  box-shadow: 0 8px 32px 0 var(--c-aurora-shadow) !important;
+}
+
+/* ── KPI Cards — concepto NEON: glass + glow + halo de color ── */
+[data-ui-style='fluid-aurora'] .kpi-card,
+html[data-ui-style='fluid-aurora'] .kpi-card {
+  background: rgba(30, 41, 59, 0.4) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 0 !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2) !important;
+  overflow: hidden;
+}
+
+/* Halo de color en esquina superior derecha — blob neon */
+[data-ui-style='fluid-aurora'] .kpi-card::after,
+html[data-ui-style='fluid-aurora'] .kpi-card::after {
+  content: "";
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  background: var(--kpi-glow, rgba(137, 206, 255, 0.15));
+  filter: blur(48px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Hover: intensifica el halo */
+[data-ui-style='fluid-aurora'] .kpi-card:hover,
+html[data-ui-style='fluid-aurora'] .kpi-card:hover {
+  transform: translateY(-2px) scale(1.02) !important;
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.3), 0 0 30px var(--kpi-glow, rgba(137, 206, 255, 0.2)) !important;
+}
+
+[data-ui-style='fluid-aurora'] .kpi-card:hover::after,
+html[data-ui-style='fluid-aurora'] .kpi-card:hover::after {
+  background: var(--kpi-glow, rgba(137, 206, 255, 0.25));
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * Neon Skin — Overrides de componentes
+ * Colores exactos del design system Stitch Liquid Glass Enterprise
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* ── Sidebar (.sidebar-glass): rectangular, pegado a los bordes ── */
+@layer components {
+  html[data-ui-style='fluid-aurora'] .sidebar-glass {
+    position: sticky !important;
+    top: 0 !important;
+    width: 220px !important;
+    flex-grow: 1 !important;
+    flex-shrink: 1 !important;
+    flex-basis: 0% !important;
+    margin-top: -8px !important;
+    margin-bottom: -8px !important;
+    border-radius: 0 !important;
+    border: 0 !important;
+    border-right: 1px solid rgba(137, 206, 255, 0.05) !important;
+    background: rgba(27, 32, 36, 0.6) !important; /* surface-container/60 */
+    backdrop-filter: blur(24px) !important;
+    -webkit-backdrop-filter: blur(24px) !important;
+    box-shadow: none !important;
+  }
+
+  [data-ui-style='fluid-aurora'] .sidebar-glass::before,
+  html[data-ui-style='fluid-aurora'] .sidebar-glass::before {
+    display: none !important;
+    border-radius: 0 !important;
+    content: none !important;
+  }
+}
+
+/* ── Items del menú: tipografía global, solo cambia superficie ── */
+[data-ui-style='fluid-aurora'] .sidebar-glass .sidebar-item,
+html[data-ui-style='fluid-aurora'] .sidebar-glass .sidebar-item {
+  border-radius: 12px !important;
+  background: transparent !important;
+  color: #bec8d2 !important; /* on-surface-variant */
+  transform: none !important;
+}
+
+[data-ui-style='fluid-aurora'] .sidebar-glass .sidebar-item:hover,
+html[data-ui-style='fluid-aurora'] .sidebar-glass .sidebar-item:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #89ceff !important; /* primary */
+}
+
+[data-ui-style='fluid-aurora'] .sidebar-glass .sidebar-item:hover svg,
+html[data-ui-style='fluid-aurora'] .sidebar-glass .sidebar-item:hover svg {
+  color: #89ceff !important;
+}
+
+/* Flyout items */
+[data-ui-style='fluid-aurora'] .sidebar-flyout-item:hover,
+html[data-ui-style='fluid-aurora'] .sidebar-flyout-item:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #89ceff !important;
+}
+[data-ui-style='fluid-aurora'] .sidebar-flyout-item:hover svg,
+html[data-ui-style='fluid-aurora'] .sidebar-flyout-item:hover svg {
+  color: #89ceff !important;
+}
+
+/* Submenú seleccionado: el mismo azul sólido del menú activo */
+html[data-ui-style='fluid-aurora'] .sidebar-flyout-item-active,
+html[data-ui-style='fluid-aurora'] .sidebar-flyout-item-active:hover {
+  background: #0ea5e9 !important;
+  border: 1px solid #0ea5e9 !important;
+  color: #003751 !important;
+  border-radius: 8px !important;
+}
+
+html[data-ui-style='fluid-aurora'] .sidebar-flyout-item-active svg,
+html[data-ui-style='fluid-aurora'] .sidebar-flyout-item-active:hover svg {
+  color: #003751 !important;
+}
+
+/* ── Topbar: surface-container-low/40 + borde outline-variant/20 ── */
+@layer components {
+  [data-ui-style='fluid-aurora'] .topbar,
+  html[data-ui-style='fluid-aurora'] .topbar {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+  }
+
+  [data-ui-style='fluid-aurora'] .topbar-inner,
+  html[data-ui-style='fluid-aurora'] .topbar-inner {
+    height: 48px !important;
+    padding: 0 16px !important;
+    background: rgba(23, 28, 32, 0.4) !important; /* surface-container-low/40 */
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 0 !important;
+    border-bottom: 1px solid rgba(62, 72, 80, 0.2) !important; /* outline-variant/20 */
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  [data-ui-style='fluid-aurora'] .topbar-inner::before,
+  html[data-ui-style='fluid-aurora'] .topbar-inner::before,
+  [data-ui-style='fluid-aurora'] .topbar-inner::after,
+  html[data-ui-style='fluid-aurora'] .topbar-inner::after {
+    display: none !important;
+  }
+
+  [data-ui-style='fluid-aurora'] .topbar-lens,
+  html[data-ui-style='fluid-aurora'] .topbar-lens {
+    display: none !important;
+  }
+
+  /* Chips y acciones del topbar: transparentes, sin glass */
+  [data-ui-style='fluid-aurora'] .topbar-inner .topbar-action,
+  html[data-ui-style='fluid-aurora'] .topbar-inner .topbar-action,
+  [data-ui-style='fluid-aurora'] .topbar-inner .topbar-chip,
+  html[data-ui-style='fluid-aurora'] .topbar-inner .topbar-chip {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+  }
+}
+
+/* ── Botones: surface-container-highest (#30353a) + border white/10 ── */
+[data-ui-style='fluid-aurora'] .pg-btn-platinum,
+html[data-ui-style='fluid-aurora'] .pg-btn-platinum {
+  background: #30353a !important; /* surface-container-highest */
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+  color: #dee3e9 !important; /* on-surface */
+  box-shadow: none !important;
+}
+
+[data-ui-style='fluid-aurora'] .pg-btn-platinum:hover:not(:disabled),
+html[data-ui-style='fluid-aurora'] .pg-btn-platinum:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  color: #dee3e9 !important;
+}
+
+/* ── Glass panel: rgba(30, 41, 59, 0.7) + blur(20px) ── */
+[data-ui-style='fluid-aurora'] .glass-panel,
+html[data-ui-style='fluid-aurora'] .glass-panel {
+  background: rgba(30, 41, 59, 0.7) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), inset 0 1px 1px rgba(255, 255, 255, 0.05) !important;
+}
+
+/* ── Contenedor de grilla: glass-panel recto ── */
+@layer components {
+  html[data-ui-style='fluid-aurora'] .app-data-table-wrap {
+    border-radius: 0 !important;
+    border-top-left-radius: 0 !important;
+    border-top-right-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    background: rgba(30, 41, 59, 0.7) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.05) !important;
+  }
+
+  html[data-ui-style='fluid-aurora'] .app-data-table-wrap::before {
+    display: none !important;
+  }
+
+  html[data-ui-style='fluid-aurora'] .app-grid-header {
+    border-radius: 0 !important;
+  }
+
+  /* ── Cabecera de grilla: surface-container-high/90 + blur ── */
+  html[data-ui-style='fluid-aurora'] .app-data-table,
+  html[data-ui-style='fluid-aurora'] .app-data-table thead,
+  html[data-ui-style='fluid-aurora'] .app-data-table thead tr,
+  html[data-ui-style='fluid-aurora'] .app-data-table th,
+  html[data-ui-style='fluid-aurora'] .app-data-table th:first-child,
+  html[data-ui-style='fluid-aurora'] .app-data-table th:last-child {
+    background: rgba(37, 43, 47, 0.9) !important; /* surface-container-high/90 */
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border-radius: 0 !important;
+    border-top-left-radius: 0 !important;
+    border-top-right-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  html[data-ui-style='fluid-aurora'] .app-data-table th {
+    font-family: var(--font-app-sans) !important;
+    font-size: var(--app-grid-header-size) !important;
+    font-weight: 600 !important;
+    line-height: 1.25 !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+    color: #bec8d2 !important; /* on-surface-variant */
+  }
+
+  /* ── Filas de grilla: hover blanco sutil ── */
+  html[data-ui-style='fluid-aurora'] .app-data-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.02) !important;
+  }
+}
+
+/* ── Aurora: esquinas rectas en paneles, modales, cards, alertas ──
+   Override global dentro de @layer components para ganar la cascada.
+   Se excluyen chips, badges, pills, avatares y botones circulares. */
+@layer components {
+  html[data-ui-style='fluid-aurora'] .glass-panel,
+  html[data-ui-style='fluid-aurora'] .app-panel,
+  html[data-ui-style='fluid-aurora'] .kpi-card,
+  html[data-ui-style='fluid-aurora'] .app-modal,
+  html[data-ui-style='fluid-aurora'] .app-modal-content,
+  html[data-ui-style='fluid-aurora'] .app-modal-body,
+  html[data-ui-style='fluid-aurora'] .app-modal-header,
+  html[data-ui-style='fluid-aurora'] .app-modal-footer,
+  html[data-ui-style='fluid-aurora'] [role='dialog'],
+  html[data-ui-style='fluid-aurora'] .modal-content,
+  html[data-ui-style='fluid-aurora'] .app-card,
+  html[data-ui-style='fluid-aurora'] .app-alert,
+  html[data-ui-style='fluid-aurora'] .app-section,
+  html[data-ui-style='fluid-aurora'] .app-section-title,
+  html[data-ui-style='fluid-aurora'] .app-data-table-wrap,
+  html[data-ui-style='fluid-aurora'] .app-grid-header,
+  html[data-ui-style='fluid-aurora'] .app-input,
+  html[data-ui-style='fluid-aurora'] .app-select,
+  html[data-ui-style='fluid-aurora'] .app-textarea,
+  html[data-ui-style='fluid-aurora'] .app-tab-bar,
+  html[data-ui-style='fluid-aurora'] .app-tab-bar-inner,
+  html[data-ui-style='fluid-aurora'] .app-sub-tab-bar,
+  html[data-ui-style='fluid-aurora'] .app-page,
+  html[data-ui-style='fluid-aurora'] .app-page-title,
+  html[data-ui-style='fluid-aurora'] .app-grid-icon,
+  html[data-ui-style='fluid-aurora'] .app-email-card,
+  html[data-ui-style='fluid-aurora'] .app-email-inner-card,
+  html[data-ui-style='fluid-aurora'] .app-email-modal-body,
+  html[data-ui-style='fluid-aurora'] .app-bulk-card,
+  html[data-ui-style='fluid-aurora'] .app-bulk-mapper-table-wrap,
+  html[data-ui-style='fluid-aurora'] .bulk-mapper-table-wrap,
+  html[data-ui-style='fluid-aurora'] .bulk-value-mapper-table-wrap,
+  html[data-ui-style='fluid-aurora'] .report-pdf-viewer,
+  html[data-ui-style='fluid-aurora'] .scroll-box-sm,
+  html[data-ui-style='fluid-aurora'] .app-panel-inner,
+  html[data-ui-style='fluid-aurora'] .dash-chart-wrap,
+  html[data-ui-style='fluid-aurora'] .dash-gauge,
+  html[data-ui-style='fluid-aurora'] .glass-panel-inner,
+  html[data-ui-style='fluid-aurora'] .sidebar-flyout,
+  html[data-ui-style='fluid-aurora'] .sidebar-flyout-panel {
+    border-radius: 0 !important;
+  }
+
+  /* Shadcn Dialog / Sheet / AlertDialog */
+  html[data-ui-style='fluid-aurora'] [data-slot='dialog-content'],
+  html[data-ui-style='fluid-aurora'] [data-slot='sheet-content'],
+  html[data-ui-style='fluid-aurora'] [data-slot='alert-dialog-content'],
+  html[data-ui-style='fluid-aurora'] [data-slot='popover-content'],
+  html[data-ui-style='fluid-aurora'] [data-slot='tooltip-content'],
+  html[data-ui-style='fluid-aurora'] [data-slot='dropdown-menu-content'],
+  html[data-ui-style='fluid-aurora'] [data-slot='select-content'],
+  html[data-ui-style='fluid-aurora'] [data-slot='hover-card-content'] {
+    border-radius: 0 !important;
+  }
+
+  /* Alert / Warning containers */
+  html[data-ui-style='fluid-aurora'] [data-slot='alert'],
+  html[data-ui-style='fluid-aurora'] .alert,
+  html[data-ui-style='fluid-aurora'] .alert-warning,
+  html[data-ui-style='fluid-aurora'] .alert-error,
+  html[data-ui-style='fluid-aurora'] .alert-info,
+  html[data-ui-style='fluid-aurora'] .alert-success {
+    border-radius: 0 !important;
+  }
+
+  /* Cards de shadcn */
+  html[data-ui-style='fluid-aurora'] [data-slot='card'],
+  html[data-ui-style='fluid-aurora'] .card {
+    border-radius: 0 !important;
+  }
+
+  /* ── Iconos del dashboard: circulares con glow neon ── */
+  html[data-ui-style='fluid-aurora'] .kpi-icon {
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 50% !important;
+    background: color-mix(in srgb, var(--kpi-color, #89ceff) 15%, transparent) !important;
+    border: 1px solid color-mix(in srgb, var(--kpi-color, #89ceff) 25%, transparent) !important;
+    box-shadow: 0 0 20px color-mix(in srgb, var(--kpi-color, #89ceff) 30%, transparent) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    color: var(--kpi-color, #89ceff) !important;
+  }
+
+  html[data-ui-style='fluid-aurora'] .kpi-icon svg {
+    color: var(--kpi-color, #89ceff) !important;
+  }
+
+  /* Colores neon por tipo de KPI */
+  html[data-ui-style='fluid-aurora'] .kpi-icon-blue   { --kpi-color: #00f2ff; }
+  html[data-ui-style='fluid-aurora'] .kpi-icon-sky    { --kpi-color: #38bdf8; }
+  html[data-ui-style='fluid-aurora'] .kpi-icon-amber  { --kpi-color: #f59e0b; }
+  html[data-ui-style='fluid-aurora'] .kpi-icon-emerald { --kpi-color: #10b981; }
+  html[data-ui-style='fluid-aurora'] .kpi-icon-violet { --kpi-color: #a855f7; }
+  html[data-ui-style='fluid-aurora'] .kpi-icon-pink   { --kpi-color: #ec4899; }
+  html[data-ui-style='fluid-aurora'] .kpi-icon-slate  { --kpi-color: #64748b; }
+
+  /* Anular los gradientes de fondo de kpi-icon */
+  html[data-ui-style='fluid-aurora'] .kpi-icon-blue,
+  html[data-ui-style='fluid-aurora'] .kpi-icon-amber,
+  html[data-ui-style='fluid-aurora'] .kpi-icon-emerald,
+  html[data-ui-style='fluid-aurora'] .kpi-icon-violet,
+  html[data-ui-style='fluid-aurora'] .kpi-icon-sky,
+  html[data-ui-style='fluid-aurora'] .kpi-icon-pink,
+  html[data-ui-style='fluid-aurora'] .kpi-icon-slate {
+    background-image: none !important;
+  }
+
+  /* ── Valores KPI: text-glow neon ── */
+  html[data-ui-style='fluid-aurora'] .kpi-value {
+    text-shadow: 0 0 15px color-mix(in srgb, var(--kpi-color, #89ceff) 60%, transparent) !important;
+  }
+
+  /* ── Glows neon por color de KPI (intensos para Aurora) ── */
+  html[data-ui-style='fluid-aurora'] .kpi-glow-blue    { --kpi-glow: rgba(0, 242, 255, 0.15) !important; --kpi-color: #00f2ff !important; }
+  html[data-ui-style='fluid-aurora'] .kpi-glow-amber   { --kpi-glow: rgba(245, 158, 11, 0.15) !important; --kpi-color: #f59e0b !important; }
+  html[data-ui-style='fluid-aurora'] .kpi-glow-emerald { --kpi-glow: rgba(16, 185, 129, 0.15) !important; --kpi-color: #10b981 !important; }
+  html[data-ui-style='fluid-aurora'] .kpi-glow-violet  { --kpi-glow: rgba(168, 85, 247, 0.15) !important; --kpi-color: #a855f7 !important; }
+  html[data-ui-style='fluid-aurora'] .kpi-glow-sky     { --kpi-glow: rgba(56, 189, 248, 0.15) !important; --kpi-color: #38bdf8 !important; }
+  html[data-ui-style='fluid-aurora'] .kpi-glow-pink    { --kpi-glow: rgba(236, 72, 153, 0.15) !important; --kpi-color: #ec4899 !important; }
+  html[data-ui-style='fluid-aurora'] .kpi-glow-slate   { --kpi-glow: rgba(100, 116, 139, 0.12) !important; --kpi-color: #64748b !important; }
+
+  /* ── Donut legend dots: colores neon ── */
+  html[data-ui-style='fluid-aurora'] .dash-legend-dot-scheduled { background: #38bdf8 !important; box-shadow: 0 0 10px rgba(56, 189, 248, 0.6) !important; }
+  html[data-ui-style='fluid-aurora'] .dash-legend-dot-active    { background: #f97316 !important; box-shadow: 0 0 10px rgba(249, 115, 22, 0.6) !important; }
+  html[data-ui-style='fluid-aurora'] .dash-legend-dot-completed { background: #10b981 !important; box-shadow: 0 0 10px rgba(16, 185, 129, 0.6) !important; }
+  html[data-ui-style='fluid-aurora'] .dash-legend-dot-cancelled { background: #f43f5e !important; box-shadow: 0 0 10px rgba(244, 63, 94, 0.6) !important; }
+
+  /* ── Donut center value: text-glow neon ── */
+  html[data-ui-style='fluid-aurora'] .nested-donut-center-value {
+    text-shadow: 0 0 20px rgba(0, 242, 255, 0.5) !important;
+  }
+}
+
+/* ── Grid icons: el base ya usa var(--primary) que se ajusta por tema ── */
+
+/* ── Tipografía idéntica a Play Skin ── */
+html[data-ui-style='fluid-aurora'] {
+  --font-app-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-app-heading: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+  --ui-font-size-body: 0.9375rem;
+  --ui-leading-body: 1.68;
+  --ui-tracking-body: 0.018em;
+  --ui-heading-weight: 600;
+  --ui-heading-tracking: -0.035em;
+  --ui-heading-leading: 1.22;
+  --ui-heading-size: clamp(1.25rem, 1.1rem + 0.4vw, 1.5rem);
+}
+
+/* ── Grilla cuadrada: el thead de Stitch no tiene esquinas redondeadas ── */
+@layer utilities {
+  html[data-ui-style='fluid-aurora'] .app-data-table-wrap,
+  html[data-ui-style='fluid-aurora'] .app-data-table,
+  html[data-ui-style='fluid-aurora'] .app-data-table thead,
+  html[data-ui-style='fluid-aurora'] .app-data-table thead tr,
+  html[data-ui-style='fluid-aurora'] .app-data-table th,
+  html[data-ui-style='fluid-aurora'] .app-data-table th:first-child,
+  html[data-ui-style='fluid-aurora'] .app-data-table th:last-child {
+    border-radius: 0 !important;
+    border-top-left-radius: 0 !important;
+    border-top-right-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+  }
+}
+
+/* El tamaño de la grilla y del menú se conserva sin overrides. */

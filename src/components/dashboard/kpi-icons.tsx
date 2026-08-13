@@ -1,75 +1,60 @@
 "use client";
 
 import Image from "next/image";
+import { useIsDarkTheme } from "@/hooks/use-is-dark-theme";
+
+interface KpiIconProps {
+  variant: "today" | "active" | "scheduled" | "completed" | "overdue" | "time";
+}
+
+const LIGHT_ICONS: Record<KpiIconProps["variant"], string> = {
+  today: "/icons/kpi-today.svg",
+  active: "/icons/kpi-active.svg",
+  scheduled: "/icons/kpi-scheduled.svg",
+  completed: "/icons/kpi-completed.svg",
+  overdue: "/icons/kpi-overdue.svg",
+  time: "/icons/kpi-time.svg",
+};
+
+const DARK_ICONS: Record<KpiIconProps["variant"], string> = {
+  today: "/icons/kpi-today-outline.svg",
+  active: "/icons/kpi-active-outline.svg",
+  scheduled: "/icons/kpi-scheduled-outline.svg",
+  completed: "/icons/kpi-completed-outline.svg",
+  overdue: "/icons/kpi-overdue-outline.svg",
+  time: "/icons/kpi-time-outline.svg",
+};
+
+export function KpiIcon({ variant }: KpiIconProps) {
+  const isDark = useIsDarkTheme();
+  const src = isDark ? DARK_ICONS[variant] : LIGHT_ICONS[variant];
+
+  return (
+    <Image
+      src={src}
+      alt=""
+      width={96}
+      height={96}
+      className={`h-24 w-24 ${isDark ? "kpi-icon-outline" : ""}`}
+    />
+  );
+}
 
 export function KpiTodayIcon() {
-  return (
-    <Image
-      src="/icons/kpi-today.svg"
-      alt="Inspecciones Hoy"
-      width={96}
-      height={96}
-      className="h-24 w-24"
-    />
-  );
+  return <KpiIcon variant="today" />;
 }
-
 export function KpiActiveIcon() {
-  return (
-    <Image
-      src="/icons/kpi-active.svg"
-      alt="En curso"
-      width={96}
-      height={96}
-      className="h-24 w-24"
-    />
-  );
+  return <KpiIcon variant="active" />;
 }
-
 export function KpiScheduledIcon() {
-  return (
-    <Image
-      src="/icons/kpi-scheduled.svg"
-      alt="Agendadas"
-      width={96}
-      height={96}
-      className="h-24 w-24"
-    />
-  );
+  return <KpiIcon variant="scheduled" />;
 }
-
 export function KpiCompletedIcon() {
-  return (
-    <Image
-      src="/icons/kpi-completed.svg"
-      alt="Completadas"
-      width={80}
-      height={80}
-      className="h-20 w-20"
-    />
-  );
+  return <KpiIcon variant="completed" />;
 }
-
 export function KpiOverdueIcon() {
-  return (
-    <Image
-      src="/icons/kpi-overdue.svg"
-      alt="Con retraso"
-      width={96}
-      height={96}
-      className="h-24 w-24"
-    />
-  );
+  return <KpiIcon variant="overdue" />;
 }
-
 export function KpiTimeIcon() {
-  return (
-    <Image
-      src="/icons/kpi-time.svg"
-      alt="Tiempo Promedio"
-      width={96}
-      height={96}
-      className="h-24 w-24"
-    />
-  );
+  return <KpiIcon variant="time" />;
 }

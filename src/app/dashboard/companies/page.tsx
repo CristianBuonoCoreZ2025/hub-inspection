@@ -140,7 +140,7 @@ export default function CompaniesPage() {
  <div className="app-page">
  <div className="app-grid-header">
  <div className="app-grid-header-left">
- <div className="app-grid-icon bg-linear-to-br from-blue-500 to-indigo-500">
+ <div className="app-grid-icon icn-blue">
  <Building2 />
  </div>
  <div className="app-grid-title-row">

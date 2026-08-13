@@ -174,8 +174,8 @@ function damageToForm(d: InspectionDamage): DamageForm {
 
 export default function DamagesTab({ sessionId, propertyClassification, countryId, sessionStatus }: { sessionId: string; propertyClassification?: string | null; countryId?: string | null; sessionStatus?: string }) {
  const queryClient = useQueryClient();
- const [ConfirmDialog, confirmDelete] = useConfirm();
- const [AlertDialog, showAlert] = useAlert();
+ const confirmDelete = useConfirm();
+ const showAlert = useAlert();
  const [editing, setEditing] = useState<string | null>(null);
  const [form, setForm] = useState<DamageForm>(emptyForm(sessionId, "building"));
  const [newType, setNewType] = useState<DamageType>("building");
@@ -578,8 +578,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
 
  return (
  <div className="app-stack">
- <ConfirmDialog />
- <AlertDialog />
+
  {/* Banner de solo lectura */}
  {readOnly && (
  <div className="flex items-center gap-2 rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 app-body text-amber-700 dark:text-amber-300">

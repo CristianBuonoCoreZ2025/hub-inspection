@@ -137,7 +137,7 @@ export default function PolizasPage() {
  <div className="app-page">
  <div className="app-grid-header">
  <div className="app-grid-header-left">
- <div className="app-grid-icon bg-linear-to-br from-[#0095DA] to-[#005BBB]">
+ <div className="app-grid-icon icn-sky">
  <FileCheck />
  </div>
  <div className="app-grid-title-row">
@@ -232,6 +232,7 @@ export default function PolizasPage() {
  {hasActiveFilters ? "No se encontraron pólizas con los filtros seleccionados." : "No hay pólizas registradas."}
  </p>
  ) : (
+ <div className="app-data-table-wrap">
  <table className="app-data-table">
  <thead>
  <tr>
@@ -254,25 +255,25 @@ export default function PolizasPage() {
  className="row-clickable"
  onClick={() => router.push(`/dashboard/catalogos/polizas/${p.id}`)}
  >
- <td className="font-mono font-medium">
+ <td className="grid-cell-link">
  {p.policy_number || <span className="text-muted-foreground italic">Sin número</span>}
  </td>
  <td>{p.policy_name}</td>
- <td className="text-muted-foreground">{p.insurance_company?.name || "—"}</td>
- <td className="text-muted-foreground">{p.broker?.name || "—"}</td>
+ <td>{p.insurance_company?.name || "—"}</td>
+ <td>{p.broker?.name || "—"}</td>
  <td>
  <Badge variant="outline" className="text-[10px]">
  {typeLabels[p.policy_type] || p.policy_type}
  </Badge>
  </td>
- <td className="text-muted-foreground">{p.business_line?.name || "—"}</td>
- <td className="text-right font-mono">
+ <td>{p.business_line?.name || "—"}</td>
+ <td className="text-right grid-cell-link">
  {formatMoney(p.insured_amount)}
  {p.currency && p.insured_amount != null && (
- <span className="text-[10px] text-muted-foreground ml-1">{p.currency}</span>
+ <span className="text-muted-foreground ml-1">{p.currency}</span>
  )}
  </td>
- <td className="text-muted-foreground">
+ <td>
  {formatDate(p.start_date)} — {formatDate(p.end_date)}
  </td>
  <td>
@@ -292,6 +293,7 @@ export default function PolizasPage() {
  ))}
  </tbody>
  </table>
+ </div>
  )}
  {total > 0 && (
  <div className="border-t border-border px-4 py-2 flex items-center justify-between">

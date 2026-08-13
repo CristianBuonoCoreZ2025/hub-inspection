@@ -80,7 +80,7 @@ export default function GestionesPage() {
     <div className="app-page">
       <div className="app-grid-header">
         <div className="app-grid-header-left">
-          <div className="app-grid-icon bg-linear-to-br from-amber-500 to-orange-500">
+          <div className="app-grid-icon icn-amber">
             <Ban />
           </div>
           <div className="app-grid-title-row">

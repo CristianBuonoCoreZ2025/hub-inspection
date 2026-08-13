@@ -21,6 +21,7 @@ interface UserProfile {
   timezone?: string | null;
   role: UserRole;
   company_id: string | null;
+  mobile_enabled?: boolean;
   company?: { id: string; name: string; logo_url: string | null; phone: string | null; email: string | null; address: string | null } | null;
 }
 
@@ -79,7 +80,7 @@ export function useAuth() {
       if (!user?.id) return null;
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, user_id, email, full_name, first_name, last_name, phone, rut, avatar_url, timezone, role, company_id, company:companies!profiles_company_id_fkey(id, name, logo_url, phone, email, address)")
+        .select("id, user_id, email, full_name, first_name, last_name, phone, rut, avatar_url, timezone, role, company_id, mobile_enabled, company:companies!profiles_company_id_fkey(id, name, logo_url, phone, email, address)")
         .eq("user_id", user.id)
         .maybeSingle();
       if (error) throw new Error(error.message);

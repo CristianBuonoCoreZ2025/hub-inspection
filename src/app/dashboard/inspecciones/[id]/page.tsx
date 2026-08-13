@@ -155,7 +155,7 @@ export default function InspectionDetailPage() {
  const params = useParams();
  const router = useRouter();
  const queryClient = useQueryClient();
- const [ConfirmDialog, confirmAction] = useConfirm();
+ const confirmAction = useConfirm();
  const sessionId = params.id as string;
  const { canView } = usePermissions();
  const { profile, dataAccess } = useAuth();
@@ -572,7 +572,7 @@ export default function InspectionDetailPage() {
 
  return (
  <div className="app-page">
- <ConfirmDialog />
+
  {/* Header */}
  <div className="flex items-center justify-between gap-3 pb-2">
  <div className="flex items-center gap-2.5 min-w-0">

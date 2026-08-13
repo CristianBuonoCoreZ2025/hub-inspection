@@ -53,6 +53,5 @@
       <path d="M 57 64 L 66 64 L 66 73 C 66 78, 62 84, 57 86 C 52 84, 48 78, 48 73 L 48 64 Z" fill="none" stroke="url(#shieldBorderGrad)" stroke-width="1.5" />
       <path d="M 52 74 L 57 78 L 63 68" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
     </g>
-    <ellipse cx="30" cy="20" rx="40" ry="40" fill="#ffffff" opacity="0.15" filter="url(#glassGlow)" />
   </g>
 </svg>

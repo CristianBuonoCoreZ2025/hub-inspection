@@ -113,18 +113,13 @@ function HybridSubFlyout({
       <div
         ref={itemRef}
         className={cn(
-          "group/sub flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs transition-all duration-150 cursor-pointer",
-          isGroupActive
-            ? "bg-primary/10 text-primary font-medium"
-            : "text-muted-foreground hover:bg-muted/70 hover:text-foreground font-normal"
+          "flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs transition-all duration-150 cursor-pointer sidebar-flyout-item",
+          isGroupActive && "sidebar-flyout-item-active"
         )}
       >
-        <Icon className={cn(
-          "size-3.5 shrink-0 transition-colors",
-          isGroupActive ? "text-primary" : "text-muted-foreground/60 group-hover/sub:text-foreground"
-        )} />
+        <Icon className="size-3.5 shrink-0 transition-colors" />
         <span className="flex-1 truncate">{subgroup.title}</span>
-        <ChevronRight className="size-3 shrink-0 text-muted-foreground/50" />
+        <ChevronRight className="size-3 shrink-0 text-sidebar-primary/50" />
       </div>
 
       {/* Sub-flyout — se abre al lado del item del subgrupo.
@@ -133,7 +128,7 @@ function HybridSubFlyout({
       {open && (
         <div
           ref={flyoutRef}
-          className="absolute left-full z-[60] w-56 rounded-[16px] bg-card shadow-xl border border-border/50"
+          className="absolute left-full z-60 w-56 rounded-[16px] sidebar-flyout-panel sidebar-sub-flyout"
           style={{ top: position.top, bottom: position.bottom }}
         >
           <div className="relative p-1">
@@ -146,20 +141,12 @@ function HybridSubFlyout({
                   href={link.href}
                   onClick={() => { onNavigate?.(); setOpen(false); }}
                   className={cn(
-                    "group/item flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs transition-all duration-150",
-                    isActive
-                      ? "bg-primary/10 text-primary font-medium shadow-[0_0_12px_rgba(139,92,246,0.15)]"
-                      : "text-muted-foreground hover:bg-muted/70 hover:text-foreground font-normal"
+                    "flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs transition-all duration-150 sidebar-flyout-item",
+                    isActive && "sidebar-flyout-item-active"
                   )}
                 >
-                  <LinkIcon className={cn(
-                    "size-3.5 shrink-0 transition-colors",
-                    isActive ? "text-primary" : "text-muted-foreground/60 group-hover/item:text-foreground"
-                  )} />
+                  <LinkIcon className="size-3.5 shrink-0 transition-colors" />
                   <span className="flex-1 truncate">{link.label}</span>
-                  {isActive && (
-                    <span className="h-3 w-0.5 rounded-full bg-primary shadow-[0_0_6px_rgba(139,92,246,0.6)]" />
-                  )}
                 </Link>
               );
             })}
@@ -258,14 +245,15 @@ function HybridFlyout({
         className={cn(
           "sidebar-item cursor-pointer",
           isGroupActive && !open && "sidebar-item-active",
-          open && "rounded-r-none !bg-card text-primary"
+          isGroupActive && open && "sidebar-item-active sidebar-item-open",
+          !isGroupActive && open && "sidebar-item-open"
         )}
       >
         <Icon className="size-[18px] shrink-0" />
         <span className="text-[11px] font-medium truncate flex-1">{group.title}</span>
         <span className={cn(
           "size-1.5 rounded-full shrink-0 transition-colors",
-          isGroupActive ? "bg-primary" : "bg-muted-foreground/40"
+          isGroupActive ? "bg-sidebar-primary" : "bg-sidebar-foreground/40"
         )} />
       </div>
 
@@ -274,7 +262,7 @@ function HybridFlyout({
       {open && (
         <div
           ref={flyoutRef}
-          className="absolute left-full z-50 w-64 rounded-[20px] bg-card"
+          className="absolute left-full z-60 w-64 rounded-[16px] sidebar-flyout-panel"
           style={{ top: position.top, bottom: position.bottom }}
         >
           {/* IMPORTANTE: el contenedor NO tiene overflow para que los subgrupos
@@ -294,20 +282,12 @@ function HybridFlyout({
                     href={link.href}
                     onClick={() => { onNavigate?.(); setOpen(false); }}
                     className={cn(
-                      "group/item flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs transition-all duration-150",
-                      isActive
-                        ? "bg-primary/10 text-primary font-medium shadow-[0_0_12px_rgba(139,92,246,0.15)]"
-                        : "text-muted-foreground hover:bg-muted/70 hover:text-foreground font-normal"
+                      "flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs transition-all duration-150 sidebar-flyout-item",
+                      isActive && "sidebar-flyout-item-active"
                     )}
                   >
-                    <LinkIcon className={cn(
-                      "size-3.5 shrink-0 transition-colors",
-                      isActive ? "text-primary" : "text-muted-foreground/60 group-hover/item:text-foreground"
-                    )} />
+                    <LinkIcon className="size-3.5 shrink-0 transition-colors" />
                     <span className="flex-1 truncate">{link.label}</span>
-                    {isActive && (
-                      <span className="h-3 w-0.5 rounded-full bg-primary shadow-[0_0_6px_rgba(139,92,246,0.6)]" />
-                    )}
                   </Link>
                 );
               }
@@ -366,19 +346,25 @@ export function HybridNav({ onNavigate }: { onNavigate?: () => void }) {
         <aside className="sidebar-glass flex flex-col w-[200px] flex-1 py-4 gap-3">
           {/* Contenido */}
           <div className="relative z-10 flex flex-col w-full h-full gap-3 px-3">
-            {/* Logo */}
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-3 px-3 py-2 rounded-[14px] bg-violet-500/10 text-violet-700 shrink-0 transition-all duration-200 hover:bg-violet-500/15"
-            >
-              <div className="flex size-10 items-center justify-center rounded-[12px] text-violet-700 shrink-0 transition-all duration-200 hover:scale-105">
-                <ClaimsHubLogo className="size-10" />
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-[13px] font-semibold leading-tight">Claims Hub</span>
-                <span className="text-[10px] text-violet-500/80 leading-tight">Dashboard</span>
-              </div>
-            </Link>
+            {/* Brand con logo flotante al lado */}
+            <div className="claims-hub-brand-wrap">
+              <Link
+                href="/dashboard"
+                className="claims-hub-logo-floating"
+                aria-label="Claims Hub"
+              >
+                <ClaimsHubLogo />
+              </Link>
+              <Link
+                href="/dashboard"
+                className="claims-hub-brand"
+              >
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[13px] font-semibold leading-tight text-sidebar-foreground">Claims Hub</span>
+                  <span className="text-[9px] text-sidebar-primary leading-tight italic text-center w-full">Dashboard</span>
+                </div>
+              </Link>
+            </div>
 
             <div className="sidebar-divider" />
 

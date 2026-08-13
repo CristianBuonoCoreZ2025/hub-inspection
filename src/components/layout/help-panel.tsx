@@ -23,6 +23,7 @@ import {
   Video,
 } from "lucide-react";
 import { HelpIcon } from "@/components/icons/topbar-icons";
+import { TopbarIcon } from "@/components/icons/topbar-icon";
 
 import {
   Dialog,
@@ -909,7 +910,7 @@ export function HelpButton() {
         className="topbar-action dock-item"
         title="Ayuda"
       >
-        <HelpIcon size={18} />
+        <TopbarIcon lightIcon={HelpIcon} darkIcon={HelpCircle} size={18} />
       </button>
       <HelpPanel open={open} onOpenChange={setOpen} />
     </>

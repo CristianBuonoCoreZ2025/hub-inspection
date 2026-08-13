@@ -3,10 +3,10 @@ import { fetchAll, fetchById, updateRow, insertRow, deleteRow } from "@/lib/supa
 import type { Profile, UserClient, UserSecondaryRole, SecondaryRole } from "@/types";
 
 const PROFILE_FIELDS =
-  "id, user_id, company_id, full_name, first_name, last_name, email, phone, rut, country_id, avatar_url, role, is_active, created_at, updated_at, user_clients:user_clients!user_clients_user_id_fkey(id, user_id, company_id, created_at, company:companies!user_clients_company_id_fkey(id, name, slug)), secondary_roles:user_secondary_roles!user_secondary_roles_profile_id_fkey(id, profile_id, role, company_id, created_at, updated_at, company:companies!user_secondary_roles_company_id_fkey(id, name))";
+  "id, user_id, company_id, full_name, first_name, last_name, email, phone, rut, country_id, avatar_url, role, is_active, mobile_enabled, created_at, updated_at, user_clients:user_clients!user_clients_user_id_fkey(id, user_id, company_id, created_at, company:companies!user_clients_company_id_fkey(id, name, slug)), secondary_roles:user_secondary_roles!user_secondary_roles_profile_id_fkey(id, profile_id, role, company_id, created_at, updated_at, company:companies!user_secondary_roles_company_id_fkey(id, name))";
 
 const PROFILE_BASE_FIELDS =
-  "id, user_id, company_id, full_name, first_name, last_name, email, phone, rut, country_id, avatar_url, role, is_active, created_at, updated_at";
+  "id, user_id, company_id, full_name, first_name, last_name, email, phone, rut, country_id, avatar_url, role, is_active, mobile_enabled, created_at, updated_at";
 
 export async function getUsers(companyId?: string) {
   const options: Parameters<typeof fetchAll>[1] = {
@@ -83,6 +83,7 @@ export async function updateUser(id: string, input: Partial<Profile>) {
   if (input.country_id !== undefined) set.country_id = input.country_id;
   if (input.role !== undefined) set.role = input.role;
   if (input.is_active !== undefined) set.is_active = input.is_active;
+  if (input.mobile_enabled !== undefined) set.mobile_enabled = input.mobile_enabled;
 
   return updateRow<Profile>("profiles", id, set, PROFILE_BASE_FIELDS);
 }

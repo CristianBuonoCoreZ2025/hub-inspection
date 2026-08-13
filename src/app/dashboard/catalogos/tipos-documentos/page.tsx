@@ -103,7 +103,7 @@ export default function TiposDocumentosPage() {
  <div className="app-page">
  <div className="app-grid-header">
  <div className="app-grid-header-left">
- <div className="app-grid-icon bg-linear-to-br from-slate-500 to-gray-500">
+ <div className="app-grid-icon icn-slate">
  <FileText />
  </div>
  <div className="app-grid-title-row">
@@ -164,7 +164,7 @@ export default function TiposDocumentosPage() {
  <DialogContent className="modal-md" showCloseButton={false}>
  <div className="modal-header">
  <DialogTitle className="modal-title flex items-center gap-2.5">
- <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm"><FileText className="h-4 w-4" /></div>
+ <div className="flex h-8 w-8 items-center justify-center rounded-lg icn-sky text-white shadow-sm"><FileText className="h-4 w-4" /></div>
  {editingId ? "Editar" : "Nuevo"}
  </DialogTitle>
  </div>

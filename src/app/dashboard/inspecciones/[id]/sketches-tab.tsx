@@ -16,7 +16,7 @@ import { useConfirm } from "@/hooks/use-confirm";
 
 export default function SketchesTab({ sessionId, sessionStatus, magicLinkToken }: { sessionId: string; sessionStatus?: string; magicLinkToken?: string }) {
  const queryClient = useQueryClient();
- const [ConfirmDialog, confirmDelete] = useConfirm();
+ const confirmDelete = useConfirm();
  const [uploading, setUploading] = useState(false);
  const [editingId, setEditingId] = useState<string | null>(null);
  const [editingLabel, setEditingLabel] = useState("");
@@ -179,7 +179,7 @@ export default function SketchesTab({ sessionId, sessionStatus, magicLinkToken }
 
  return (
  <div className="app-stack">
- <ConfirmDialog />
+
  {/* Banner de solo lectura */}
  {readOnly && (
  <div className="flex items-center gap-2 rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 app-body text-amber-700 dark:text-amber-300">

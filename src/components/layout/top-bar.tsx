@@ -1,16 +1,20 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, type SVGProps } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import Image from "next/image";
 import {
   Loader2,
-  Sun,
-  Moon,
-  Monitor,
   Menu,
   X,
+  FileCheck2,
+  ScanSearch,
+  Send,
+  ShieldCheck,
+  History,
+  Palette,
+  LogOut,
 } from "lucide-react";
 import {
   LiquidacionIcon,
@@ -20,13 +24,11 @@ import {
   RecientesIcon,
   SkinIcon,
   LogoutIcon,
-  ThemeSunIcon,
-  ThemeMoonIcon,
 } from "@/components/icons/topbar-icons";
+import { TopbarIcon } from "@/components/icons/topbar-icon";
 import { useSyncExternalStore } from "react";
 
 import { useAuth } from "@/hooks/use-auth";
-import { useMounted } from "@/hooks/use-mounted";
 import { getTopbarStats } from "@/services/topbar-stats";
 import { userTypeLabels } from "@/services/permissions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -37,14 +39,13 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useTheme } from "next-themes";
 import {
-  getUiStyleSnapshot,
-  subscribeUiStyle,
-  persistUiStyleChoice,
-  UI_STYLE_LABELS,
-  UI_STYLE_SWATCHES,
-  type UiStyleSkin,
+  getUiThemeSnapshot,
+  getUiStyleServerSnapshot,
+  subscribeUiTheme,
+  persistUiThemeChoice,
+  UI_THEME_LIST,
+  type UiThemeId,
 } from "@/lib/ui-style-client-store";
 import { getClaimTypeIcon } from "@/lib/claim-type-icons";
 import { useRecentClaims } from "@/hooks/use-recent-claims";
@@ -61,7 +62,8 @@ function getInitials(email?: string | null) {
 }
 
 interface StatChipProps {
-  icon: React.ElementType;
+  lightIcon: React.ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  darkIcon: React.ComponentType<{ className?: string; size?: number | string }>;
   count: number;
   label: string;
   href: string;
@@ -69,7 +71,7 @@ interface StatChipProps {
   iconClassName?: string;
 }
 
-function StatChip({ icon: Icon, count, label, href, variant = "default", iconClassName }: StatChipProps) {
+function StatChip({ lightIcon, darkIcon, count, label, href, variant = "default", iconClassName }: StatChipProps) {
   return (
     <Link
       href={href}
@@ -77,77 +79,38 @@ function StatChip({ icon: Icon, count, label, href, variant = "default", iconCla
       title={`${label}: ${count}`}
     >
       <span className="topbar-chip-icon">
-        <Icon className={iconClassName} />
+        <TopbarIcon lightIcon={lightIcon} darkIcon={darkIcon} size={18} className={iconClassName} />
       </span>
       {count > 0 && <span className="topbar-chip-count">{count}</span>}
     </Link>
   );
 }
 
-function ThemeToggleCompact() {
-  const { setTheme, theme } = useTheme();
-  const mounted = useMounted();
+function ThemeSelectorCompact() {
+  const themeId = useSyncExternalStore(subscribeUiTheme, getUiThemeSnapshot, getUiStyleServerSnapshot);
 
-  const currentIcon =
-    mounted && theme === "dark" ? <ThemeMoonIcon size={18} /> : <ThemeSunIcon size={18} />;
-
-  const currentValue = mounted ? theme ?? "system" : "system";
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <button type="button" className="topbar-action dock-item" title="Tema">
-            {currentIcon}
-          </button>
-        }
-      />
-      <DropdownMenuContent align="end" className="w-40">
-        <DropdownMenuRadioGroup value={currentValue} onValueChange={setTheme}>
-          <DropdownMenuRadioItem value="light" className="text-xs">
-            <Sun className="mr-2 size-3" />
-            <span>Claro</span>
-          </DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="dark" className="text-xs">
-            <Moon className="mr-2 size-3" />
-            <span>Oscuro</span>
-          </DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="system" className="text-xs">
-            <Monitor className="mr-2 size-3" />
-            <span>Sistema</span>
-          </DropdownMenuRadioItem>
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-function SkinToggleCompact() {
-  const skin = useSyncExternalStore(subscribeUiStyle, getUiStyleSnapshot, getUiStyleSnapshot);
-
-  const handleSelect = (value: UiStyleSkin) => {
-    persistUiStyleChoice(value);
-    document.documentElement.setAttribute("data-ui-style", value);
+  const handleSelect = (value: UiThemeId) => {
+    persistUiThemeChoice(value);
   };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <button type="button" className="topbar-action dock-item" title="Color">
-            <SkinIcon size={18} />
+          <button type="button" className="topbar-action dock-item" title="Tema">
+            <TopbarIcon lightIcon={SkinIcon} darkIcon={Palette} size={18} />
           </button>
         }
       />
-      <DropdownMenuContent align="end" className="w-40">
-        <DropdownMenuRadioGroup value={skin} onValueChange={(value) => handleSelect(value as UiStyleSkin)}>
-          {(Object.keys(UI_STYLE_LABELS) as UiStyleSkin[]).map((key) => (
-            <DropdownMenuRadioItem key={key} value={key} className="text-xs">
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuRadioGroup value={themeId} onValueChange={(value) => handleSelect(value as UiThemeId)}>
+          {UI_THEME_LIST.map((theme) => (
+            <DropdownMenuRadioItem key={theme.id} value={theme.id} className="text-xs">
               <span
                 className="mr-2 size-2.5 rounded-full border border-white/20 shadow-sm"
-                style={{ backgroundColor: UI_STYLE_SWATCHES[key] }}
+                style={{ backgroundColor: theme.swatch }}
               />
-              <span>{UI_STYLE_LABELS[key]}</span>
+              <span>{theme.label}</span>
             </DropdownMenuRadioItem>
           ))}
         </DropdownMenuRadioGroup>
@@ -174,13 +137,13 @@ function RecentClaimsButton() {
         render={
           <button type="button" className="topbar-chip topbar-action-recents dock-item" title="Siniestros recientes">
             <span className="topbar-chip-icon">
-              <RecientesIcon size={18} />
+              <TopbarIcon lightIcon={RecientesIcon} darkIcon={History} size={18} />
             </span>
             {count > 0 && <span className="topbar-chip-count">{count}</span>}
           </button>
         }
       />
-      <DropdownMenuContent align="end" className="w-[480px] p-0">
+      <DropdownMenuContent align="end" className="w-120 p-0">
         <div className="flex items-center justify-between px-3 py-2 border-b border-border/60">
           <span className="text-xs font-semibold">
             Siniestros recientes
@@ -323,25 +286,29 @@ export function TopBar() {
         {/* ── Centro: Siniestros (solo iconos + tooltip) ── */}
         <div className="topbar-center">
           <StatChip
-            icon={LiquidacionIcon}
+            lightIcon={LiquidacionIcon}
+            darkIcon={FileCheck2}
             count={s.liquidations}
             label="Liquidaciones"
             href="/dashboard/mis-casos?role=liquidador"
           />
           <StatChip
-            icon={InspeccionIcon}
+            lightIcon={InspeccionIcon}
+            darkIcon={ScanSearch}
             count={s.inspections}
             label="Inspecciones"
             href="/dashboard/mis-casos?role=inspector"
           />
           <StatChip
-            icon={DespachoIcon}
+            lightIcon={DespachoIcon}
+            darkIcon={Send}
             count={s.dispatches}
             label="Despachos"
             href="/dashboard/mis-casos?role=despachador"
           />
           <StatChip
-            icon={AuditoriaIcon}
+            lightIcon={AuditoriaIcon}
+            darkIcon={ShieldCheck}
             count={s.audits}
             label="Auditoría"
             href="/dashboard/mis-casos?role=auditor"
@@ -351,8 +318,7 @@ export function TopBar() {
         {/* ── Derecha: Acciones ── */}
         <div className="topbar-right">
           <RecentClaimsButton />
-          <ThemeToggleCompact />
-          <SkinToggleCompact />
+          <ThemeSelectorCompact />
           <HelpButton />
           <button
             type="button"
@@ -361,7 +327,7 @@ export function TopBar() {
             className="topbar-action topbar-action-logout dock-item"
             title="Salir"
           >
-            {isLoading ? <Loader2 className="animate-spin" /> : <LogoutIcon size={18} />}
+            {isLoading ? <Loader2 className="animate-spin" /> : <TopbarIcon lightIcon={LogoutIcon} darkIcon={LogOut} size={18} />}
           </button>
           {/* placeholder for help below */}
         </div>

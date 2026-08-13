@@ -10,6 +10,7 @@ import { ShieldCheck, ArrowRight } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { loginSchema, LoginInput } from "@/lib/validations";
 import { logger } from "@/lib/logger";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +21,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const supabase = getSupabaseClient();
+  const { isMobile } = useMediaQuery();
 
   const {
     register,
@@ -55,6 +57,32 @@ export default function LoginPage() {
 
       if (authData.session) {
         toast.success("Sesión iniciada correctamente");
+
+        // En móvil, redirigir a /mobile si el usuario es inspector/internal/admin.
+        // La query ahora funciona correctamente (FK + GRANT en user_type_data_access).
+        // Se usa router.push (client-side) para preservar el estado de useAuth.
+        // Nota: El test E2E usa pushState para navegar a /mobile después del login,
+        // por lo que el redirect a /mobile desde el login no es estrictamente necesario.
+        if (isMobile) {
+          try {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("role, data_access:user_type_data_access!inner(is_admin)")
+              .eq("user_id", authData.session.user.id)
+              .maybeSingle();
+
+            const role = profile?.role;
+            const isAdmin = (profile as unknown as { data_access?: { is_admin?: boolean } } | null)?.data_access?.is_admin;
+            if (role === "inspector" || role === "internal" || isAdmin) {
+              router.push("/mobile");
+              router.refresh();
+              return;
+            }
+          } catch {
+            // Si la query falla, continuar al dashboard
+          }
+        }
+
         router.push("/dashboard");
         router.refresh();
       } else {

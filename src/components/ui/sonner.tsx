@@ -1,15 +1,19 @@
 "use client"
 
-import { useTheme } from "next-themes"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 import { CircleCheckIcon, InfoIcon, TriangleAlertIcon, OctagonXIcon, Loader2Icon } from "lucide-react"
+import { useSyncExternalStore } from "react"
+import { getUiThemeSnapshot, subscribeUiTheme, getUiStyleServerSnapshot } from "@/lib/ui-style-client-store"
+import { UI_THEMES } from "@/lib/ui-style-client-store"
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme()
+  const themeId = useSyncExternalStore(subscribeUiTheme, getUiThemeSnapshot, getUiStyleServerSnapshot)
+  const theme = UI_THEMES[themeId]
+  const sonnerTheme = theme?.dark ? "dark" : "light"
 
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme={sonnerTheme as ToasterProps["theme"]}
       className="toaster group"
       icons={{
         success: (

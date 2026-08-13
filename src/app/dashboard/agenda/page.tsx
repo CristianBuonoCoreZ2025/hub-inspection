@@ -204,7 +204,12 @@ export default function AgendaPage() {
  return (
  <div className="app-page">
  <header className="app-page-header">
+ <div className="flex items-center gap-3">
+ <div className="app-grid-icon icn-sky">
+ <CalendarDays />
+ </div>
  <h1 className="app-page-title">Agenda</h1>
+ </div>
  <p className="app-page-lead">
  <span className="agenda-stats inline-flex items-center gap-1.5">
  {stats.total} en esta semana

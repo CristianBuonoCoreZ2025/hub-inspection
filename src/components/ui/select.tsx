@@ -143,10 +143,7 @@ function SelectContent({
         data-align-trigger={alignItemWithTrigger}
         className={cn(
           "relative max-h-(--available-height) min-w-(--anchor-width) w-max max-w-[min(90vw,600px)] origin-(--transform-origin) overflow-x-hidden overflow-y-auto",
-          "rounded-[10px] border border-input",
-          "bg-card/85 backdrop-blur-xl saturate-150",
-          "shadow-[0_8px_32px_rgba(0,0,0,0.12)]",
-          "dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]",
+          "rounded-[10px]",
           "text-popover-foreground p-1",
           "data-[side=bottom]:rounded-t-none data-[side=top]:rounded-b-none",
           "duration-100 data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-1 data-[side=inline-end]:slide-in-from-left-1 data-[side=inline-start]:slide-in-from-right-1 data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1 data-[side=top]:slide-in-from-bottom-1 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-100 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",

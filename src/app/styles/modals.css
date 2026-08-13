@@ -211,7 +211,7 @@
     border: 0 !important;
     border-radius: 0 !important;
     box-shadow: none !important;
-    background: #ffffff !important;
+    background: var(--c-paper) !important;
   }
   .email-body-render .html-editor-wrap {
     padding: 32px !important;
@@ -219,7 +219,7 @@
   .email-body-render .html-editor-content {
     font-size: 14px !important;
     line-height: 1.7 !important;
-    color: #1e293b !important;
+    color: var(--c-gray-700) !important;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
   }
   .email-body-render .html-editor-content p {
@@ -227,19 +227,19 @@
   }
   .email-body-render .html-editor-content h1 {
     font-size: 22px !important;
-    color: #0f172a !important;
+    color: var(--c-gray-700) !important;
     margin: 0 0 12px 0 !important;
     font-weight: 600 !important;
   }
   .email-body-render .html-editor-content h2 {
     font-size: 18px !important;
-    color: #1e293b !important;
+    color: var(--c-gray-700) !important;
     margin: 0 0 12px 0 !important;
     font-weight: 600 !important;
   }
   .email-body-render .html-editor-content h3 {
     font-size: 15px !important;
-    color: #334155 !important;
+    color: var(--c-gray-700) !important;
     margin: 0 0 12px 0 !important;
     font-weight: 600 !important;
   }
@@ -252,7 +252,7 @@
     margin-bottom: 6px !important;
   }
   .email-body-render .html-editor-content a {
-    color: #2563eb !important;
+    color: var(--st-info) !important;
     text-decoration: none !important;
   }
   .email-body-render .html-editor-content a:hover {
@@ -267,7 +267,7 @@
   }
   .email-body-render .html-editor-content th,
   .email-body-render .html-editor-content td {
-    border: 1px solid #e5e7eb !important;
+    border: 1px solid var(--c-canvas) !important;
     padding: 8px !important;
   }
 
@@ -275,7 +275,7 @@
   /* El composer muestra el email como va a salir: toolbar + header branding + body editable + footer.
      El body editable usa la clase email-body-render (piel única) — ver bloque de arriba. */
   .email-composer-canvas-scroll {
-    background: #ffffff !important;
+    background: var(--c-paper) !important;
     padding: 0 !important;
     display: flex !important;
     flex-direction: column !important;
@@ -294,7 +294,7 @@
     flex-direction: column !important;
     border-radius: 0 !important;
     overflow: hidden !important;
-    background: #ffffff !important;
+    background: var(--c-paper) !important;
     border: 0 !important;
   }
   .email-composer-header {
@@ -321,23 +321,23 @@
   .email-composer-company-name {
     font-size: 20px !important;
     font-weight: 600 !important;
-    color: #ffffff !important;
+    color: var(--c-paper) !important;
     letter-spacing: 0.2px !important;
   }
 
   /* Footer del email */
   .email-composer-footer {
     padding: 20px 32px !important;
-    border-top: 1px solid #e2e8f0 !important;
-    background-color: #f8fafc !important;
-    color: #64748b !important;
+    border-top: 1px solid var(--c-canvas) !important;
+    background-color: var(--c-canvas) !important;
+    color: var(--c-gray-400) !important;
     font-size: 11px !important;
     text-align: center !important;
     line-height: 1.5 !important;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
   }
   .email-composer-footer span {
-    color: #94a3b8 !important;
+    color: var(--c-gray-400) !important;
   }
 
   /* ═══════════════ IFRAME PREVIEW (composer de email) ═══════════════ */
@@ -347,22 +347,20 @@
     min-height: 200px !important;
     border: 0 !important;
     border-radius: 0 !important;
-    background: #f1f5f9 !important;
+    background: var(--c-canvas) !important;
     display: block !important;
   }
 
   /* ═══════════════ ESTRUCTURA INTERNA (inmune) ═══════════════ */
-  /* Header — con sutil tinte del color primario del tema */
+  /* Header — glass sutil con tinte del primario del sistema */
   .modal-header {
     flex-shrink: 0 !important;
     padding: 18px 20px 13px 20px !important;
-    border-bottom: 1px solid var(--border) !important;
+    border-bottom: 1px solid color-mix(in srgb, var(--primary) 20%, transparent) !important;
     background:
-      radial-gradient(ellipse 80% 70% at 10% 15%, rgba(255, 230, 170, 0.35), transparent 55%),
-      radial-gradient(ellipse 70% 60% at 90% 15%, rgba(255, 180, 220, 0.30), transparent 50%),
-      radial-gradient(ellipse 80% 70% at 50% 95%, rgba(180, 220, 255, 0.35), transparent 55%),
-      radial-gradient(ellipse 60% 50% at 95% 85%, rgba(180, 190, 255, 0.25), transparent 45%),
-      linear-gradient(135deg, #fffbf0 0%, #fff4f7 35%, #f0f7ff 70%, #eef2ff 100%) !important;
+      color-mix(in srgb, var(--primary) 6%, transparent) !important;
+    backdrop-filter: blur(16px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
     position: relative !important;
     overflow: hidden !important;
   }
@@ -497,17 +495,15 @@
     min-height: 0 !important;
   }
 
-  /* Header con gradiente pastel visible */
+  /* Header — glass sutil con tinte del primario del sistema */
   .modal-b-header {
     flex-shrink: 0 !important;
     padding: 18px 20px 13px 20px !important;
-    border-bottom: 1px solid var(--border) !important;
+    border-bottom: 1px solid color-mix(in srgb, var(--primary) 20%, transparent) !important;
     background:
-      radial-gradient(ellipse 80% 70% at 10% 15%, rgba(255, 230, 170, 0.35), transparent 55%),
-      radial-gradient(ellipse 70% 60% at 90% 15%, rgba(255, 180, 220, 0.30), transparent 50%),
-      radial-gradient(ellipse 80% 70% at 50% 95%, rgba(180, 220, 255, 0.35), transparent 55%),
-      radial-gradient(ellipse 60% 50% at 95% 85%, rgba(180, 190, 255, 0.25), transparent 45%),
-      linear-gradient(135deg, #fffbf0 0%, #fff4f7 35%, #f0f7ff 70%, #eef2ff 100%) !important;
+      color-mix(in srgb, var(--primary) 6%, transparent) !important;
+    backdrop-filter: blur(16px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
     position: relative !important;
     overflow: hidden !important;
   }
@@ -565,11 +561,8 @@
   .dark .modal-header,
   .dark .modal-b-header {
     background:
-      radial-gradient(ellipse 80% 70% at 10% 15%, rgb(139 92 246 / 0.25), transparent 55%),
-      radial-gradient(ellipse 70% 60% at 90% 10%, rgb(14 165 233 / 0.20), transparent 50%),
-      radial-gradient(ellipse 80% 70% at 50% 95%, rgb(236 72 153 / 0.18), transparent 55%),
-      radial-gradient(ellipse 60% 50% at 95% 85%, rgb(59 130 246 / 0.12), transparent 45%),
-      linear-gradient(135deg, #111827 0%, #1e1b4b 50%, #0f172a 100%) !important;
+      color-mix(in srgb, var(--primary) 10%, transparent) !important;
+    border-bottom: 1px solid color-mix(in srgb, var(--primary) 30%, transparent) !important;
   }
 }
 
@@ -709,9 +702,9 @@
 .info-box {
   padding: 10px 14px !important;
   border-radius: 12px !important;
-  background: #e3f2fb !important;
+  background: var(--st-info) !important;
   border: 1px solid rgba(0, 149, 218, 0.35) !important;
-  color: #003591 !important;
+  color: var(--st-info) !important;
   font-size: 13px !important;
 }
 
@@ -722,7 +715,7 @@
 
 /* Icono con gradiente brand — usado en headers de modal y avatares */
 .email-icon-gradient {
-  background: linear-gradient(135deg, #6366f1, #a855f7) !important;
+  background: linear-gradient(135deg, var(--c-violet), var(--c-violet)) !important;
 }
 
 /* ═══════════════ HEADER DE MODAL DE EMAIL ═══════════════
@@ -835,22 +828,22 @@
   flex: 1 !important;
 }
 .gestion-light-tooltip-value-done {
-  color: #10b981 !important;
+  color: var(--st-success) !important;
   font-weight: 500 !important;
 }
 .gestion-light-tooltip-value-pending {
   color: var(--muted-foreground) !important;
 }
 .gestion-light-tooltip-value-late {
-  color: #ef4444 !important;
+  color: var(--st-error) !important;
   font-weight: 500 !important;
 }
 .gestion-light-tooltip-value-alert {
-  color: #f59e0b !important;
+  color: var(--c-orange) !important;
   font-weight: 500 !important;
 }
 .gestion-light-tooltip-value-active {
-  color: #3b82f6 !important;
+  color: var(--st-info) !important;
   font-weight: 500 !important;
 }
 .gestion-light-tooltip-divider {
@@ -991,8 +984,8 @@
 .user-client-primary-icon {
   width: 12px !important;
   height: 12px !important;
-  color: #f59e0b !important;
-  fill: #f59e0b !important;
+  color: var(--c-orange) !important;
+  fill: var(--c-orange) !important;
   flex-shrink: 0 !important;
 }
 
@@ -1016,15 +1009,15 @@
   border-radius: 10px !important;
   font-size: 13px !important;
   font-weight: 600 !important;
-  background: #dc2626 !important;
-  color: #fff !important;
-  border: 1px solid #dc2626 !important;
+  background: var(--st-error) !important;
+  color: var(--c-paper) !important;
+  border: 1px solid var(--st-error) !important;
   cursor: pointer !important;
   transition: all 0.15s ease !important;
 }
 .pg-btn-danger:hover:not(:disabled) {
-  background: #b91c1c !important;
-  border-color: #b91c1c !important;
+  background: var(--st-error) !important;
+  border-color: var(--st-error) !important;
 }
 .pg-btn-danger:disabled {
   opacity: 0.5 !important;
@@ -1091,13 +1084,13 @@
   gap: 4px !important;
   font-size: 13px !important;
   font-weight: 500 !important;
-  color: #ef4444 !important;
+  color: var(--st-error) !important;
   border: none !important;
   background: transparent !important;
   cursor: pointer !important;
   transition: color 0.15s ease !important;
 }
 .my-profile-remove-btn:hover {
-  color: #dc2626 !important;
+  color: var(--st-error) !important;
 }
 

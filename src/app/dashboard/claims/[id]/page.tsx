@@ -1465,7 +1465,7 @@ export default function ClaimDetailPage() {
            onClick={openCompose}
            className="cursor-pointer"
          >
-           <div className="flex items-center justify-center h-6 w-6 rounded bg-linear-to-br from-sky-500 to-indigo-600 text-white shrink-0">
+           <div className="flex items-center justify-center h-6 w-6 rounded icn-sky text-white shrink-0">
              <Plus className="h-3.5 w-3.5" />
            </div>
            <div className="flex flex-col min-w-0">
@@ -1479,7 +1479,7 @@ export default function ClaimDetailPage() {
          {/* Item 2: Correos enviados (n) — submenu con la lista */}
          <DropdownMenuSub>
            <DropdownMenuSubTrigger className="cursor-pointer">
-             <div className="flex items-center justify-center h-6 w-6 rounded bg-linear-to-br from-amber-400 to-orange-600 text-white shrink-0">
+             <div className="flex items-center justify-center h-6 w-6 rounded icn-amber text-white shrink-0">
                <Inbox className="h-3.5 w-3.5" />
              </div>
              <div className="flex flex-col min-w-0 flex-1">
@@ -1729,7 +1729,7 @@ export default function ClaimDetailPage() {
  <DialogContent className="modal-xl" showCloseButton>
  <div className="modal-header">
  <DialogTitle className="modal-title flex items-center gap-2.5">
- <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
+ <div className="flex h-8 w-8 items-center justify-center rounded-lg icn-sky text-white shadow-sm">
  <ClipboardList className="h-4 w-4" />
  </div>
  {editingGestion?.nombre || "Editar Gestión"}

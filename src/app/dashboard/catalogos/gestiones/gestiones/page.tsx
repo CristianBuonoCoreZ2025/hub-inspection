@@ -1064,7 +1064,7 @@ export default function GestionesPage() {
  <div className="app-page">
  <div className="app-grid-header">
  <div className="app-grid-header-left">
- <div className="app-grid-icon bg-linear-to-br from-[#0095DA] to-[#005BBB]">
+ <div className="app-grid-icon icn-sky">
  <FileSpreadsheet />
  </div>
  <div className="app-grid-title-row">

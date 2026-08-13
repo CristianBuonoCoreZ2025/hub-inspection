@@ -420,7 +420,7 @@ export default function UsersPage() {
  <div className="app-page">
  <div className="app-grid-header">
  <div className="app-grid-header-left">
- <div className="app-grid-icon bg-linear-to-br from-violet-500 to-purple-500">
+ <div className="app-grid-icon icn-violet">
  <Users />
  </div>
  <div className="app-grid-title-row">

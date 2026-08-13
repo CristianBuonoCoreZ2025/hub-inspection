@@ -56,6 +56,7 @@ export function Pagination({ page, totalPages, total, pageSize, onPageChange, on
         onClick={() => onPageChange(1)}
         className="flex size-6 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
         title="Primera página"
+        aria-label="Primera página"
       >
         <ChevronsLeft className="size-3.5" />
       </button>
@@ -65,6 +66,7 @@ export function Pagination({ page, totalPages, total, pageSize, onPageChange, on
         onClick={() => onPageChange(page - 1)}
         className="flex size-6 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
         title="Página anterior"
+        aria-label="Página anterior"
       >
         <ChevronLeft className="size-3.5" />
       </button>
@@ -80,7 +82,7 @@ export function Pagination({ page, totalPages, total, pageSize, onPageChange, on
             className={cn(
               "flex size-6 items-center justify-center rounded-md border text-[10px] font-medium transition-colors",
               p === page
-                ? "border-primary bg-primary text-primary-foreground"
+                ? "pagination-page-active"
                 : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
           >
@@ -95,6 +97,7 @@ export function Pagination({ page, totalPages, total, pageSize, onPageChange, on
         onClick={() => onPageChange(page + 1)}
         className="flex size-6 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
         title="Página siguiente"
+        aria-label="Página siguiente"
       >
         <ChevronRight className="size-3.5" />
       </button>
@@ -104,6 +107,7 @@ export function Pagination({ page, totalPages, total, pageSize, onPageChange, on
         onClick={() => onPageChange(totalPages)}
         className="flex size-6 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
         title="Última página"
+        aria-label="Última página"
       >
         <ChevronsRight className="size-3.5" />
       </button>
@@ -152,7 +156,7 @@ export function Pagination({ page, totalPages, total, pageSize, onPageChange, on
               className={cn(
                 "flex size-6 items-center justify-center rounded-md border text-[10px] font-medium transition-colors",
                 p === page
-                  ? "border-primary bg-primary text-primary-foreground"
+                  ? "pagination-page-active"
                   : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >

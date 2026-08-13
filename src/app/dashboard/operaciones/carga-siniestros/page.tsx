@@ -1273,7 +1273,7 @@ export default function CargaSiniestrosPage() {
     <div className="app-page">
       <div className="app-grid-header">
         <div className="app-grid-header-left">
-          <div className="app-grid-icon bg-linear-to-br from-blue-500 to-cyan-500">
+          <div className="app-grid-icon icn-blue">
             <FileSpreadsheet />
           </div>
           <div className="app-grid-title-row">

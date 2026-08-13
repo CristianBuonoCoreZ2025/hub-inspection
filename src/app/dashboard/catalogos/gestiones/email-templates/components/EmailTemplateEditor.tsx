@@ -285,7 +285,7 @@ export function EmailTemplateEditor({ templateId }: Props) {
     <div className="app-page">
       <div className="app-grid-header">
         <div className="app-grid-header-left">
-          <div className="app-grid-icon bg-linear-to-br from-sky-500 to-blue-500">
+          <div className="app-grid-icon icn-sky">
             <Mail />
           </div>
           <div className="app-grid-title-row">

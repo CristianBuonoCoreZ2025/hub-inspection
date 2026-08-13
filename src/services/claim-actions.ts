@@ -781,6 +781,8 @@ export async function issueClaimAction(actionId: string, userId?: string, action
   if (action?.action_template_id) {
     fetch(`/api/claims/actions/${actionId}/generate-document`, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ templateId: action.action_template_id }),
     }).catch((e) => {
       // Fire-and-forget: solo log, no bloquea
       console.warn(`[issueClaimAction] generate-document falló para ${actionId}:`, e);

@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import { useForm } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { actaSchema, type ActaInput } from "@/lib/validations";
@@ -19,6 +19,8 @@ import {
  MapPin,
  AlertTriangle,
  XCircle,
+ ChevronLeft,
+ ChevronRight,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -316,30 +318,39 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  Inspección finalizada — el acta es de solo lectura
  </div>
  )}
- {/* Stepper (siempre navegable, incluso en readOnly) */}
- <div className="flex items-center gap-1 overflow-x-auto pb-2">
- {steps.map((s) => {
+ {/* Stepper horizontal — wizard de pasos */}
+ <div className="acta-wizard">
+ <div className="acta-wizard-steps">
+ {steps.map((s, idx) => {
  const Icon = s.icon;
  const active = s.id === step;
  const completed = s.id < step;
+ const isLast = idx === steps.length - 1;
  return (
+ <Fragment key={s.id}>
  <button
- key={s.id}
  type="button"
  onClick={() => setStep(s.id)}
- className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-[11px] font-medium transition-colors ${
- active
- ? "bg-primary text-primary-foreground"
- : completed
- ? "bg-primary/10 text-primary"
- : "bg-muted text-muted-foreground hover:bg-muted/80"
- }`}
+ className={`acta-wizard-step ${active ? "acta-wizard-step-active" : ""} ${completed ? "acta-wizard-step-done" : ""}`}
  >
- {completed ? <CheckCircle className="h-3 w-3" /> : <Icon className="h-3 w-3" />}
- <span className="hidden sm:inline">{s.label}</span>
+ <span className="acta-wizard-step-num">
+ {completed ? <CheckCircle className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
+ </span>
+ <span className="acta-wizard-step-label">{s.label}</span>
  </button>
+ {!isLast && (
+ <span className={`acta-wizard-step-line ${completed ? "acta-wizard-step-line-done" : ""}`} />
+ )}
+ </Fragment>
  );
  })}
+ </div>
+ <div className="acta-wizard-progress">
+ <span className="acta-wizard-progress-text">Paso {step} de {steps.length}</span>
+ <div className="acta-wizard-progress-bar">
+ <div className="acta-wizard-progress-fill" style={{ width: `${(step / steps.length) * 100}%` }} />
+ </div>
+ </div>
  </div>
 
  <fieldset disabled={readOnly} className="contents">
@@ -887,9 +898,34 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  </div>
  )}
 
- {/* Guardar (oculto en readOnly) */}
+ {/* Navegacion del wizard: Anterior / Siguiente / Guardar */}
  {!readOnly && (
- <div className="flex items-center justify-end border-t border-border pt-4">
+ <div className="acta-wizard-nav">
+ <Button
+ type="button"
+ size="sm"
+ variant="outline"
+ onClick={() => setStep(Math.max(1, step - 1))}
+ disabled={step === 1}
+ className="pg-btn-platinum"
+ >
+ <ChevronLeft className="h-4 w-4" /> Anterior
+ </Button>
+ <div className="flex items-center gap-2">
+ {step < steps.length ? (
+ <Button
+ type="button"
+ size="sm"
+ onClick={() => {
+ form.handleSubmit((data) => saveMutation.mutate(data))();
+ setStep(step + 1);
+ }}
+ disabled={saveMutation.isPending}
+ className="pg-btn-platinum"
+ >
+ {saveMutation.isPending ? "Guardando..." : "Siguiente"} <ChevronRight className="h-4 w-4" />
+ </Button>
+ ) : (
  <Button
  type="submit"
  size="sm"
@@ -897,6 +933,32 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  className="pg-btn-platinum"
  >
  {saveMutation.isPending ? "Guardando..." : "Guardar"}
+ </Button>
+ )}
+ </div>
+ </div>
+ )}
+ {readOnly && (
+ <div className="acta-wizard-nav">
+ <Button
+ type="button"
+ size="sm"
+ variant="outline"
+ onClick={() => setStep(Math.max(1, step - 1))}
+ disabled={step === 1}
+ className="pg-btn-platinum"
+ >
+ <ChevronLeft className="h-4 w-4" /> Anterior
+ </Button>
+ <Button
+ type="button"
+ size="sm"
+ variant="outline"
+ onClick={() => setStep(Math.min(steps.length, step + 1))}
+ disabled={step === steps.length}
+ className="pg-btn-platinum"
+ >
+ Siguiente <ChevronRight className="h-4 w-4" />
  </Button>
  </div>
  )}

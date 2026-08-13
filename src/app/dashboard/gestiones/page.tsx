@@ -27,12 +27,12 @@ const FILTER_CONFIG: Record<
   GestionFilter,
   { label: string; icon: typeof ListTodo; title: string; gradient: string; glow: string }
 > = {
-  all: { label: "Todas", icon: ListTodo, title: "Mis Gestiones", gradient: "from-slate-500 to-zinc-600", glow: "rgba(100, 116, 139, 0.08)" },
-  "in-progress": { label: "En curso", icon: ListTodo, title: "Gestiones en Curso", gradient: "from-sky-500 to-blue-600", glow: "rgba(14, 165, 233, 0.08)" },
-  reviews: { label: "Revisiones", icon: Eye, title: "Gestiones en Revisión", gradient: "from-violet-500 to-purple-600", glow: "rgba(139, 92, 246, 0.08)" },
-  approvals: { label: "Aprobación", icon: CheckCircle, title: "Gestiones por Aprobar", gradient: "from-emerald-500 to-teal-600", glow: "rgba(16, 185, 129, 0.08)" },
-  alert: { label: "En alarma", icon: AlertTriangle, title: "Gestiones en Alarma", gradient: "from-amber-500 to-orange-600", glow: "rgba(245, 158, 11, 0.08)" },
-  overdue: { label: "Atrasadas", icon: Clock, title: "Gestiones Atrasadas", gradient: "from-red-500 to-rose-600", glow: "rgba(239, 68, 68, 0.08)" },
+  all: { label: "Todas", icon: ListTodo, title: "Mis Gestiones", gradient: "icn-slate", glow: "rgba(100, 116, 139, 0.08)" },
+  "in-progress": { label: "En curso", icon: ListTodo, title: "Gestiones en Curso", gradient: "icn-sky", glow: "rgba(14, 165, 233, 0.08)" },
+  reviews: { label: "Revisiones", icon: Eye, title: "Gestiones en Revisión", gradient: "icn-violet", glow: "rgba(139, 92, 246, 0.08)" },
+  approvals: { label: "Aprobación", icon: CheckCircle, title: "Gestiones por Aprobar", gradient: "icn-emerald", glow: "rgba(16, 185, 129, 0.08)" },
+  alert: { label: "En alarma", icon: AlertTriangle, title: "Gestiones en Alarma", gradient: "icn-amber", glow: "rgba(245, 158, 11, 0.08)" },
+  overdue: { label: "Atrasadas", icon: Clock, title: "Gestiones Atrasadas", gradient: "icn-red", glow: "rgba(239, 68, 68, 0.08)" },
 };
 
 const PAGE_SIZE = 12;
@@ -87,7 +87,7 @@ function GestionesContent() {
       {/* ── Header ── */}
       <div className="app-grid-header">
         <div className="app-grid-header-left">
-          <div className={`app-grid-icon bg-linear-to-br ${config.gradient}`}>
+          <div className={`app-grid-icon ${config.gradient}`}>
             <Icon />
           </div>
           <div className="app-grid-title-row">

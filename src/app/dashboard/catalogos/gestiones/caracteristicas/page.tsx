@@ -138,7 +138,7 @@ export default function CaracteristicasPage() {
  <div className="app-page">
  <div className="app-grid-header">
  <div className="app-grid-header-left">
- <div className="app-grid-icon bg-linear-to-br from-[#0095DA] to-[#005BBB]">
+ <div className="app-grid-icon icn-sky">
  <Boxes />
  </div>
  <div className="app-grid-title-row">
@@ -249,7 +249,7 @@ export default function CaracteristicasPage() {
  <Dialog open={open} onOpenChange={setOpen}>
  <DialogContent className="modal-sm">
  <div className="modal-header">
- <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
+ <div className="flex h-8 w-8 items-center justify-center rounded-lg icn-sky text-white shadow-sm">
  <Boxes className="h-4 w-4" />
  </div>
  {editingId ? "Editar" : "Nueva"} Característica

@@ -270,7 +270,7 @@ export default function UbicacionesPage() {
      Todo en una sola fila compacta usando las clases app-grid-* */}
  <div className="app-grid-header">
  <div className="app-grid-header-left">
- <div className="app-grid-icon bg-linear-to-br from-emerald-500 to-teal-500">
+ <div className="app-grid-icon icn-emerald">
  <MapPin />
  </div>
  <div className="app-grid-title-row">
@@ -386,7 +386,7 @@ export default function UbicacionesPage() {
  <DialogContent className="modal-md" showCloseButton={false}>
  <div className="modal-header">
  <DialogTitle className="modal-title flex items-center gap-2.5">
- <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
+ <div className="flex h-8 w-8 items-center justify-center rounded-lg icn-sky text-white shadow-sm">
  {getLevelIcon()}
  </div>
  {editingId ? "Editar" : "Nuevo"} {level === 1 ? "Región" : level === 2 ? "Ciudad" : "Comuna"}
