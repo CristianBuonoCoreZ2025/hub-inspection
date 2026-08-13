@@ -370,8 +370,6 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
         const xhr = new XMLHttpRequest();
         xhr.open("POST", "/api/inspection/evidences/upload");
 
-        toast.loading(kind === "video" ? "Subiendo video..." : "Subiendo foto...", { id: toastId });
-
         xhr.upload.addEventListener("progress", (ev) => {
           if (!ev.lengthComputable) return;
           const pct = Math.round((ev.loaded / ev.total) * 100);
@@ -383,7 +381,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
 
         xhr.addEventListener("load", () => {
           if (xhr.status >= 200 && xhr.status < 300) {
-            toast.success(kind === "video" ? "Video subido" : "Foto subida", { id: toastId, duration: 2000 });
+            toast.success(kind === "video" ? "Video capturado" : "Foto capturada", { id: toastId, duration: 1500 });
           } else {
             let msg = `Error ${xhr.status}`;
             try { const b = JSON.parse(xhr.responseText); msg = b.error || msg; } catch { /* ignore */ }
