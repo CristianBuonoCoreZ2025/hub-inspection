@@ -1343,6 +1343,9 @@ disabled={!!exportProgress}
          strokeLinecap="round"
          transform="rotate(-90 12 12)"
        />
+       <text x="12" y="15" textAnchor="middle" fontSize="7" fill="currentColor" fontWeight="600">
+         {exportProgress.total > 0 ? Math.round((exportProgress.current / exportProgress.total) * 100) : 0}
+       </text>
      </svg>
      Exportar
    </>
