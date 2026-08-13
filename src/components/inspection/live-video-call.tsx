@@ -759,60 +759,39 @@ export function LiveVideoCall({
     const blob = new Blob(chunks, { type: chunks[0]?.type || "video/webm" });
     const ext = blob.type.includes("mp4") ? ".mp4" : ".webm";
     const fileName = `grabacion-sesion-${Date.now()}${ext}`;
-    try {
-      // 1. Pedir URL presigned para subir directamente a R2
-      //    (evita HTTP 413 por límite de body size de Vercel)
-      const presignRes = await fetch("/api/inspection/evidences/presign", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId,
-          mimeType: blob.type,
-          ext,
-          originalName: fileName,
-          source: "live_video",
-        }),
-      });
-      if (!presignRes.ok) throw new Error(`HTTP ${presignRes.status} (presign)`);
-      const { presignedUrl, url, fileCode, userId, claimId } = await presignRes.json();
+    const file = new File([blob], fileName, { type: blob.type || "video/webm" });
 
-      // 2. Subir directamente a R2 via XHR (fetch falla con archivos grandes)
-      await new Promise<void>((resolve, reject) => {
+    try {
+      // Subir via nuestro route handler (evita CORS / presign de R2).
+      // Para videos muy grandes puede fallar por límite de body size en Vercel,
+      // pero evita el 'Error de red' que daba el PUT directo a R2.
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("sessionId", sessionId);
+      formData.append("originalName", fileName);
+      formData.append("source", "live_video");
+
+      const data = await new Promise<{ evidence: { id: string; url: string; description: string } }>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open("PUT", presignedUrl);
-        xhr.setRequestHeader("Content-Type", blob.type);
-        xhr.upload.addEventListener("progress", (ev) => {
-          if (ev.lengthComputable) {
-            // Progreso disponible si se necesita mostrar en UI
+        xhr.open("POST", "/api/inspection/evidences/upload");
+        xhr.addEventListener("load", () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              resolve(JSON.parse(xhr.responseText));
+            } catch {
+              reject(new Error("Respuesta inválida del servidor"));
+            }
+          } else {
+            let msg = `Error ${xhr.status}`;
+            try { const b = JSON.parse(xhr.responseText); msg = b.error || msg; } catch { /* ignore */ }
+            reject(new Error(msg));
           }
         });
-        xhr.addEventListener("load", () => {
-          if (xhr.status >= 200 && xhr.status < 300) resolve();
-          else reject(new Error(`HTTP ${xhr.status} (upload to R2)`));
-        });
-        xhr.addEventListener("error", () => reject(new Error("Error de red al subir a R2")));
+        xhr.addEventListener("error", () => reject(new Error("Error de red")));
         xhr.addEventListener("abort", () => reject(new Error("Subida cancelada")));
-        xhr.send(blob);
+        xhr.send(formData);
       });
 
-      // 3. Registrar la evidencia en la BD
-      const regRes = await fetch("/api/inspection/evidences/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId,
-          url,
-          fileCode,
-          mimeType: blob.type,
-          originalName: fileName,
-          source: "live_video",
-          fileSize: blob.size,
-          userId,
-          claimId,
-        }),
-      });
-      if (!regRes.ok) throw new Error(`HTTP ${regRes.status} (register)`);
-      const data = await regRes.json();
       if (data.evidence) {
         onRecordingSaved?.({ id: data.evidence.id, url: data.evidence.url, description: data.evidence.description });
       }
