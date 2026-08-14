@@ -33,7 +33,7 @@ const destinationTypeLabel = (t: string | null | undefined) =>
 interface FormData {
   name: string;
   description: string;
-  destination_type: "residential" | "commercial" | "";
+  destination_type: "residential" | "commercial" | null;
 }
 
 export default function HousingDestinationPage() {
@@ -42,7 +42,7 @@ export default function HousingDestinationPage() {
  const [search, setSearch] = useState("");
  const [open, setOpen] = useState(false);
  const [editingId, setEditingId] = useState<string | null>(null);
- const [formData, setFormData] = useState<FormData>({ name: "", description: "", destination_type: "" });
+ const [formData, setFormData] = useState<FormData>({ name: "", description: "", destination_type: null });
 
  const { data: items, isLoading } = useQuery({
  queryKey: ["destinos_vivienda"],
@@ -56,7 +56,7 @@ export default function HousingDestinationPage() {
  queryClient.invalidateQueries({ queryKey: ["destinos_vivienda"] });
  queryClient.invalidateQueries({ queryKey: ["housing-destinations"] });
  setOpen(false);
- setFormData({ name: "", description: "", destination_type: "" });
+ setFormData({ name: "", description: "", destination_type: null });
  },
  onError: (err: Error) => toast.error(err.message),
  });
@@ -69,7 +69,7 @@ export default function HousingDestinationPage() {
  queryClient.invalidateQueries({ queryKey: ["housing-destinations"] });
  setOpen(false);
  setEditingId(null);
- setFormData({ name: "", description: "", destination_type: "" });
+ setFormData({ name: "", description: "", destination_type: null });
  },
  onError: (err: Error) => toast.error(err.message),
  });
@@ -125,7 +125,7 @@ export default function HousingDestinationPage() {
  </div>
  <div className="app-grid-header-right">
  {canCreate("catalogos") && (
- <Button onClick={() => { setEditingId(null); setFormData({ name: "", description: "", destination_type: "" }); setOpen(true); }} className="pg-btn-platinum">
+ <Button onClick={() => { setEditingId(null); setFormData({ name: "", description: "", destination_type: null }); setOpen(true); }} className="pg-btn-platinum">
  Nuevo
  </Button>
  )}
@@ -170,7 +170,7 @@ export default function HousingDestinationPage() {
  {canEdit("catalogos") && (
  <button type="button" className="btn-icon-sm" onClick={() => {
  setEditingId(item.id);
- setFormData({ name: item.name || "", description: item.description || "", destination_type: item.destination_type || "" });
+ setFormData({ name: item.name || "", description: item.description || "", destination_type: item.destination_type ?? null });
  setOpen(true);
  }}><Pencil className="h-4 w-4" /></button>
  )}
@@ -213,7 +213,7 @@ export default function HousingDestinationPage() {
  <div className="modal-field">
  <Label className="app-field-label">Tipo <span className="text-red-500">*</span></Label>
  <Select
- value={formData.destination_type || undefined}
+ value={formData.destination_type ?? undefined}
  onValueChange={(v) => setFormData({ ...formData, destination_type: v as "residential" | "commercial" })}
  >
  <SelectTrigger className="app-input w-full">
