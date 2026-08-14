@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/compone
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Settings2, Eye, EyeOff, Lock, Home, Building2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export interface FieldConfig {
   show?: string[] | Record<string, string[]>;
@@ -149,7 +150,19 @@ export function FieldConfigEditor({
   };
 
   const updateOrder = (field: string, value: number) => {
-    setOrder((prev) => ({ ...prev, [field]: value || 0 }));
+    if (!value) return;
+    setOrder((prev) => {
+      const next = { ...prev };
+      // Buscar si otro campo ya tiene ese numero -> intercambiar
+      const otherField = Object.entries(next).find(
+        ([k, v]) => k !== field && v === value,
+      )?.[0];
+      if (otherField) {
+        next[otherField] = next[field] ?? DEFAULT_ORDER[field] ?? 0;
+      }
+      next[field] = value;
+      return next;
+    });
   };
 
   const handleSave = () => {
@@ -227,8 +240,8 @@ export function FieldConfigEditor({
     );
   };
 
-  // Grilla: # orden (60px) + campo (200px) + una columna por cada tipo disponible
-  const gridCols = ["60px", "200px", ...availableDestTypes.map(() => "1fr")].join(" ");
+  // Grilla: # orden (72px) + campo (200px) + una columna por cada tipo disponible
+  const gridCols = ["72px", "200px", ...availableDestTypes.map(() => "1fr")].join(" ");
   const showRes = availableDestTypes.includes("residential");
   const showCom = availableDestTypes.includes("commercial");
 
@@ -294,15 +307,19 @@ export function FieldConfigEditor({
                 >
                   {/* Columna: numero de orden */}
                   <div className="flex items-center justify-center px-1 py-2">
-                    <input
-                      type="number"
-                      min={1}
-                      max={99}
-                      value={fieldOrder}
-                      onChange={(e) => updateOrder(field.key, parseInt(e.target.value) || 0)}
-                      className="w-9 h-7 text-center text-[12px] rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-emerald-500/40"
-                      title="Orden del campo en el formulario"
-                    />
+                    <Select
+                      value={String(fieldOrder)}
+                      onValueChange={(v) => updateOrder(field.key, parseInt(v ?? "0") || 0)}
+                    >
+                      <SelectTrigger className="h-7 w-14 text-[12px] px-1.5 py-0">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 13 }, (_, i) => i + 1).map((n) => (
+                          <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {/* Columna: nombre del campo */}
