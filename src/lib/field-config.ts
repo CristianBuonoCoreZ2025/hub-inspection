@@ -22,6 +22,49 @@ export const DEFAULT_LABELS: Record<string, string> = {
   business_line: "Rubro de la Empresa",
 };
 
+// Orden de los campos en el formulario y reporte.
+// Los campos siempre visibles (ALWAYS_VISIBLE_FIELDS) se ordenan primero.
+// Cambiar estos números reordena los campos en toda la app.
+export const FIELD_ORDER: Record<string, number> = {
+  age_years: 1,
+  owner_name: 2,
+  worker_resident_count: 3,
+  apartment_number: 4,
+  floor_count: 5,
+  built_surface: 6,
+  room_count: 7,
+  bathroom_count: 8,
+  is_habitable: 9,
+  office_count: 10,
+  warehouse_count: 11,
+  branch_count: 12,
+  business_line: 13,
+};
+
+// Todos los campos dinámicos (excluyendo los selects fijos destino/clasificacion)
+export const DYNAMIC_FIELDS = [
+  "age_years",
+  "owner_name",
+  "worker_resident_count",
+  "apartment_number",
+  "floor_count",
+  "built_surface",
+  "room_count",
+  "bathroom_count",
+  "is_habitable",
+  "office_count",
+  "warehouse_count",
+  "branch_count",
+  "business_line",
+] as const;
+
+// Retorna los campos visibles ordenados por FIELD_ORDER
+export function getSortedVisibleFields(visible: Set<string>): string[] {
+  return DYNAMIC_FIELDS
+    .filter((key) => visible.has(key))
+    .sort((a, b) => (FIELD_ORDER[a] ?? 99) - (FIELD_ORDER[b] ?? 99));
+}
+
 type FieldConfigViejo = {
   show?: string[];
   hide?: string[];

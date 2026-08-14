@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { getReport, createReport, updateReport, completeInspection } from "@/services/inspections";
 import { getPropertyClassifications, getHousingDestinations } from "@/services/catalogs";
-import { resolveFieldConfig } from "@/lib/field-config";
+import { resolveFieldConfig, getSortedVisibleFields } from "@/lib/field-config";
 import { issueClaimAction } from "@/services/claim-actions";
 import { toast } from "sonner";
 import { FileText, Printer, CheckCircle2, RefreshCw, Lock, Download, Archive } from "lucide-react";
@@ -846,19 +846,15 @@ export default function ReportTab({
               </div>
               {fieldRow(labelFor("property_type"), session.property_risk.property_type)}
               {fieldRow(labelFor("risk_class"), session.property_risk.risk_class)}
-              {visible.has("age_years") && fieldRow(labelFor("age_years"), fmtAge(session.property_risk.age_years))}
-              {visible.has("owner_name") && fieldRow(labelFor("owner_name"), session.property_risk.owner_name)}
-              {visible.has("worker_resident_count") && fieldRow(labelFor("worker_resident_count"), session.property_risk.worker_resident_count)}
-              {visible.has("apartment_number") && fieldRow(labelFor("apartment_number"), session.property_risk.apartment_number)}
-              {visible.has("floor_count") && fieldRow(labelFor("floor_count"), session.property_risk.floor_count)}
-              {visible.has("built_surface") && fieldRow(labelFor("built_surface"), session.property_risk.built_surface ? `${session.property_risk.built_surface} m²` : null)}
-              {visible.has("room_count") && fieldRow(labelFor("room_count"), session.property_risk.room_count)}
-              {visible.has("bathroom_count") && fieldRow(labelFor("bathroom_count"), session.property_risk.bathroom_count)}
-              {visible.has("office_count") && fieldRow(labelFor("office_count"), session.property_risk.office_count)}
-              {visible.has("warehouse_count") && fieldRow(labelFor("warehouse_count"), session.property_risk.warehouse_count)}
-              {visible.has("branch_count") && fieldRow(labelFor("branch_count"), session.property_risk.branch_count)}
-              {visible.has("business_line") && fieldRow(labelFor("business_line"), session.property_risk.business_line)}
-              {visible.has("is_habitable") && fieldRow(labelFor("is_habitable"), session.property_risk.is_habitable !== undefined ? (session.property_risk.is_habitable ? "Sí" : "No") : null)}
+              {getSortedVisibleFields(visible).map((key) => {
+                const pr = session.property_risk as Record<string, unknown>;
+                const val = pr[key];
+                let display: string | null = val != null ? String(val) : null;
+                if (key === "age_years") display = fmtAge(val as string);
+                if (key === "built_surface") display = val ? `${val} m²` : null;
+                if (key === "is_habitable") display = val !== undefined ? (val ? "Sí" : "No") : null;
+                return fieldRow(labelFor(key), display);
+              })}
             </>
           )}
 

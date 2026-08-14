@@ -990,18 +990,18 @@ function ActaTab({ session, actaStep }: { session: LiveSession; actaStep: string
               <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 app-body">
                 <Field label="Destino del Bien" value={val(pr, "property_type")} />
                 <Field label="Clasificacion del Bien" value={riskClass} />
+                <Field label="Antiguedad del Inmueble" value={val(pr, "age_years")} />
+                <Field label="Nombre Propietario(s)" value={val(pr, "owner_name")} />
+                <Field label={isResidential ? "N° Habitantes" : "N° Trabajadores"} value={val(pr, "worker_resident_count")} />
                 <Field label="N° Dpto / Oficina" value={val(pr, "apartment_number")} />
                 <Field label="N° Pisos" value={val(pr, "floor_count")} />
-                <Field label="Antiguedad del Inmueble" value={val(pr, "age_years")} />
                 <Field label="Superficie Construida (m²)" value={val(pr, "built_surface")} />
                 <Field label="Cantidad Espacios" value={val(pr, "room_count")} />
                 <Field label="Cantidad Baños" value={val(pr, "bathroom_count")} />
+                <Field label="¿Se encuentra habitable?" value={val(pr, "is_habitable")} />
                 <Field label="N° Oficinas" value={val(pr, "office_count")} />
                 <Field label="N° Bodegas" value={val(pr, "warehouse_count")} />
-                <Field label="¿Se encuentra habitable?" value={val(pr, "is_habitable")} />
-                <Field label="Nombre Propietario(s)" value={val(pr, "owner_name")} />
                 {!isResidential && <Field label="Sucursales" value={val(pr, "branch_count")} />}
-                <Field label={isResidential ? "N° Habitantes" : "N° Trabajadores"} value={val(pr, "worker_resident_count")} />
                 {!isResidential && <Field label="Rubro de la Empresa" value={val(pr, "business_line")} />}
               </div>
             );

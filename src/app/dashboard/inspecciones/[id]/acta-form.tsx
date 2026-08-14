@@ -32,7 +32,7 @@ import { ToggleChip } from "@/components/ui/toggle-chip";
 import { VoiceTextarea } from "@/components/ui/voice-textarea";
 import { useLookupCatalogs } from "@/hooks/use-lookup-catalog";
 import { getPropertyClassifications, getHousingDestinations, getClassificationDestinations, getBuildingAges } from "@/services/catalogs";
-import { resolveFieldConfig, filterClassificationsByDestination } from "@/lib/field-config";
+import { resolveFieldConfig, filterClassificationsByDestination, getSortedVisibleFields } from "@/lib/field-config";
 import { useQuery } from "@tanstack/react-query";
 import type { InspectionSession } from "@/types";
 
@@ -523,7 +523,7 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  propertyClassifications,
  housingDestinations,
  );
- const isFieldVisible = (key: string) => visible.has(key);
+ // isFieldVisible no se necesita: getSortedVisibleFields ya filtra por visibilidad
 
  // ── Filtrar clasificaciones según destino seleccionado ──
  const filteredClassifications = filterClassificationsByDestination(
@@ -543,89 +543,53 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  <Label className="app-field-label">Clasificacion del Bien</Label>
  {tableSelect("property_risk.risk_class", filteredClassifications)}
  </div>
- {isFieldVisible("apartment_number") && (
- <div className="modal-field">
- <Label className="app-field-label">{labelFor("apartment_number")}</Label>
- <Input {...field("property_risk.apartment_number")} placeholder="606" className="app-input" />
- </div>
- )}
- {isFieldVisible("floor_count") && (
- <div className="modal-field">
- <Label className="app-field-label">{labelFor("floor_count")}</Label>
- <Input {...field("property_risk.floor_count")} type="number" placeholder="6" className="app-input" />
- </div>
- )}
- {isFieldVisible("age_years") && (
- <div className="modal-field">
- <Label className="app-field-label">{labelFor("age_years")}</Label>
- {tableSelect("property_risk.age_years", buildingAges)}
- </div>
- )}
- {isFieldVisible("built_surface") && (
- <div className="modal-field">
- <Label className="app-field-label">{labelFor("built_surface")}</Label>
- <Input {...field("property_risk.built_surface")} type="number" placeholder="0" className="app-input" />
- </div>
- )}
- {isFieldVisible("room_count") && (
- <div className="modal-field">
- <Label className="app-field-label">{labelFor("room_count")}</Label>
- {numberSelect("property_risk.room_count", 10)}
- </div>
- )}
- {isFieldVisible("bathroom_count") && (
- <div className="modal-field">
- <Label className="app-field-label">{labelFor("bathroom_count")}</Label>
- {numberSelect("property_risk.bathroom_count", 10)}
- </div>
- )}
- {isFieldVisible("office_count") && (
- <div className="modal-field">
- <Label className="app-field-label">{labelFor("office_count")}</Label>
- {numberSelect("property_risk.office_count", 10)}
- </div>
- )}
- {isFieldVisible("warehouse_count") && (
- <div className="modal-field">
- <Label className="app-field-label">{labelFor("warehouse_count")}</Label>
- {numberSelect("property_risk.warehouse_count", 10)}
- </div>
- )}
- {isFieldVisible("is_habitable") && (
- <div className="modal-field">
- <Label className="app-field-label">{labelFor("is_habitable")}</Label>
- <ToggleChip
- active={Boolean(watch("property_risk.is_habitable"))}
- onClick={(v) => set("property_risk.is_habitable", v)}
- >
- {watch("property_risk.is_habitable") ? "Sí" : "No"}
- </ToggleChip>
- </div>
- )}
- {isFieldVisible("owner_name") && (
- <div className="modal-field">
- <Label className="app-field-label">{labelFor("owner_name")}</Label>
- <Input {...field("property_risk.owner_name")} placeholder="Pamela Becerra" className="app-input" />
- </div>
- )}
- {isFieldVisible("branch_count") && (
- <div className="modal-field">
- <Label className="app-field-label">{labelFor("branch_count")}</Label>
- <Input {...field("property_risk.branch_count")} type="number" className="app-input" />
- </div>
- )}
- {isFieldVisible("worker_resident_count") && (
- <div className="modal-field">
- <Label className="app-field-label">{labelFor("worker_resident_count")}</Label>
- <Input {...field("property_risk.worker_resident_count")} type="number" className="app-input" />
- </div>
- )}
- {isFieldVisible("business_line") && (
- <div className="modal-field modal-field-full">
- <Label className="app-field-label">{labelFor("business_line")}</Label>
- <Input {...field("property_risk.business_line")} className="app-input" />
- </div>
- )}
+ {getSortedVisibleFields(visible).map((key) => {
+   const renderField = () => {
+     switch (key) {
+       case "age_years":
+         return tableSelect("property_risk.age_years", buildingAges);
+       case "room_count":
+         return numberSelect("property_risk.room_count", 10);
+       case "bathroom_count":
+         return numberSelect("property_risk.bathroom_count", 10);
+       case "office_count":
+         return numberSelect("property_risk.office_count", 10);
+       case "warehouse_count":
+         return numberSelect("property_risk.warehouse_count", 10);
+       case "is_habitable":
+         return (
+           <ToggleChip
+             active={Boolean(watch("property_risk.is_habitable"))}
+             onClick={(v) => set("property_risk.is_habitable", v)}
+           >
+             {watch("property_risk.is_habitable") ? "Sí" : "No"}
+           </ToggleChip>
+         );
+       case "apartment_number":
+         return <Input {...field("property_risk.apartment_number")} placeholder="606" className="app-input" />;
+       case "floor_count":
+         return <Input {...field("property_risk.floor_count")} type="number" placeholder="6" className="app-input" />;
+       case "built_surface":
+         return <Input {...field("property_risk.built_surface")} type="number" placeholder="0" className="app-input" />;
+       case "owner_name":
+         return <Input {...field("property_risk.owner_name")} placeholder="Pamela Becerra" className="app-input" />;
+       case "branch_count":
+         return <Input {...field("property_risk.branch_count")} type="number" className="app-input" />;
+       case "worker_resident_count":
+         return <Input {...field("property_risk.worker_resident_count")} type="number" className="app-input" />;
+       case "business_line":
+         return <Input {...field("property_risk.business_line")} className="app-input" />;
+       default:
+         return null;
+     }
+   };
+   return (
+     <div key={key} className={`modal-field${key === "business_line" ? " modal-field-full" : ""}`}>
+       <Label className="app-field-label">{labelFor(key)}</Label>
+       {renderField()}
+     </div>
+   );
+ })}
  </div>
  );
  })()}
