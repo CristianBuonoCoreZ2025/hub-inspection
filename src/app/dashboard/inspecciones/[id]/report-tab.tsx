@@ -989,7 +989,7 @@ export default function ReportTab({
                     <th className="report-th app-body">Tipo de Bien</th>
                     <th className="report-th app-body">Producto</th>
                     <th className="report-th app-body">Marca/Modelo</th>
-                    <th className="report-th app-body">Clasificación del Daño</th>
+                    <th className="report-th app-body">Daño</th>
                     <th className="report-th-right app-body">Cantidad</th>
                     <th className="report-th-right app-body">Monto</th>
                     <th className="report-th app-body">Fecha Compra</th>

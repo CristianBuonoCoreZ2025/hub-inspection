@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -1333,7 +1333,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <th>Producto</th>
  <th>Marca/Modelo</th>
  <th>Daño</th>
- <th className="text-right">Superficie / Daño</th>
+ <th className="text-right">Cantidad</th>
  <th className="text-right">Monto</th>
  <th className="w-[80px]">Acciones</th>
  </tr>
