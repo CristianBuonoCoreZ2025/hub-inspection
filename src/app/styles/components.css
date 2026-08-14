@@ -2522,7 +2522,7 @@
 
 /* Título de sección del acta */
 .report-acta-title {
-  @apply font-bold uppercase text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l border-foreground/20;
+  @apply font-bold text-gray-900 bg-gray-100 px-2.5 py-1.5 my-4 border-l border-foreground/20;
 }
 
 /* Fila de campo label: valor */
@@ -2530,7 +2530,7 @@
   @apply flex mb-0.5;
 }
 .report-field-label {
-  @apply font-semibold text-muted-foreground min-w-50 uppercase;
+  @apply font-semibold text-muted-foreground min-w-50;
 }
 .report-field-value {
   @apply flex-1;
@@ -2562,10 +2562,10 @@
   @apply w-full border-collapse my-1.5;
 }
 .report-th {
-  @apply text-left p-1.5 bg-gray-100 border border-gray-300 font-bold uppercase;
+  @apply text-left p-1.5 bg-gray-100 border border-gray-300 font-bold;
 }
 .report-th-right {
-  @apply text-right p-1.5 bg-gray-100 border border-gray-300 font-bold uppercase;
+  @apply text-right p-1.5 bg-gray-100 border border-gray-300 font-bold;
 }
 .report-td {
   @apply p-1.5 border border-gray-300;
