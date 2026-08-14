@@ -22,13 +22,7 @@ interface FieldConfigEditorProps {
 
 const ALWAYS_VISIBLE = ["age_years", "owner_name", "worker_resident_count"];
 
-const DEST_TYPES = ["residential", "commercial"] as const;
-type DestType = (typeof DEST_TYPES)[number];
-
-const DEST_TYPE_LABELS: Record<DestType, string> = {
-  residential: "Habitacional",
-  commercial: "Comercial",
-};
+type DestType = "residential" | "commercial";
 
 const ALL_FIELDS: { key: string; defaultLabel: string }[] = [
   { key: "age_years", defaultLabel: "Antigüedad del Inmueble" },
@@ -73,11 +67,9 @@ function normalizeShow(
   const empty: ShowState = { residential: new Set(), commercial: new Set() };
   if (!raw) return empty;
   if (Array.isArray(raw)) {
-    // Formato viejo: mismo show para ambos tipos
     const s = new Set(raw);
     return { residential: new Set(s), commercial: new Set(s) };
   }
-  // Formato nuevo: objeto con arrays por tipo
   return {
     residential: new Set(raw.residential || []),
     commercial: new Set(raw.commercial || []),
@@ -85,15 +77,12 @@ function normalizeShow(
 }
 
 export function FieldConfigEditor({ open, onOpenChange, currentConfig, onSave, itemName }: FieldConfigEditorProps) {
-  const [activeDestType, setActiveDestType] = React.useState<DestType>("residential");
   const [showFields, setShowFields] = React.useState<ShowState>(() => normalizeShow(currentConfig?.show));
   const [labels, setLabels] = React.useState<LabelState>(() => normalizeLabels(currentConfig?.labels));
   const [lastOpen, setLastOpen] = React.useState(false);
 
-  // Reset state cuando se abre el dialog
   if (open && !lastOpen) {
     setLastOpen(true);
-    setActiveDestType("residential");
     setShowFields(normalizeShow(currentConfig?.show));
     setLabels(normalizeLabels(currentConfig?.labels));
   } else if (!open && lastOpen) {
@@ -121,9 +110,6 @@ export function FieldConfigEditor({ open, onOpenChange, currentConfig, onSave, i
   };
 
   const handleSave = () => {
-    // Convertir show a formato compacto:
-    // - Si residential === commercial → guardar como array plano
-    // - Si son distintos → guardar como objeto
     const resArr = Array.from(showFields.residential).filter((f) => !ALWAYS_VISIBLE.includes(f)).sort();
     const comArr = Array.from(showFields.commercial).filter((f) => !ALWAYS_VISIBLE.includes(f)).sort();
     const showOut: string[] | Record<string, string[]> =
@@ -131,7 +117,6 @@ export function FieldConfigEditor({ open, onOpenChange, currentConfig, onSave, i
         ? resArr
         : { residential: resArr, commercial: comArr };
 
-    // Convertir labels a formato compacto
     const labelsOut: Record<string, string | Record<string, string>> = {};
     for (const [key, { residential, commercial }] of Object.entries(labels)) {
       if (!residential.trim() && !commercial.trim()) continue;
@@ -145,14 +130,31 @@ export function FieldConfigEditor({ open, onOpenChange, currentConfig, onSave, i
       }
     }
 
-    onSave({
-      show: showOut,
-      labels: labelsOut,
-    });
+    onSave({ show: showOut, labels: labelsOut });
     onOpenChange(false);
   };
 
-  const activeShow = showFields[activeDestType];
+  const renderEye = (field: { key: string; defaultLabel: string }, destType: DestType) => {
+    const isVisible = showFields[destType].has(field.key) || ALWAYS_VISIBLE.includes(field.key);
+    const isLocked = ALWAYS_VISIBLE.includes(field.key);
+    return (
+      <button
+        type="button"
+        onClick={() => toggleField(field.key, destType)}
+        disabled={isLocked}
+        className={`shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-md transition-all ${
+          isLocked
+            ? "text-muted-foreground/40 cursor-default"
+            : isVisible
+            ? "text-emerald-500 hover:bg-emerald-500/10"
+            : "text-muted-foreground hover:bg-muted"
+        }`}
+        title={isLocked ? "Siempre visible" : isVisible ? "Visible" : "Oculto"}
+      >
+        {isLocked ? <Lock className="h-3.5 w-3.5" /> : isVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+      </button>
+    );
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -165,97 +167,72 @@ export function FieldConfigEditor({ open, onOpenChange, currentConfig, onSave, i
             {itemName}
           </DialogTitle>
           <DialogDescription className="modal-subtitle">
-            Configura campos visibles y etiquetas por tipo de destino.
+            Activa o desactiva campos y define etiquetas por tipo de destino.
           </DialogDescription>
         </div>
 
-        {/* Toggle de tipo de destino */}
-        <div className="flex items-center gap-2 px-1 pb-2">
-          {DEST_TYPES.map((dt) => {
-            const Icon = dt === "residential" ? Home : Building2;
-            const isActive = activeDestType === dt;
-            return (
-              <button
-                key={dt}
-                type="button"
-                onClick={() => setActiveDestType(dt)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
-                    ? dt === "residential"
-                      ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                      : "bg-sky-500/15 text-sky-600 dark:text-sky-400"
-                    : "text-muted-foreground hover:bg-muted"
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                {DEST_TYPE_LABELS[dt]}
-              </button>
-            );
-          })}
-        </div>
+        <div className="modal-body">
+          <div className="field-config-matrix">
+            {/* Header de la matriz */}
+            <div className="field-config-matrix-header">
+              <div className="field-config-col-field">Campo</div>
+              <div className="field-config-col-dest field-config-col-residential">
+                <Home className="h-3.5 w-3.5" />
+                <span>Habitacional</span>
+              </div>
+              <div className="field-config-col-dest field-config-col-commercial">
+                <Building2 className="h-3.5 w-3.5" />
+                <span>Comercial</span>
+              </div>
+            </div>
 
-        <div className="modal-body space-y-3">
-          {/* Encabezado de columnas de labels */}
-          <div className="flex items-center gap-2 px-3 pb-1">
-            <div className="w-7 shrink-0" />
-            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide min-w-30">Campo</span>
-            <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex-1">Label Habitacional</span>
-            <span className="text-[11px] font-semibold text-sky-600 dark:text-sky-400 flex-1">Label Comercial</span>
-          </div>
-
-          <div className="grid grid-cols-1 gap-1">
-            {ALL_FIELDS.map((field) => {
-              const isVisible = activeShow.has(field.key) || ALWAYS_VISIBLE.includes(field.key);
-              const isLocked = ALWAYS_VISIBLE.includes(field.key);
-              const fieldLabels = labels[field.key] || { residential: "", commercial: "" };
-              return (
-                <div
-                  key={field.key}
-                  className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 transition-colors ${
-                    isVisible ? "bg-background" : "bg-muted/30 opacity-60"
-                  }`}
-                >
-                  <button
-                    type="button"
-                    onClick={() => toggleField(field.key, activeDestType)}
-                    disabled={isLocked}
-                    className={`shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-md transition-all ${
-                      isLocked
-                        ? "text-muted-foreground/40 cursor-default"
-                        : isVisible
-                        ? "text-emerald-500 hover:bg-emerald-500/10"
-                        : "text-muted-foreground hover:bg-muted"
-                    }`}
-                    title={isLocked ? "Siempre visible" : isVisible ? `Visible en ${DEST_TYPE_LABELS[activeDestType]}` : `Oculto en ${DEST_TYPE_LABELS[activeDestType]}`}
+            {/* Filas de la matriz */}
+            <div className="field-config-matrix-body">
+              {ALL_FIELDS.map((field) => {
+                const isLocked = ALWAYS_VISIBLE.includes(field.key);
+                const fieldLabels = labels[field.key] || { residential: "", commercial: "" };
+                const resVisible = showFields.residential.has(field.key) || isLocked;
+                const comVisible = showFields.commercial.has(field.key) || isLocked;
+                return (
+                  <div
+                    key={field.key}
+                    className={`field-config-matrix-row ${isLocked ? "field-config-row-locked" : ""}`}
                   >
-                    {isLocked ? (
-                      <Lock className="h-3.5 w-3.5" />
-                    ) : isVisible ? (
-                      <Eye className="h-4 w-4" />
-                    ) : (
-                      <EyeOff className="h-4 w-4" />
-                    )}
-                  </button>
-                  <span className={`text-[13px] font-medium min-w-30 ${isVisible ? "text-foreground" : "text-muted-foreground line-through"}`}>
-                    {field.defaultLabel}
-                  </span>
-                  <Input
-                    type="text"
-                    placeholder={field.defaultLabel}
-                    value={fieldLabels.residential}
-                    onChange={(e) => updateLabel(field.key, "residential", e.target.value)}
-                    className="app-input flex-1"
-                  />
-                  <Input
-                    type="text"
-                    placeholder={field.defaultLabel}
-                    value={fieldLabels.commercial}
-                    onChange={(e) => updateLabel(field.key, "commercial", e.target.value)}
-                    className="app-input flex-1"
-                  />
-                </div>
-              );
-            })}
+                    {/* Columna: nombre del campo */}
+                    <div className="field-config-col-field">
+                      <span className="text-[13px] font-medium text-foreground">{field.defaultLabel}</span>
+                      {isLocked && <Lock className="h-3 w-3 text-muted-foreground/40" />}
+                    </div>
+
+                    {/* Columna: Habitacional */}
+                    <div className="field-config-col-dest field-config-col-residential">
+                      {renderEye(field, "residential")}
+                      <Input
+                        type="text"
+                        placeholder={field.defaultLabel}
+                        value={fieldLabels.residential}
+                        onChange={(e) => updateLabel(field.key, "residential", e.target.value)}
+                        className="app-input flex-1"
+                        disabled={!resVisible}
+                      />
+                    </div>
+
+                    {/* Columna: Comercial */}
+                    <div className="field-config-col-dest field-config-col-commercial">
+                      {renderEye(field, "commercial")}
+                      <Input
+                        type="text"
+                        placeholder={field.defaultLabel}
+                        value={fieldLabels.commercial}
+                        onChange={(e) => updateLabel(field.key, "commercial", e.target.value)}
+                        className="app-input flex-1"
+                        disabled={!comVisible}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
 
