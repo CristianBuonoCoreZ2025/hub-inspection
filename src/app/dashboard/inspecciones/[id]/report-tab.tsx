@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback, useState, useMemo } from "react";
+import { useRef, useCallback, useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { getReport, createReport, updateReport, completeInspection } from "@/services/inspections";
@@ -134,6 +134,11 @@ export default function ReportTab({
   const isCancellation = sessionStatus === "cancelled";
   const isCompleted = sessionStatus === "completed";
 
+  // Refrescar la sesión completa al entrar a la pestaña del informe
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ["inspection-session-full", sessionId] });
+  }, [sessionId, queryClient]);
+
   const { data: reportMaxPhotos } = useQuery({
     queryKey: ["report-max-photos"],
     queryFn: async () => {
@@ -182,6 +187,7 @@ export default function ReportTab({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["report", sessionId] });
+      queryClient.invalidateQueries({ queryKey: ["inspection-session-full", sessionId] });
       toast.success("Acta generada");
     },
     onError: (err: Error) => toast.error(err.message),
@@ -293,6 +299,8 @@ export default function ReportTab({
       // 1. Forzar isFinal=true para que el DOM oculte el watermark "BORRADOR"
       //    y el footer diga "definitivo" ANTES de capturar el PDF
       setForceFinalForPdf(true);
+      // Refrescar la sesión completa antes de generar para incluir los últimos cambios
+      await queryClient.refetchQueries({ queryKey: ["inspection-session-full", sessionId], type: "active" });
       // Esperar a que React re-renderice con el nuevo estado
       await new Promise((r) => setTimeout(r, 100));
 
@@ -347,6 +355,7 @@ export default function ReportTab({
       }).catch(() => {});
       queryClient.invalidateQueries({ queryKey: ["report", sessionId] });
       queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
+      queryClient.invalidateQueries({ queryKey: ["inspection-session-full", sessionId] });
       queryClient.invalidateQueries({ queryKey: ["inspection-sessions"] });
       if (session.claim_id) {
         queryClient.invalidateQueries({ queryKey: ["claim", session.claim_id] });
@@ -362,6 +371,9 @@ export default function ReportTab({
     mutationFn: async () => {
       // Forzar isFinal=true para que el DOM no tenga watermark
       setForceFinalForPdf(true);
+      // Refrescar la sesión completa antes de generar para incluir los últimos cambios
+      await queryClient.refetchQueries({ queryKey: ["inspection-session-full", sessionId], type: "active" });
+      // Esperar a que React renderice con el DOM definitivo
       await new Promise((r) => setTimeout(r, 100));
 
       // Generar el PDF
@@ -371,9 +383,18 @@ export default function ReportTab({
       // Subir el PDF a R2 (pisar el anterior)
       const reportUrl = await uploadPdf(pdfBlob);
 
-      // Actualizar el reporte con la nueva URL
+      // Actualizar o crear el reporte con la nueva URL
       if (report) {
         await updateReport(report.id, { status: "final", generated_at: new Date().toISOString(), report_url: reportUrl });
+      } else {
+        await createReport({
+          session_id: sessionId,
+          claim_id: session.claim_id || null,
+          report_url: reportUrl,
+          generated_at: new Date().toISOString(),
+          status: "final",
+          report_type: isCancellation ? "cancellation" : "completion",
+        } as Omit<import("@/types").InspectionReport, "id">);
       }
     },
     onMutate: () => {
