@@ -1272,7 +1272,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  </thead>
  <tbody>
  {buildingDamages.map((d) => [
- <tr key={d.id} className={d.observations ? "with-observation" : ""}>
+ <tr key={d.id} className={d.description ? "with-observation" : ""}>
  <td className="app-body">{spaceName(d.space_id)}</td>
  <td className="app-body">{d.subcategory || "—"}</td>
  <td className="app-body max-w-[200px] truncate">{d.description || d.materiality_type || "—"}</td>
@@ -1293,10 +1293,10 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  </div>
  </td>
  </tr>,
- d.observations ? (
+ d.description ? (
    <tr key={`${d.id}-obs`} className="observation-row">
      <td colSpan={6} className="grid-observation">
-       <strong>Aclaratoria:</strong> {d.observations}
+       <strong>Aclaratoria:</strong> {d.description}
      </td>
    </tr>
  ) : null,
@@ -1340,7 +1340,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  </thead>
  <tbody>
  {contentDamages.map((d) => [
- <tr key={d.id} className={d.observations ? "with-observation" : ""}>
+ <tr key={d.id} className={d.description ? "with-observation" : ""}>
  <td className="app-body">{goodTypeName(d.content_good_type_id)}</td>
  <td className="app-body max-w-[150px] truncate">{d.product || d.description}</td>
  <td className="app-body">{d.brand_model || "—"}</td>
@@ -1371,10 +1371,10 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  </div>
  </td>
  </tr>,
- d.observations ? (
+ d.description ? (
    <tr key={`${d.id}-obs`} className="observation-row">
      <td colSpan={7} className="grid-observation">
-       <strong>Aclaratoria:</strong> {d.observations}
+       <strong>Aclaratoria:</strong> {d.description}
      </td>
    </tr>
  ) : null,

@@ -964,10 +964,10 @@ export default function ReportTab({
                       <td className="report-td-right app-body">{fmtMoney(d.estimated_amount, d.currency)}</td>
                       <td className="report-td app-body">{SEVERITY_LABELS[d.severity] || d.severity}</td>
                     </tr>,
-                    d.observations ? (
+                    d.description ? (
                       <tr key={`${d.id}-obs`} className="report-observation-row">
                         <td colSpan={6} className="report-td report-observation">
-                          <strong>Aclaratoria:</strong> {d.observations}
+                          <strong>Aclaratoria:</strong> {d.description}
                         </td>
                       </tr>
                     ) : null,
@@ -1006,10 +1006,10 @@ export default function ReportTab({
                       <td className="report-td-right app-body">{fmtMoney(d.estimated_amount, d.currency)}</td>
                       <td className="report-td app-body">{fmtDate(d.purchase_date)}</td>
                     </tr>,
-                    d.observations ? (
+                    d.description ? (
                       <tr key={`${d.id}-obs`} className="report-observation-row">
                         <td colSpan={7} className="report-td report-observation">
-                          <strong>Aclaratoria:</strong> {d.observations}
+                          <strong>Aclaratoria:</strong> {d.description}
                         </td>
                       </tr>
                     ) : null,
