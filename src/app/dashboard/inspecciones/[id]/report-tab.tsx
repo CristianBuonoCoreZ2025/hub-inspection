@@ -964,10 +964,10 @@ export default function ReportTab({
                       <td className="report-td-right app-body">{fmtMoney(d.estimated_amount, d.currency)}</td>
                       <td className="report-td app-body">{SEVERITY_LABELS[d.severity] || d.severity}</td>
                     </tr>,
-                    d.description ? (
+                    d.observations ? (
                       <tr key={`${d.id}-obs`} className="report-observation-row">
                         <td colSpan={6} className="report-td report-observation">
-                          <strong>Aclaratoria:</strong> {d.description}
+                          {d.observations}
                         </td>
                       </tr>
                     ) : null,
@@ -999,17 +999,21 @@ export default function ReportTab({
                   {contentDamages.map((d) => [
                     <tr key={d.id} className={d.observations ? "report-with-observation" : ""}>
                       <td className="report-td app-body">{d.category || "—"}</td>
-                      <td className="report-td app-body">{d.product === "Otros" ? (d.description || d.product) : (d.product || "—")}</td>
+                      <td className="report-td app-body">
+                        {d.product === "Otros" || !d.product
+                          ? (d.description || "—")
+                          : (d.description ? `${d.product} / ${d.description}` : d.product)}
+                      </td>
                       <td className="report-td app-body">{d.brand_model || "—"}</td>
                       <td className="report-td app-body">{SEVERITY_LABELS[d.severity] || d.severity}</td>
                       <td className="report-td-right app-body">{fmtQuantity(d)}</td>
                       <td className="report-td-right app-body">{fmtMoney(d.estimated_amount, d.currency)}</td>
                       <td className="report-td app-body">{fmtDate(d.purchase_date)}</td>
                     </tr>,
-                    d.description ? (
+                    d.observations ? (
                       <tr key={`${d.id}-obs`} className="report-observation-row">
                         <td colSpan={7} className="report-td report-observation">
-                          <strong>Aclaratoria:</strong> {d.description}
+                          {d.observations}
                         </td>
                       </tr>
                     ) : null,

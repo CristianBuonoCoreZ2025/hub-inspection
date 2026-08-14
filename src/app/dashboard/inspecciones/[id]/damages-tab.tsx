@@ -1272,7 +1272,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  </thead>
  <tbody>
  {buildingDamages.map((d) => [
- <tr key={d.id} className={d.description ? "with-observation" : ""}>
+ <tr key={d.id} className={d.observations ? "with-observation" : ""}>
  <td className="app-body">{spaceName(d.space_id)}</td>
  <td className="app-body">{d.subcategory || "—"}</td>
  <td className="app-body max-w-[200px] truncate">{d.description || d.materiality_type || "—"}</td>
@@ -1293,10 +1293,10 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  </div>
  </td>
  </tr>,
- d.description ? (
+ d.observations ? (
    <tr key={`${d.id}-obs`} className="observation-row">
      <td colSpan={6} className="grid-observation">
-       <strong>Aclaratoria:</strong> {d.description}
+       {d.observations}
      </td>
    </tr>
  ) : null,
@@ -1340,9 +1340,13 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  </thead>
  <tbody>
  {contentDamages.map((d) => [
- <tr key={d.id} className={d.description ? "with-observation" : ""}>
+ <tr key={d.id} className={d.observations ? "with-observation" : ""}>
  <td className="app-body">{goodTypeName(d.content_good_type_id)}</td>
- <td className="app-body max-w-[150px] truncate">{d.product || d.description}</td>
+ <td className="app-body max-w-[150px] truncate">
+   {d.product === "Otro" || !d.product
+     ? (d.description || "—")
+     : (d.description ? `${d.product} / ${d.description}` : d.product)}
+ </td>
  <td className="app-body">{d.brand_model || "—"}</td>
  <td>
  <span className={`app-body font-medium px-2 py-0.5 rounded-full ${
@@ -1371,10 +1375,10 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  </div>
  </td>
  </tr>,
- d.description ? (
+ d.observations ? (
    <tr key={`${d.id}-obs`} className="observation-row">
      <td colSpan={7} className="grid-observation">
-       <strong>Aclaratoria:</strong> {d.description}
+       {d.observations}
      </td>
    </tr>
  ) : null,
