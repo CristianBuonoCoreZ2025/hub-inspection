@@ -719,7 +719,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  />
  </div>
  <div className="modal-field">
- <label className="app-field-label">Clasificación del Daño</label>
+ <label className="app-field-label">Daño</label>
  <Select
  value={form.severity || "low"}
  items={severityOptions}
@@ -1068,7 +1068,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  </Select>
  </div>
  <div className='modal-field'>
- <label className='app-field-label'>Clasificación del Daño</label>
+ <label className='app-field-label'>Daño</label>
  <Select
  value={form.severity || 'low'}
  items={severityOptions}
@@ -1332,7 +1332,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <th>Tipo de Bien</th>
  <th>Producto</th>
  <th>Marca/Modelo</th>
- <th>Clasificación del Daño</th>
+ <th>Daño</th>
  <th className="text-right">Superficie / Daño</th>
  <th className="text-right">Monto</th>
  <th className="w-[80px]">Acciones</th>
