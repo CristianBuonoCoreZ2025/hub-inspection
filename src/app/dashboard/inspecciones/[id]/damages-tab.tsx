@@ -1278,6 +1278,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <td className="app-body max-w-[200px] truncate">{d.description || d.materiality_type || "—"}</td>
  <td className="text-right app-body">{formatQuantity(d)}</td>
  <td className="text-right font-medium app-body">{formatMoney(d.estimated_amount || 0, d.currency || "CLP")}</td>
+ <td className="app-body">{d.purchase_date ? new Date(d.purchase_date).toLocaleDateString('es-CL') : '—'}</td>
  <td>
  <div className="app-row-actions">
  {!readOnly && (
@@ -1335,6 +1336,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <th>Daño</th>
  <th className="text-right">Cantidad</th>
  <th className="text-right">Monto</th>
+ <th>Compra</th>
  <th className="w-[80px]">Acciones</th>
  </tr>
  </thead>
@@ -1358,6 +1360,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  </td>
  <td className="text-right app-body">{formatQuantity(d)}</td>
  <td className="text-right font-medium app-body">{formatMoney(d.estimated_amount || 0, d.currency || "CLP")}</td>
+ <td className="app-body">{d.purchase_date ? new Date(d.purchase_date).toLocaleDateString('es-CL') : '—'}</td>
  <td>
  <div className="app-row-actions">
  {!readOnly && (
@@ -1375,7 +1378,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  </tr>,
  d.observations ? (
    <tr key={`${d.id}-obs`} className="observation-row">
-     <td colSpan={7} className="grid-observation">
+     <td colSpan={8} className="grid-observation">
        {d.observations}
      </td>
    </tr>

@@ -992,7 +992,7 @@ export default function ReportTab({
                     <th className="report-th app-body">Daño</th>
                     <th className="report-th-right app-body">Cantidad</th>
                     <th className="report-th-right app-body">Monto</th>
-                    <th className="report-th app-body">Fecha Compra</th>
+                    <th className="report-th app-body">Compra</th>
                   </tr>
                 </thead>
                 <tbody>
