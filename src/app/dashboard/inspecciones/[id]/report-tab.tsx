@@ -28,6 +28,13 @@ function fmtDate(s?: string | null): string {
   return new Date(s).toLocaleDateString("es-CL", { timeZone: "America/Santiago", day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
+function fmtAge(s?: string | null): string {
+  if (!s) return "—";
+  const n = Number(s);
+  if (!isNaN(n) && String(n) === s.trim()) return `${s} años`;
+  return s;
+}
+
 function fmtSingleQuantity(quantity: number | null, length: number | null, width: number | null, height: number | null, unit: string | null): string {
   if (quantity == null || quantity === 0) return "—";
   const dimension =
@@ -478,8 +485,8 @@ export default function ReportTab({
     destConfig?.hide?.forEach((f) => visible.delete(f));
 
     const defaultLabels: Record<string, string> = {
-      risk_class: "Materia Afectada",
-      property_type: "Uso del Inmueble",
+      risk_class: "Clasificación del Bien",
+      property_type: "Destino del Bien",
       age_years: "Antigüedad",
       owner_name: "Propietario",
       worker_resident_count: "N° Habitantes",
@@ -810,7 +817,7 @@ export default function ReportTab({
               </div>
               {fieldRow(labelFor("risk_class"), session.property_risk.risk_class)}
               {fieldRow(labelFor("property_type"), session.property_risk.property_type)}
-              {visible.has("age_years") && fieldRow(labelFor("age_years"), session.property_risk.age_years ? `${session.property_risk.age_years} años` : null)}
+              {visible.has("age_years") && fieldRow(labelFor("age_years"), fmtAge(session.property_risk.age_years))}
               {visible.has("owner_name") && fieldRow(labelFor("owner_name"), session.property_risk.owner_name)}
               {visible.has("worker_resident_count") && fieldRow(labelFor("worker_resident_count"), session.property_risk.worker_resident_count)}
               {visible.has("apartment_number") && fieldRow(labelFor("apartment_number"), session.property_risk.apartment_number)}
