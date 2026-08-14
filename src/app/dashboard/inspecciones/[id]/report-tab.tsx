@@ -1004,7 +1004,7 @@ export default function ReportTab({
                       </td>
                       <td className="report-td app-body">{d.brand_model || "—"}</td>
                       <td className="report-td app-body">{SEVERITY_LABELS[d.severity] || d.severity}</td>
-                      <td className="report-td-right app-body">{fmtQuantity(d)}</td>
+                      <td className="report-td-right app-body">{d.quantity ? `${d.quantity}${d.unit ? ` ${d.unit}` : ""}` : "—"}</td>
                       <td className="report-td-right app-body">{fmtMoney(d.estimated_amount, d.currency)}</td>
                       <td className="report-td app-body">{fmtDate(d.purchase_date)}</td>
                     </tr>,
