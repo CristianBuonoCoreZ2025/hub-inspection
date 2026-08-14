@@ -4,6 +4,7 @@ import { useRef, useCallback, useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { getReport, createReport, updateReport, completeInspection } from "@/services/inspections";
+import { getPropertyClassifications, getHousingDestinations } from "@/services/catalogs";
 import { issueClaimAction } from "@/services/claim-actions";
 import { toast } from "sonner";
 import { FileText, Printer, CheckCircle2, RefreshCw, Lock, Download, Archive } from "lucide-react";
@@ -138,6 +139,17 @@ export default function ReportTab({
   const { data: report, isLoading, isError, error: reportError } = useQuery({
     queryKey: ["report", sessionId],
     queryFn: () => getReport(sessionId),
+  });
+
+  const { data: propertyClassifications = [] } = useQuery({
+    queryKey: ["property-classifications"],
+    queryFn: getPropertyClassifications,
+    staleTime: 1000 * 60 * 30,
+  });
+  const { data: housingDestinations = [] } = useQuery({
+    queryKey: ["housing-destinations"],
+    queryFn: getHousingDestinations,
+    staleTime: 1000 * 60 * 30,
   });
 
   // Forzar isFinal durante la generación del PDF para que el watermark
@@ -446,6 +458,46 @@ export default function ReportTab({
   const nonPhotoEvidences = useMemo(() => evidences.filter(e => !isPhoto(e.type)), [evidences]);
   // Solo una firma por rol (insured + adjuster = máximo 2)
   const uniqueSignatures = useMemo(() => signatures.filter((s, i, arr) => arr.findIndex(x => x.role === s.role) === i), [signatures]);
+
+  // Config dinámica de campos del acta (classification + destination)
+  const { visible, labelFor } = useMemo(() => {
+    const riskClass = session.property_risk?.risk_class || "";
+    const propertyType = session.property_risk?.property_type || "";
+    const classConfig = propertyClassifications.find((c) => c.name === riskClass)?.field_config as {
+      show?: string[]; hide?: string[]; labels?: Record<string, string>;
+    } | undefined;
+    const destConfig = housingDestinations.find((d) => d.name === propertyType)?.field_config as {
+      show?: string[]; hide?: string[]; labels?: Record<string, string>;
+    } | undefined;
+
+    const ALWAYS_VISIBLE = ["age_years", "owner_name", "worker_resident_count"];
+    const visible = new Set<string>(ALWAYS_VISIBLE);
+    classConfig?.show?.forEach((f) => visible.add(f));
+    destConfig?.show?.forEach((f) => visible.add(f));
+    classConfig?.hide?.forEach((f) => visible.delete(f));
+    destConfig?.hide?.forEach((f) => visible.delete(f));
+
+    const defaultLabels: Record<string, string> = {
+      risk_class: "Materia Afectada",
+      property_type: "Uso del Inmueble",
+      age_years: "Antigüedad",
+      owner_name: "Propietario",
+      worker_resident_count: "N° Habitantes",
+      apartment_number: "N° Dpto / Oficina",
+      floor_count: "Número de Pisos",
+      built_surface: "Metros Cuadrados",
+      room_count: "Habitaciones",
+      bathroom_count: "Baños",
+      is_habitable: "¿Habitable?",
+      office_count: "N° Oficinas",
+      warehouse_count: "N° Bodegas",
+      branch_count: "Sucursales",
+      business_line: "Rubro de la Empresa",
+    };
+    const labelFor = (key: string) =>
+      classConfig?.labels?.[key] || destConfig?.labels?.[key] || defaultLabels[key] || key;
+    return { visible, labelFor };
+  }, [session.property_risk?.risk_class, session.property_risk?.property_type, propertyClassifications, housingDestinations]);
 
   // Descargar ZIP: reporte PDF + todas las evidencias + croquis (sin firmas)
   const [zipPending, setZipPending] = useState(false);
@@ -756,14 +808,21 @@ export default function ReportTab({
               <div className="report-acta-title app-body">
                 Antecedentes del Riesgo
               </div>
-              {fieldRow("Materia Afectada", session.property_risk.property_type)}
-              {fieldRow("Uso del Inmueble", session.property_risk.risk_type)}
-              {fieldRow("Antigüedad", session.property_risk.age_years ? `${session.property_risk.age_years} años` : null)}
-              {fieldRow("Número de Pisos", session.property_risk.floor_count)}
-              {fieldRow("Metros Cuadrados", session.property_risk.built_surface ? `${session.property_risk.built_surface} m²` : null)}
-              {fieldRow("Habitaciones", session.property_risk.room_count)}
-              {fieldRow("Baños", session.property_risk.bathroom_count)}
-              {fieldRow("¿Habitable?", session.property_risk.is_habitable !== undefined ? (session.property_risk.is_habitable ? "Sí" : "No") : null)}
+              {fieldRow(labelFor("risk_class"), session.property_risk.risk_class)}
+              {fieldRow(labelFor("property_type"), session.property_risk.property_type)}
+              {visible.has("age_years") && fieldRow(labelFor("age_years"), session.property_risk.age_years ? `${session.property_risk.age_years} años` : null)}
+              {visible.has("owner_name") && fieldRow(labelFor("owner_name"), session.property_risk.owner_name)}
+              {visible.has("worker_resident_count") && fieldRow(labelFor("worker_resident_count"), session.property_risk.worker_resident_count)}
+              {visible.has("apartment_number") && fieldRow(labelFor("apartment_number"), session.property_risk.apartment_number)}
+              {visible.has("floor_count") && fieldRow(labelFor("floor_count"), session.property_risk.floor_count)}
+              {visible.has("built_surface") && fieldRow(labelFor("built_surface"), session.property_risk.built_surface ? `${session.property_risk.built_surface} m²` : null)}
+              {visible.has("room_count") && fieldRow(labelFor("room_count"), session.property_risk.room_count)}
+              {visible.has("bathroom_count") && fieldRow(labelFor("bathroom_count"), session.property_risk.bathroom_count)}
+              {visible.has("office_count") && fieldRow(labelFor("office_count"), session.property_risk.office_count)}
+              {visible.has("warehouse_count") && fieldRow(labelFor("warehouse_count"), session.property_risk.warehouse_count)}
+              {visible.has("branch_count") && fieldRow(labelFor("branch_count"), session.property_risk.branch_count)}
+              {visible.has("business_line") && fieldRow(labelFor("business_line"), session.property_risk.business_line)}
+              {visible.has("is_habitable") && fieldRow(labelFor("is_habitable"), session.property_risk.is_habitable !== undefined ? (session.property_risk.is_habitable ? "Sí" : "No") : null)}
             </>
           )}
 
@@ -773,7 +832,6 @@ export default function ReportTab({
               <div className="report-acta-title app-body">
                 Características de la Construcción
               </div>
-              {fieldRow("Sistema Estructural", null)}
               {fieldRow("Muros / Tabiquería", session.property_materiality.walls)}
               {fieldRow("Techumbre", session.property_materiality.roof)}
               {fieldRow("Terminaciones de Muro", session.property_materiality.interior_finishes)}
@@ -781,7 +839,7 @@ export default function ReportTab({
               {fieldRow("Pavimentos", session.property_materiality.interior_flooring)}
               {fieldRow("Cielos", session.property_materiality.interior_ceilings)}
               {fieldRow("Cierre Perimetral", session.property_materiality.perimeter_closure)}
-              {fieldRow("Instalación de Agua Potable", null)}
+              {fieldRow("Otros", session.property_materiality.others)}
             </>
           )}
 
@@ -869,7 +927,7 @@ export default function ReportTab({
                     <tr key={d.id} className={d.observations ? "report-with-observation" : ""}>
                       <td className="report-td app-body">{d.dependency || "—"}</td>
                       <td className="report-td app-body">{d.subcategory || "—"}</td>
-                      <td className="report-td app-body">{d.description || d.materiality_type || "—"}</td>
+                      <td className="report-td app-body">{d.subcategory === "Otros" ? (d.description || "—") : (d.description || d.materiality_type || "—")}</td>
                       <td className="report-td app-body">{fmtQuantity(d)}</td>
                       <td className="report-td-right app-body">{fmtMoney(d.estimated_amount, d.currency)}</td>
                       <td className="report-td app-body">{SEVERITY_LABELS[d.severity] || d.severity}</td>
@@ -909,7 +967,7 @@ export default function ReportTab({
                   {contentDamages.map((d) => [
                     <tr key={d.id} className={d.observations ? "report-with-observation" : ""}>
                       <td className="report-td app-body">{d.category || "—"}</td>
-                      <td className="report-td app-body">{d.product || d.description || "—"}</td>
+                      <td className="report-td app-body">{d.product === "Otros" ? (d.description || d.product) : (d.product || "—")}</td>
                       <td className="report-td app-body">{d.brand_model || "—"}</td>
                       <td className="report-td app-body">{SEVERITY_LABELS[d.severity] || d.severity}</td>
                       <td className="report-td-right app-body">{fmtQuantity(d)}</td>
