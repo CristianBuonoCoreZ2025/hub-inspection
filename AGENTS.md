@@ -4799,4 +4799,32 @@ en Supabase cloud porque el usuario `postgres` no es owner de `auth.identities`
 reservado). Solo `supabase_admin` (superuser) puede modificarlo, y ese rol
 no es accesible desde el pooler ni desde el SQL Editor del Dashboard.
 
+---
 
+## Tareas Futuras Agendadas
+
+### Bitacora de cambios en inspecciones
+
+**Prioridad:** Alta
+
+**Contexto:** Se detecto que durante la edicion de configuraciones (field_config, clasificaciones, destinos) y cambios en el acta, no hay forma de saber que se modifico, cuando, ni quien lo hizo. El usuario reporto que "se borro clasificacion del bien" y no hubo forma de rastrear que paso.
+
+**Objetivo:** Implementar una bitacora/audit log que registre todos los cambios en:
+- Configuracion de inspeccion (field_config, show, labels, order)
+- Catalogos sensibles (clasificaciones, destinos, relaciones)
+- Datos del acta (property_risk, materiality, security, etc.)
+- Daños (crear, editar, eliminar)
+
+**Requisitos:**
+- Tabla inspection_audit_log con: id, session_id, entity_type, entity_id, action (create/update/delete), changed_fields (JSONB), previous_values (JSONB), user_id, created_at
+- Trigger o logica en services que registre cambios antes de hacer update
+- Vista en el dashboard para consultar la bitacora de una inspeccion
+- Filtro por tipo de entidad y rango de fechas
+- Exportable (CSV/PDF) para auditoria
+
+**Tablas a auditar:**
+- inspection_sessions (datos del acta)
+- inspection_damages (daños constructivos y contenido)
+- property_classifications (configuracion de campos)
+- classification_destinations (relaciones N:M)
+- housing_destinations (destinos)
