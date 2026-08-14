@@ -220,7 +220,7 @@ export default function PropertyClassificationPage() {
                 <SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh>
                 <SortableTh sortKey="description" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Descripción</SortableTh>
                 <th>Destinos relacionados</th>
-                <th className="w-[120px]"></th>
+                <th className="w-30"></th>
               </tr>
             </thead>
             <tbody>

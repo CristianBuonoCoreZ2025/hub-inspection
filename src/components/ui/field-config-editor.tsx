@@ -173,7 +173,7 @@ export function FieldConfigEditor({ open, onOpenChange, currentConfig, onSave, i
           {/* Encabezado de columnas */}
           <div className="flex items-center gap-2 px-3 pb-1">
             <div className="w-7 shrink-0" />
-            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide min-w-[120px]">Campo</span>
+            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide min-w-30">Campo</span>
             <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex-1">Label Habitacional</span>
             <span className="text-[11px] font-semibold text-sky-600 dark:text-sky-400 flex-1">Label Comercial</span>
           </div>
@@ -219,7 +219,7 @@ export function FieldConfigEditor({ open, onOpenChange, currentConfig, onSave, i
                             <EyeOff className="h-4 w-4" />
                           )}
                         </button>
-                        <span className={`text-[13px] font-medium min-w-[120px] ${isVisible ? "text-foreground" : "text-muted-foreground line-through"}`}>
+                        <span className={`text-[13px] font-medium min-w-30 ${isVisible ? "text-foreground" : "text-muted-foreground line-through"}`}>
                           {field.defaultLabel}
                         </span>
                         <Input
