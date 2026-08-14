@@ -10,6 +10,7 @@ export interface FieldConfig {
   show?: string[] | Record<string, string[]>;
   hide?: string[] | Record<string, string[]>;
   labels?: Record<string, string | Record<string, string>>;
+  order?: Record<string, number>;
 }
 
 interface FieldConfigEditorProps {
@@ -44,6 +45,28 @@ const ALL_FIELDS: { key: string; defaultLabel: string }[] = [
 
 type LabelState = Record<string, { residential: string; commercial: string }>;
 type ShowState = Record<DestType, Set<string>>;
+type OrderState = Record<string, number>;
+
+// Orden por defecto desde field-config.ts
+const DEFAULT_ORDER: Record<string, number> = {
+  age_years: 1,
+  owner_name: 2,
+  worker_resident_count: 3,
+  apartment_number: 4,
+  floor_count: 5,
+  built_surface: 6,
+  room_count: 7,
+  bathroom_count: 8,
+  is_habitable: 9,
+  office_count: 10,
+  warehouse_count: 11,
+  branch_count: 12,
+  business_line: 13,
+};
+
+function normalizeOrder(raw: Record<string, number> | undefined): OrderState {
+  return { ...DEFAULT_ORDER, ...(raw || {}) };
+}
 
 function normalizeLabels(
   raw: Record<string, string | Record<string, string>> | undefined,
@@ -88,12 +111,14 @@ export function FieldConfigEditor({
 }: FieldConfigEditorProps) {
   const [showFields, setShowFields] = React.useState<ShowState>(() => normalizeShow(currentConfig?.show));
   const [labels, setLabels] = React.useState<LabelState>(() => normalizeLabels(currentConfig?.labels));
+  const [order, setOrder] = React.useState<OrderState>(() => normalizeOrder(currentConfig?.order));
   const [lastOpen, setLastOpen] = React.useState(false);
 
   if (open && !lastOpen) {
     setLastOpen(true);
     setShowFields(normalizeShow(currentConfig?.show));
     setLabels(normalizeLabels(currentConfig?.labels));
+    setOrder(normalizeOrder(currentConfig?.order));
   } else if (!open && lastOpen) {
     setLastOpen(false);
   }
@@ -121,6 +146,10 @@ export function FieldConfigEditor({
       ...prev,
       [field]: { ...prev[field], [column]: value },
     }));
+  };
+
+  const updateOrder = (field: string, value: number) => {
+    setOrder((prev) => ({ ...prev, [field]: value || 0 }));
   };
 
   const handleSave = () => {
@@ -157,7 +186,15 @@ export function FieldConfigEditor({
       }
     }
 
-    onSave({ show: showOut, labels: labelsOut });
+    // Orden: solo guardar los que difieren del default
+    const orderOut: Record<string, number> = {};
+    for (const [key, num] of Object.entries(order)) {
+      if (num !== DEFAULT_ORDER[key]) {
+        orderOut[key] = num;
+      }
+    }
+
+    onSave({ show: showOut, labels: labelsOut, ...(Object.keys(orderOut).length > 0 ? { order: orderOut } : {}) });
     onOpenChange(false);
   };
 
@@ -190,10 +227,13 @@ export function FieldConfigEditor({
     );
   };
 
-  // Grilla: 200px + una columna por cada tipo disponible
-  const gridCols = ["200px", ...availableDestTypes.map(() => "1fr")].join(" ");
+  // Grilla: # orden (60px) + campo (200px) + una columna por cada tipo disponible
+  const gridCols = ["60px", "200px", ...availableDestTypes.map(() => "1fr")].join(" ");
   const showRes = availableDestTypes.includes("residential");
   const showCom = availableDestTypes.includes("commercial");
+
+  // Campos ordenados por el número de orden
+  const sortedFields = [...ALL_FIELDS].sort((a, b) => (order[a.key] ?? 99) - (order[b.key] ?? 99));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -216,6 +256,9 @@ export function FieldConfigEditor({
             className="grid bg-muted/80 border-b border-border"
             style={{ gridTemplateColumns: gridCols }}
           >
+            <div className="flex items-center justify-center px-1 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              #
+            </div>
             <div className="flex items-center gap-1.5 px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               Campo
             </div>
@@ -235,19 +278,33 @@ export function FieldConfigEditor({
 
           {/* Filas de la matriz */}
           <div className="flex flex-col">
-            {ALL_FIELDS.map((field) => {
+            {sortedFields.map((field) => {
               const isLocked = ALWAYS_VISIBLE.includes(field.key);
               const fieldLabels = labels[field.key] || { residential: "", commercial: "" };
               const resLabel = fieldLabels.residential ?? "";
               const comLabel = fieldLabels.commercial ?? "";
               const resVisible = showFields.residential.has(field.key) || isLocked;
               const comVisible = showFields.commercial.has(field.key) || isLocked;
+              const fieldOrder = order[field.key] ?? 0;
               return (
                 <div
                   key={field.key}
                   className="grid border-b border-border/60 last:border-b-0 items-center hover:bg-muted/30 transition-colors"
                   style={{ gridTemplateColumns: gridCols }}
                 >
+                  {/* Columna: numero de orden */}
+                  <div className="flex items-center justify-center px-1 py-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={99}
+                      value={fieldOrder}
+                      onChange={(e) => updateOrder(field.key, parseInt(e.target.value) || 0)}
+                      className="w-9 h-7 text-center text-[12px] rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-emerald-500/40"
+                      title="Orden del campo en el formulario"
+                    />
+                  </div>
+
                   {/* Columna: nombre del campo */}
                   <div className="flex items-center gap-1.5 px-3 py-2">
                     <span className="text-[13px] font-medium text-foreground">{field.defaultLabel}</span>

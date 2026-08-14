@@ -517,7 +517,7 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  const propertyType = String(watch("property_risk.property_type") ?? "");
 
  // ── Config dinámica desde la BD (dual-read) ──
- const { visible, labelFor } = resolveFieldConfig(
+ const { visible, labelFor, order } = resolveFieldConfig(
  riskClass,
  propertyType,
  propertyClassifications,
@@ -543,7 +543,7 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  <Label className="app-field-label">Clasificacion del Bien</Label>
  {tableSelect("property_risk.risk_class", filteredClassifications)}
  </div>
- {getSortedVisibleFields(visible).map((key) => {
+ {getSortedVisibleFields(visible, order).map((key) => {
    const renderField = () => {
      switch (key) {
        case "age_years":

@@ -58,11 +58,12 @@ export const DYNAMIC_FIELDS = [
   "business_line",
 ] as const;
 
-// Retorna los campos visibles ordenados por FIELD_ORDER
-export function getSortedVisibleFields(visible: Set<string>): string[] {
+// Retorna los campos visibles ordenados por FIELD_ORDER (o order del config si se pasa)
+export function getSortedVisibleFields(visible: Set<string>, customOrder?: Record<string, number>): string[] {
+  const orderMap = customOrder ? { ...FIELD_ORDER, ...customOrder } : FIELD_ORDER;
   return DYNAMIC_FIELDS
     .filter((key) => visible.has(key))
-    .sort((a, b) => (FIELD_ORDER[a] ?? 99) - (FIELD_ORDER[b] ?? 99));
+    .sort((a, b) => (orderMap[a] ?? 99) - (orderMap[b] ?? 99));
 }
 
 type FieldConfigViejo = {
@@ -76,11 +77,13 @@ type FieldConfigNuevo = {
   show?: string[] | Record<string, string[]>;
   hide?: string[] | Record<string, string[]>;
   labels?: Record<string, string | Record<string, string>>;
+  order?: Record<string, number>;
 };
 
 export interface ResolvedFieldConfig {
   visible: Set<string>;
   labelFor: (key: string) => string;
+  order?: Record<string, number>;
 }
 
 /**
@@ -137,7 +140,7 @@ export function resolveFieldConfig(
       return DEFAULT_LABELS[key] || key;
     };
 
-    return { visible, labelFor };
+    return { visible, labelFor, order: cfg?.order as Record<string, number> | undefined };
   }
 
   // ── Modelo viejo (fallback): merge classConfig + destConfig ──

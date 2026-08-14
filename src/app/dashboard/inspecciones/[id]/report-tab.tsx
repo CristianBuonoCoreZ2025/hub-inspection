@@ -515,7 +515,7 @@ export default function ReportTab({
   const uniqueSignatures = useMemo(() => signatures.filter((s, i, arr) => arr.findIndex(x => x.role === s.role) === i), [signatures]);
 
   // Config dinámica de campos del acta (dual-read: modelo nuevo o viejo)
-  const { visible, labelFor } = useMemo(() => {
+  const { visible, labelFor, order } = useMemo(() => {
     const riskClass = session.property_risk?.risk_class || "";
     const propertyType = session.property_risk?.property_type || "";
     const result = resolveFieldConfig(
@@ -531,7 +531,7 @@ export default function ReportTab({
       if (key === "property_type") return "Destino del Bien";
       return baseLabelFor(key);
     };
-    return { visible: result.visible, labelFor };
+    return { visible: result.visible, labelFor, order: result.order };
   }, [session.property_risk?.risk_class, session.property_risk?.property_type, propertyClassifications, housingDestinations]);
 
   // Descargar ZIP: reporte PDF + todas las evidencias + croquis (sin firmas)
@@ -846,7 +846,7 @@ export default function ReportTab({
               </div>
               {fieldRow(labelFor("property_type"), session.property_risk.property_type)}
               {fieldRow(labelFor("risk_class"), session.property_risk.risk_class)}
-              {getSortedVisibleFields(visible).map((key) => {
+              {getSortedVisibleFields(visible, order).map((key) => {
                 const pr = session.property_risk as Record<string, unknown>;
                 const val = pr[key];
                 let display: string | null = val != null ? String(val) : null;
