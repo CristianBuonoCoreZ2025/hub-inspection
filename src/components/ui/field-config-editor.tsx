@@ -238,6 +238,8 @@ export function FieldConfigEditor({
             {ALL_FIELDS.map((field) => {
               const isLocked = ALWAYS_VISIBLE.includes(field.key);
               const fieldLabels = labels[field.key] || { residential: "", commercial: "" };
+              const resLabel = fieldLabels.residential ?? "";
+              const comLabel = fieldLabels.commercial ?? "";
               const resVisible = showFields.residential.has(field.key) || isLocked;
               const comVisible = showFields.commercial.has(field.key) || isLocked;
               return (
@@ -259,7 +261,7 @@ export function FieldConfigEditor({
                       <Input
                         type="text"
                         placeholder={field.defaultLabel}
-                        value={fieldLabels.residential}
+                        value={resLabel}
                         onChange={(e) => updateLabel(field.key, "residential", e.target.value)}
                         className={`app-input flex-1 ${!resVisible ? "opacity-35 bg-transparent cursor-not-allowed" : ""}`}
                         disabled={!resVisible}
@@ -274,7 +276,7 @@ export function FieldConfigEditor({
                       <Input
                         type="text"
                         placeholder={field.defaultLabel}
-                        value={fieldLabels.commercial}
+                        value={comLabel}
                         onChange={(e) => updateLabel(field.key, "commercial", e.target.value)}
                         className={`app-input flex-1 ${!comVisible ? "opacity-35 bg-transparent cursor-not-allowed" : ""}`}
                         disabled={!comVisible}
