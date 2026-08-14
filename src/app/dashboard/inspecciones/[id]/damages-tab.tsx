@@ -1343,9 +1343,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <tr key={d.id} className={d.observations ? "with-observation" : ""}>
  <td className="app-body">{goodTypeName(d.content_good_type_id)}</td>
  <td className="app-body max-w-[150px] truncate">
-   {d.product === "Otro" || !d.product
-     ? (d.description || "—")
-     : (d.description ? `${d.product} / ${d.description}` : d.product)}
+   {d.description || d.product || "—"}
  </td>
  <td className="app-body">{d.brand_model || "—"}</td>
  <td>
