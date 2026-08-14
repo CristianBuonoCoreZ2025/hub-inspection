@@ -156,12 +156,14 @@ export default function ReportTab({
   const { data: propertyClassifications = [] } = useQuery({
     queryKey: ["property-classifications"],
     queryFn: getPropertyClassifications,
-    staleTime: 1000 * 60 * 30,
+    staleTime: 0,
+    refetchOnMount: true,
   });
   const { data: housingDestinations = [] } = useQuery({
     queryKey: ["housing-destinations"],
     queryFn: getHousingDestinations,
-    staleTime: 1000 * 60 * 30,
+    staleTime: 0,
+    refetchOnMount: true,
   });
 
   // Forzar isFinal durante la generación del PDF para que el watermark
