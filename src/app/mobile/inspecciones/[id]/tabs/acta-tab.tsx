@@ -5,7 +5,7 @@ import { getInspectionSessionById } from "@/services/inspections";
 import ActaForm from "@/app/dashboard/inspecciones/[id]/acta-form";
 import { Loader2, AlertCircle } from "lucide-react";
 
-export default function MobileActaTab({ sessionId }: { sessionId: string }) {
+export default function MobileActaTab({ sessionId, onComplete }: { sessionId: string; onComplete?: () => void }) {
   const { data: session, isLoading, isError } = useQuery({
     queryKey: ["inspection-session", sessionId],
     queryFn: () => getInspectionSessionById(sessionId),
@@ -30,5 +30,5 @@ export default function MobileActaTab({ sessionId }: { sessionId: string }) {
     );
   }
 
-  return <ActaForm session={session} />;
+  return <ActaForm session={session} onComplete={onComplete} />;
 }

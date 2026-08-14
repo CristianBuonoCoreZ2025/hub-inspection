@@ -351,7 +351,7 @@ export default function MobileInspectionDetailPage() {
             })}
           />
         )}
-        {activeTab === "acta" && <MobileActaTab sessionId={session.id} />}
+        {activeTab === "acta" && <MobileActaTab sessionId={session.id} onComplete={() => setActiveTab("danos")} />}
         {activeTab === "danos" && (
           <MobileDamagesTab
             sessionId={session.id}

@@ -48,9 +48,10 @@ const steps = [
 interface ActaFormProps {
  session: SessionDetail;
  readOnly?: boolean;
+ onComplete?: () => void;
 }
 
-export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
+export default function ActaForm({ session, readOnly = false, onComplete }: ActaFormProps) {
  const queryClient = useQueryClient();
  const [step, setStep] = useState(1);
 
@@ -893,12 +894,16 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  </Button>
  ) : (
  <Button
- type="submit"
+ type="button"
  size="sm"
+ onClick={() => {
+ form.handleSubmit((data) => saveMutation.mutate(data))();
+ onComplete?.();
+ }}
  disabled={saveMutation.isPending}
  className="pg-btn-platinum"
  >
- {saveMutation.isPending ? "Guardando..." : "Guardar"}
+ {saveMutation.isPending ? "Guardando..." : "Siguiente"} <ChevronRight className="h-4 w-4" />
  </Button>
  )}
  </div>

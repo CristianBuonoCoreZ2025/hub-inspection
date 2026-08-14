@@ -1256,7 +1256,7 @@ enabled: activeTab === "informe",
  </div>
  </div>
  ) : (
- <ActaForm session={session} readOnly={session.status !== "active"} />
+ <ActaForm session={session} readOnly={session.status !== "active"} onComplete={() => setActiveTab("danos")} />
  )}
  </div>
  )}
