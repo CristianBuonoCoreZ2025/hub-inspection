@@ -98,10 +98,58 @@ export default function PropertyClassificationPage() {
   });
 
   const setRelationsMutation = useMutation({
-    mutationFn: ({ id, destinationIds }: { id: string; destinationIds: string[] }) => setClassificationDestinations(id, destinationIds),
+    mutationFn: async ({ id, destinationIds, removedDestTypes, currentFieldConfig }: {
+      id: string;
+      destinationIds: string[];
+      removedDestTypes: string[];
+      currentFieldConfig?: Record<string, unknown>;
+    }) => {
+      // 1. Guardar las nuevas relaciones
+      await setClassificationDestinations(id, destinationIds);
+
+      // 2. Si se quitaron tipos de destino, limpiar esa columna del field_config
+      if (removedDestTypes.length > 0 && currentFieldConfig) {
+        const cfg = { ...currentFieldConfig } as Record<string, unknown>;
+
+        // Limpiar show: si es objeto, vaciar los arrays de los tipos removidos
+        const show = cfg.show;
+        if (show && typeof show === "object" && !Array.isArray(show)) {
+          const showObj = { ...(show as Record<string, string[]>) };
+          for (const t of removedDestTypes) {
+            showObj[t] = [];
+          }
+          cfg.show = showObj;
+        }
+
+        // Limpiar labels: si un label es objeto, borrar la clave del tipo removido
+        const labels = cfg.labels;
+        if (labels && typeof labels === "object") {
+          const labelsObj = { ...(labels as Record<string, unknown>) };
+          for (const [key, value] of Object.entries(labelsObj)) {
+            if (value && typeof value === "object" && !Array.isArray(value)) {
+              const labelObj = { ...(value as Record<string, string>) };
+              for (const t of removedDestTypes) {
+                delete labelObj[t];
+              }
+              // Si quedó vacío, dejar string vacío o borrar
+              if (Object.keys(labelObj).length === 0) {
+                delete labelsObj[key];
+              } else {
+                labelsObj[key] = labelObj;
+              }
+            }
+          }
+          cfg.labels = labelsObj;
+        }
+
+        await updatePropertyClassification(id, { field_config: cfg });
+      }
+    },
     onSuccess: () => {
       toast.success("Destinos relacionados actualizados");
       queryClient.invalidateQueries({ queryKey: ["classification-destinations"] });
+      queryClient.invalidateQueries({ queryKey: ["clasificacion_bien"] });
+      queryClient.invalidateQueries({ queryKey: ["property-classifications"] });
       setRelationsOpen(false);
     },
     onError: (err: Error) => toast.error(err.message),
@@ -176,9 +224,30 @@ export default function PropertyClassificationPage() {
 
   const handleSaveRelations = () => {
     if (!relationsItem) return;
+    const newDestinationIds = Array.from(selectedDestinationIds);
+
+    // Calcular qué tipos de destino se mantienen vs se quitaron
+    const newDestTypes = new Set<string>();
+    for (const destId of newDestinationIds) {
+      const dest = housingDestinations.find((d) => d.id === destId);
+      if (dest?.destination_type) newDestTypes.add(dest.destination_type);
+    }
+
+    // Tipos que tenía antes (según relaciones actuales)
+    const oldDestTypes = new Set<string>();
+    for (const r of classificationDestinations.filter((r) => r.classification_id === relationsItem.id)) {
+      const dest = housingDestinations.find((d) => d.id === r.destination_id);
+      if (dest?.destination_type) oldDestTypes.add(dest.destination_type);
+    }
+
+    // Tipos que se quitaron → limpiar esa columna del field_config
+    const removedTypes = [...oldDestTypes].filter((t) => !newDestTypes.has(t));
+
     setRelationsMutation.mutate({
       id: relationsItem.id,
-      destinationIds: Array.from(selectedDestinationIds),
+      destinationIds: newDestinationIds,
+      removedDestTypes: removedTypes,
+      currentFieldConfig: relationsItem.field_config,
     });
   };
 
