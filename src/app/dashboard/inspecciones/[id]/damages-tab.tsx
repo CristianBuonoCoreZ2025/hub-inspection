@@ -1358,7 +1358,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  {severityLabelMap[d.severity] || d.severity}
  </span>
  </td>
- <td className="text-right app-body">{formatQuantity(d)}</td>
+ <td className="text-right app-body">{d.quantity ? `${d.quantity}${d.unit ? ` ${d.unit}` : ""}` : "—"}</td>
  <td className="text-right font-medium app-body">{formatMoney(d.estimated_amount || 0, d.currency || "CLP")}</td>
  <td className="app-body">{d.purchase_date ? new Date(d.purchase_date).toLocaleDateString('es-CL') : '—'}</td>
  <td>
