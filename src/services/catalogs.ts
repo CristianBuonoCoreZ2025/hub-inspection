@@ -1,4 +1,4 @@
-import { fetchAll, fetchById, insertRow, updateRow, deleteRow } from "@/lib/supabase/db";
+import { fetchAll, fetchById, insertRow, updateRow, deleteRow, getSupabaseClient } from "@/lib/supabase/db";
 import type {
   ClaimCause,
   InsuranceCompanyCatalog,
@@ -496,6 +496,25 @@ export async function getClassificationDestinations() {
   return fetchAll<ClassificationDestination>("classification_destinations", {
     select: "id, classification_id, destination_id, created_at",
   });
+}
+
+export async function setClassificationDestinations(classificationId: string, destinationIds: string[]) {
+  const supabase = getSupabaseClient();
+  // Eliminar relaciones existentes
+  const { error: delError } = await supabase
+    .from("classification_destinations")
+    .delete()
+    .eq("classification_id", classificationId);
+  if (delError) throw new Error(delError.message);
+  // Insertar nuevas relaciones
+  if (destinationIds.length === 0) return [];
+  const rows = destinationIds.map((destination_id) => ({ classification_id: classificationId, destination_id }));
+  const { data, error: insError } = await supabase
+    .from("classification_destinations")
+    .insert(rows)
+    .select("id, classification_id, destination_id, created_at");
+  if (insError) throw new Error(insError.message);
+  return data as ClassificationDestination[];
 }
 
 export async function createHousingDestination(input: { name: string; description?: string; destination_type?: string }) {
