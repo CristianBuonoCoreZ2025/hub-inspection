@@ -79,6 +79,9 @@ CREATE POLICY "classification_destinations_delete"
   ON classification_destinations FOR DELETE
   USING (true);
 
+-- 6. GRANTs a los roles de Supabase (anon, authenticated, service_role)
+GRANT SELECT, INSERT, UPDATE, DELETE ON classification_destinations TO anon, authenticated, service_role;
+
 -- 6. Verificación (no destructiva)
 -- SELECT hd.name AS destino, hd.destination_type, pc.name AS clasificacion
 -- FROM classification_destinations cd
