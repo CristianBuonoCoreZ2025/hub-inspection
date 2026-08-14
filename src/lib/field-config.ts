@@ -29,8 +29,9 @@ type FieldConfigViejo = {
 };
 
 type FieldConfigNuevo = {
-  show?: string[];
-  hide?: string[];
+  // show puede ser array (viejo) o objeto {residential: [...], commercial: [...]} (nuevo)
+  show?: string[] | Record<string, string[]>;
+  hide?: string[] | Record<string, string[]>;
   labels?: Record<string, string | Record<string, string>>;
 };
 
@@ -64,8 +65,21 @@ export function resolveFieldConfig(
   if (destType) {
     const cfg = classification?.field_config as FieldConfigNuevo | undefined;
     const visible = new Set<string>(ALWAYS_VISIBLE_FIELDS);
-    cfg?.show?.forEach((f) => visible.add(f));
-    cfg?.hide?.forEach((f) => visible.delete(f));
+
+    // show puede ser array (viejo) o objeto {residential: [...], commercial: [...]} (nuevo)
+    const showRaw = cfg?.show;
+    if (Array.isArray(showRaw)) {
+      showRaw.forEach((f) => visible.add(f));
+    } else if (showRaw && typeof showRaw === "object") {
+      showRaw[destType]?.forEach((f) => visible.add(f));
+    }
+
+    const hideRaw = cfg?.hide;
+    if (Array.isArray(hideRaw)) {
+      hideRaw.forEach((f) => visible.delete(f));
+    } else if (hideRaw && typeof hideRaw === "object") {
+      hideRaw[destType]?.forEach((f) => visible.delete(f));
+    }
 
     const labelFor = (key: string): string => {
       const raw = cfg?.labels?.[key];
