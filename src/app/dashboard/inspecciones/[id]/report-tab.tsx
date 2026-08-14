@@ -1000,7 +1000,7 @@ export default function ReportTab({
                     <tr key={d.id} className={d.observations ? "report-with-observation" : ""}>
                       <td className="report-td app-body">{d.category || "—"}</td>
                       <td className="report-td app-body">
-                        {d.product === "Otros" || !d.product
+                        {d.product === "Otro" || d.product === "Otros" || !d.product
                           ? (d.description || "—")
                           : (d.description ? `${d.product} / ${d.description}` : d.product)}
                       </td>
