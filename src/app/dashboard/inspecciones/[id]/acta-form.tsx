@@ -135,7 +135,7 @@ export default function ActaForm({ session, readOnly = false, onComplete }: Acta
  risk_type: "", risk_class: "", property_type: "", apartment_number: "",
  floor_count: "", age_years: "", built_surface: "", room_count: "",
  bathroom_count: "", office_count: "", warehouse_count: "",
- is_habitable: false, owner_name: preInsuredName, branch_count: "",
+ is_habitable: true, owner_name: preInsuredName, branch_count: "",
  worker_resident_count: "", business_line: "",
  ...(session.property_risk as Record<string, unknown> || {}),
  },
