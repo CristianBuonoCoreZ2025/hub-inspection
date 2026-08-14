@@ -853,7 +853,7 @@ export default function ReportTab({
                 if (key === "age_years") display = fmtAge(val as string);
                 if (key === "built_surface") display = val ? `${val} m²` : null;
                 if (key === "is_habitable") display = val !== undefined ? (val ? "Sí" : "No") : null;
-                return fieldRow(labelFor(key), display);
+                return fieldRow(labelFor(key), display, key);
               })}
             </>
           )}
