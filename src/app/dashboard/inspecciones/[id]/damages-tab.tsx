@@ -1339,8 +1339,8 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  </tr>
  </thead>
  <tbody>
- {contentDamages.map((d) => (
- <tr key={d.id}>
+ {contentDamages.map((d) => [
+ <tr key={d.id} className={d.observations ? "with-observation" : ""}>
  <td className="app-body">{goodTypeName(d.content_good_type_id)}</td>
  <td className="app-body max-w-[150px] truncate">{d.product || d.description}</td>
  <td className="app-body">{d.brand_model || "—"}</td>
@@ -1370,8 +1370,15 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  )}
  </div>
  </td>
- </tr>
- ))}
+ </tr>,
+ d.observations ? (
+   <tr key={`${d.id}-obs`} className="observation-row">
+     <td colSpan={7} className="grid-observation">
+       {d.observations}
+     </td>
+   </tr>
+ ) : null,
+])}
  </tbody>
  </table>
  </div>
