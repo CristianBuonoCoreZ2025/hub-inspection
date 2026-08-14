@@ -176,68 +176,72 @@ export function FieldConfigEditor({ open, onOpenChange, currentConfig, onSave, i
           </DialogDescription>
         </div>
 
-        <div className="modal-body">
-          <div className="field-config-matrix">
-            {/* Header de la matriz */}
-            <div className="field-config-matrix-header">
-              <div className="field-config-col-field">Campo</div>
-              <div className="field-config-col-dest field-config-col-residential">
-                <Home className="h-3.5 w-3.5" />
-                <span>Habitacional</span>
-              </div>
-              <div className="field-config-col-dest field-config-col-commercial">
-                <Building2 className="h-3.5 w-3.5" />
-                <span>Comercial</span>
-              </div>
+        <div className="modal-body overflow-hidden p-0">
+          {/* Header de la matriz */}
+          <div
+            className="grid bg-muted/80 border-b border-border"
+            style={{ gridTemplateColumns: "200px 1fr 1fr" }}
+          >
+            <div className="flex items-center gap-1.5 px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Campo
             </div>
+            <div className="flex items-center gap-1.5 px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-600 border-l border-border">
+              <Home className="h-3.5 w-3.5" />
+              <span>Habitacional</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sky-600 border-l border-border">
+              <Building2 className="h-3.5 w-3.5" />
+              <span>Comercial</span>
+            </div>
+          </div>
 
-            {/* Filas de la matriz */}
-            <div className="field-config-matrix-body">
-              {ALL_FIELDS.map((field) => {
-                const isLocked = ALWAYS_VISIBLE.includes(field.key);
-                const fieldLabels = labels[field.key] || { residential: "", commercial: "" };
-                const resVisible = showFields.residential.has(field.key) || isLocked;
-                const comVisible = showFields.commercial.has(field.key) || isLocked;
-                return (
-                  <div
-                    key={field.key}
-                    className={`field-config-matrix-row ${isLocked ? "field-config-row-locked" : ""}`}
-                  >
-                    {/* Columna: nombre del campo */}
-                    <div className="field-config-col-field">
-                      <span className="text-[13px] font-medium text-foreground">{field.defaultLabel}</span>
-                      {isLocked && <Lock className="h-3 w-3 text-muted-foreground/40" />}
-                    </div>
-
-                    {/* Columna: Habitacional */}
-                    <div className="field-config-col-dest field-config-col-residential">
-                      {renderEye(field, "residential")}
-                      <Input
-                        type="text"
-                        placeholder={field.defaultLabel}
-                        value={fieldLabels.residential}
-                        onChange={(e) => updateLabel(field.key, "residential", e.target.value)}
-                        className="app-input flex-1"
-                        disabled={!resVisible}
-                      />
-                    </div>
-
-                    {/* Columna: Comercial */}
-                    <div className="field-config-col-dest field-config-col-commercial">
-                      {renderEye(field, "commercial")}
-                      <Input
-                        type="text"
-                        placeholder={field.defaultLabel}
-                        value={fieldLabels.commercial}
-                        onChange={(e) => updateLabel(field.key, "commercial", e.target.value)}
-                        className="app-input flex-1"
-                        disabled={!comVisible}
-                      />
-                    </div>
+          {/* Filas de la matriz */}
+          <div className="flex flex-col">
+            {ALL_FIELDS.map((field) => {
+              const isLocked = ALWAYS_VISIBLE.includes(field.key);
+              const fieldLabels = labels[field.key] || { residential: "", commercial: "" };
+              const resVisible = showFields.residential.has(field.key) || isLocked;
+              const comVisible = showFields.commercial.has(field.key) || isLocked;
+              return (
+                <div
+                  key={field.key}
+                  className="grid border-b border-border/60 last:border-b-0 items-center hover:bg-muted/30 transition-colors"
+                  style={{ gridTemplateColumns: "200px 1fr 1fr" }}
+                >
+                  {/* Columna: nombre del campo */}
+                  <div className="flex items-center gap-1.5 px-3 py-2">
+                    <span className="text-[13px] font-medium text-foreground">{field.defaultLabel}</span>
+                    {isLocked && <Lock className="h-3 w-3 text-muted-foreground/40" />}
                   </div>
-                );
-              })}
-            </div>
+
+                  {/* Columna: Habitacional */}
+                  <div className="flex items-center gap-2 px-3 py-2 border-l border-border/60">
+                    {renderEye(field, "residential")}
+                    <Input
+                      type="text"
+                      placeholder={field.defaultLabel}
+                      value={fieldLabels.residential}
+                      onChange={(e) => updateLabel(field.key, "residential", e.target.value)}
+                      className={`app-input flex-1 ${!resVisible ? "opacity-35 bg-transparent cursor-not-allowed" : ""}`}
+                      disabled={!resVisible}
+                    />
+                  </div>
+
+                  {/* Columna: Comercial */}
+                  <div className="flex items-center gap-2 px-3 py-2 border-l border-border/60">
+                    {renderEye(field, "commercial")}
+                    <Input
+                      type="text"
+                      placeholder={field.defaultLabel}
+                      value={fieldLabels.commercial}
+                      onChange={(e) => updateLabel(field.key, "commercial", e.target.value)}
+                      className={`app-input flex-1 ${!comVisible ? "opacity-35 bg-transparent cursor-not-allowed" : ""}`}
+                      disabled={!comVisible}
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
