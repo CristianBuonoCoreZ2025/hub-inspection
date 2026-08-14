@@ -948,7 +948,7 @@ export default function ReportTab({
                   <tr>
                     <th className="report-th app-body">Espacio</th>
                     <th className="report-th app-body">Categoría</th>
-                    <th className="report-th app-body">Materialidad / Aclaración</th>
+                    <th className="report-th app-body">Materialidad</th>
                     <th className="report-th app-body">Superficie / Daño</th>
                     <th className="report-th-right app-body">Monto</th>
                     <th className="report-th app-body">Clasificación</th>
