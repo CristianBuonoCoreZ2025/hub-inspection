@@ -176,6 +176,17 @@ export default function PropertyClassificationPage() {
   const { page, pageSize, total, totalPages, paginatedData, setPage, setPageSize } = usePagination(sorted);
 
   // Destinos relacionados para una clasificación
+  const getDestTypesFor = (classificationId: string): ("residential" | "commercial")[] => {
+    const relatedIds = classificationDestinations
+      .filter((r) => r.classification_id === classificationId)
+      .map((r) => r.destination_id);
+    const types = housingDestinations
+      .filter((d) => relatedIds.includes(d.id) && d.destination_type)
+      .map((d) => d.destination_type as "residential" | "commercial");
+    // Si no hay relaciones definidas, dejar ambos tipos para no bloquear al usuario
+    return types.length > 0 ? Array.from(new Set(types)) : ["residential", "commercial"];
+  };
+
   const getRelatedDestinationNames = (classificationId: string): string => {
     const relatedIds = classificationDestinations
       .filter((r) => r.classification_id === classificationId)
@@ -429,6 +440,7 @@ export default function PropertyClassificationPage() {
           currentConfig={configItem.field_config as FieldConfig | undefined}
           onSave={(config) => updateConfigMutation.mutate({ id: configItem.id, config })}
           itemName={configItem.name}
+          availableDestTypes={getDestTypesFor(configItem.id)}
         />
       )}
     </div>

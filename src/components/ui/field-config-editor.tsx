@@ -18,6 +18,8 @@ interface FieldConfigEditorProps {
   currentConfig?: FieldConfig;
   onSave: (config: FieldConfig) => void;
   itemName: string;
+  // Tipos de destino relacionados con esta clasificacion. Si no se pasa, se asumen ambos.
+  availableDestTypes?: DestType[];
 }
 
 const ALWAYS_VISIBLE = ["age_years", "owner_name", "worker_resident_count"];
@@ -76,7 +78,14 @@ function normalizeShow(
   };
 }
 
-export function FieldConfigEditor({ open, onOpenChange, currentConfig, onSave, itemName }: FieldConfigEditorProps) {
+export function FieldConfigEditor({
+  open,
+  onOpenChange,
+  currentConfig,
+  onSave,
+  itemName,
+  availableDestTypes = ["residential", "commercial"],
+}: FieldConfigEditorProps) {
   const [showFields, setShowFields] = React.useState<ShowState>(() => normalizeShow(currentConfig?.show));
   const [labels, setLabels] = React.useState<LabelState>(() => normalizeLabels(currentConfig?.labels));
   const [lastOpen, setLastOpen] = React.useState(false);
@@ -90,7 +99,7 @@ export function FieldConfigEditor({ open, onOpenChange, currentConfig, onSave, i
   }
 
   const toggleField = (field: string, destType: DestType) => {
-    if (ALWAYS_VISIBLE.includes(field)) return;
+    if (ALWAYS_VISIBLE.includes(field) || !availableDestTypes.includes(destType)) return;
     setShowFields((prev) => {
       const next = { ...prev, [destType]: new Set(prev[destType]) };
       if (next[destType].has(field)) {
@@ -115,8 +124,19 @@ export function FieldConfigEditor({ open, onOpenChange, currentConfig, onSave, i
   };
 
   const handleSave = () => {
-    const resArr = Array.from(showFields.residential).filter((f) => !ALWAYS_VISIBLE.includes(f)).sort();
-    const comArr = Array.from(showFields.commercial).filter((f) => !ALWAYS_VISIBLE.includes(f)).sort();
+    // Al guardar, no incluir los tipos de destino que no estan disponibles
+    const allowed: Record<DestType, boolean> = {
+      residential: availableDestTypes.includes("residential"),
+      commercial: availableDestTypes.includes("commercial"),
+    };
+
+    const resArr = allowed.residential
+      ? Array.from(showFields.residential).filter((f) => !ALWAYS_VISIBLE.includes(f)).sort()
+      : [];
+    const comArr = allowed.commercial
+      ? Array.from(showFields.commercial).filter((f) => !ALWAYS_VISIBLE.includes(f)).sort()
+      : [];
+
     const showOut: string[] | Record<string, string[]> =
       resArr.join(",") === comArr.join(",")
         ? resArr
@@ -124,14 +144,16 @@ export function FieldConfigEditor({ open, onOpenChange, currentConfig, onSave, i
 
     const labelsOut: Record<string, string | Record<string, string>> = {};
     for (const [key, { residential, commercial }] of Object.entries(labels)) {
-      if (!residential.trim() && !commercial.trim()) continue;
-      if (residential.trim() === commercial.trim()) {
-        labelsOut[key] = residential.trim();
+      const lr = allowed.residential ? residential.trim() : "";
+      const lc = allowed.commercial ? commercial.trim() : "";
+      if (!lr && !lc) continue;
+      if (lr === lc) {
+        labelsOut[key] = lr;
       } else {
-        labelsOut[key] = {
-          ...(residential.trim() ? { residential: residential.trim() } : {}),
-          ...(commercial.trim() ? { commercial: commercial.trim() } : {}),
-        };
+        const labelObj: Record<string, string> = {};
+        if (lr) labelObj.residential = lr;
+        if (lc) labelObj.commercial = lc;
+        labelsOut[key] = labelObj;
       }
     }
 
@@ -140,26 +162,38 @@ export function FieldConfigEditor({ open, onOpenChange, currentConfig, onSave, i
   };
 
   const renderEye = (field: { key: string; defaultLabel: string }, destType: DestType) => {
+    const isAvailable = availableDestTypes.includes(destType);
     const isVisible = showFields[destType].has(field.key) || ALWAYS_VISIBLE.includes(field.key);
     const isLocked = ALWAYS_VISIBLE.includes(field.key);
     return (
       <button
         type="button"
         onClick={() => toggleField(field.key, destType)}
-        disabled={isLocked}
+        disabled={isLocked || !isAvailable}
         className={`shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-md transition-all ${
-          isLocked
-            ? "text-muted-foreground/40 cursor-default"
+          isLocked || !isAvailable
+            ? "text-muted-foreground/30 cursor-not-allowed"
             : isVisible
             ? "text-emerald-500 hover:bg-emerald-500/10"
             : "text-muted-foreground hover:bg-muted"
         }`}
-        title={isLocked ? "Siempre visible" : isVisible ? "Visible" : "Oculto"}
+        title={!isAvailable ? "No aplica a esta clasificacion" : isLocked ? "Siempre visible" : isVisible ? "Visible" : "Oculto"}
       >
-        {isLocked ? <Lock className="h-3.5 w-3.5" /> : isVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+        {isLocked || !isAvailable ? (
+          <Lock className="h-3.5 w-3.5" />
+        ) : isVisible ? (
+          <Eye className="h-4 w-4" />
+        ) : (
+          <EyeOff className="h-4 w-4" />
+        )}
       </button>
     );
   };
+
+  // Grilla: 200px + una columna por cada tipo disponible
+  const gridCols = ["200px", ...availableDestTypes.map(() => "1fr")].join(" ");
+  const showRes = availableDestTypes.includes("residential");
+  const showCom = availableDestTypes.includes("commercial");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -180,19 +214,23 @@ export function FieldConfigEditor({ open, onOpenChange, currentConfig, onSave, i
           {/* Header de la matriz */}
           <div
             className="grid bg-muted/80 border-b border-border"
-            style={{ gridTemplateColumns: "200px 1fr 1fr" }}
+            style={{ gridTemplateColumns: gridCols }}
           >
             <div className="flex items-center gap-1.5 px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               Campo
             </div>
-            <div className="flex items-center gap-1.5 px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-600 border-l border-border">
-              <Home className="h-3.5 w-3.5" />
-              <span>Habitacional</span>
-            </div>
-            <div className="flex items-center gap-1.5 px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sky-600 border-l border-border">
-              <Building2 className="h-3.5 w-3.5" />
-              <span>Comercial</span>
-            </div>
+            {showRes && (
+              <div className="flex items-center gap-1.5 px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-600 border-l border-border">
+                <Home className="h-3.5 w-3.5" />
+                <span>Habitacional</span>
+              </div>
+            )}
+            {showCom && (
+              <div className="flex items-center gap-1.5 px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sky-600 border-l border-border">
+                <Building2 className="h-3.5 w-3.5" />
+                <span>Comercial</span>
+              </div>
+            )}
           </div>
 
           {/* Filas de la matriz */}
@@ -206,7 +244,7 @@ export function FieldConfigEditor({ open, onOpenChange, currentConfig, onSave, i
                 <div
                   key={field.key}
                   className="grid border-b border-border/60 last:border-b-0 items-center hover:bg-muted/30 transition-colors"
-                  style={{ gridTemplateColumns: "200px 1fr 1fr" }}
+                  style={{ gridTemplateColumns: gridCols }}
                 >
                   {/* Columna: nombre del campo */}
                   <div className="flex items-center gap-1.5 px-3 py-2">
@@ -215,30 +253,34 @@ export function FieldConfigEditor({ open, onOpenChange, currentConfig, onSave, i
                   </div>
 
                   {/* Columna: Habitacional */}
-                  <div className="flex items-center gap-2 px-3 py-2 border-l border-border/60">
-                    {renderEye(field, "residential")}
-                    <Input
-                      type="text"
-                      placeholder={field.defaultLabel}
-                      value={fieldLabels.residential}
-                      onChange={(e) => updateLabel(field.key, "residential", e.target.value)}
-                      className={`app-input flex-1 ${!resVisible ? "opacity-35 bg-transparent cursor-not-allowed" : ""}`}
-                      disabled={!resVisible}
-                    />
-                  </div>
+                  {showRes && (
+                    <div className="flex items-center gap-2 px-3 py-2 border-l border-border/60">
+                      {renderEye(field, "residential")}
+                      <Input
+                        type="text"
+                        placeholder={field.defaultLabel}
+                        value={fieldLabels.residential}
+                        onChange={(e) => updateLabel(field.key, "residential", e.target.value)}
+                        className={`app-input flex-1 ${!resVisible ? "opacity-35 bg-transparent cursor-not-allowed" : ""}`}
+                        disabled={!resVisible}
+                      />
+                    </div>
+                  )}
 
                   {/* Columna: Comercial */}
-                  <div className="flex items-center gap-2 px-3 py-2 border-l border-border/60">
-                    {renderEye(field, "commercial")}
-                    <Input
-                      type="text"
-                      placeholder={field.defaultLabel}
-                      value={fieldLabels.commercial}
-                      onChange={(e) => updateLabel(field.key, "commercial", e.target.value)}
-                      className={`app-input flex-1 ${!comVisible ? "opacity-35 bg-transparent cursor-not-allowed" : ""}`}
-                      disabled={!comVisible}
-                    />
-                  </div>
+                  {showCom && (
+                    <div className="flex items-center gap-2 px-3 py-2 border-l border-border/60">
+                      {renderEye(field, "commercial")}
+                      <Input
+                        type="text"
+                        placeholder={field.defaultLabel}
+                        value={fieldLabels.commercial}
+                        onChange={(e) => updateLabel(field.key, "commercial", e.target.value)}
+                        className={`app-input flex-1 ${!comVisible ? "opacity-35 bg-transparent cursor-not-allowed" : ""}`}
+                        disabled={!comVisible}
+                      />
+                    </div>
+                  )}
                 </div>
               );
             })}
