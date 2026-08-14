@@ -915,8 +915,16 @@ export interface HousingDestination {
   description: string | null;
   is_active: boolean;
   field_config?: Record<string, unknown>;
+  destination_type?: "residential" | "commercial" | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface ClassificationDestination {
+  id: string;
+  classification_id: string;
+  destination_id: string;
+  created_at: string;
 }
 
 export interface BuildingAge {

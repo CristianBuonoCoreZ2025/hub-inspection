@@ -31,7 +31,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ToggleChip } from "@/components/ui/toggle-chip";
 import { VoiceTextarea } from "@/components/ui/voice-textarea";
 import { useLookupCatalogs } from "@/hooks/use-lookup-catalog";
-import { getPropertyClassifications, getHousingDestinations, getBuildingAges } from "@/services/catalogs";
+import { getPropertyClassifications, getHousingDestinations, getClassificationDestinations, getBuildingAges } from "@/services/catalogs";
+import { resolveFieldConfig, filterClassificationsByDestination } from "@/lib/field-config";
 import { useQuery } from "@tanstack/react-query";
 import type { InspectionSession } from "@/types";
 
@@ -73,6 +74,11 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  const { data: housingDestinations = [] } = useQuery({
  queryKey: ["housing-destinations"],
  queryFn: getHousingDestinations,
+ staleTime: 1000 * 60 * 30,
+ });
+ const { data: classificationDestinations = [] } = useQuery({
+ queryKey: ["classification-destinations"],
+ queryFn: getClassificationDestinations,
  staleTime: 1000 * 60 * 30,
  });
  const { data: buildingAges = [] } = useQuery({
@@ -493,49 +499,28 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  const riskClass = String(watch("property_risk.risk_class") ?? "");
  const propertyType = String(watch("property_risk.property_type") ?? "");
 
- // ── Config dinámica desde la BD (field_config) ──
- const classConfig = propertyClassifications.find((c) => c.name === riskClass)?.field_config as {
- show?: string[]; hide?: string[]; labels?: Record<string, string>;
- } | undefined;
- const destConfig = housingDestinations.find((d) => d.name === propertyType)?.field_config as {
- show?: string[]; hide?: string[]; labels?: Record<string, string>;
- } | undefined;
-
- // Merge: base siempre visibles + classification.show + destination.show
- const ALWAYS_VISIBLE = ["age_years", "owner_name", "worker_resident_count"];
- const visible = new Set<string>(ALWAYS_VISIBLE);
- classConfig?.show?.forEach((f) => visible.add(f));
- destConfig?.show?.forEach((f) => visible.add(f));
- // Quitar hides
- classConfig?.hide?.forEach((f) => visible.delete(f));
- destConfig?.hide?.forEach((f) => visible.delete(f));
-
- // Labels: classification > destination > default
- const defaultLabels: Record<string, string> = {
- age_years: "Antigüedad del Inmueble",
- owner_name: "Nombre Propietario(s)",
- worker_resident_count: "N° Habitantes",
- apartment_number: "N° Dpto / Oficina",
- floor_count: "N° Pisos",
- built_surface: "Superficie Construida (m²)",
- room_count: "Cantidad Espacios",
- bathroom_count: "Cantidad Baños",
- is_habitable: "¿Se encuentra habitable?",
- office_count: "N° Oficinas",
- warehouse_count: "N° Bodegas",
- branch_count: "Sucursales",
- business_line: "Rubro de la Empresa",
- };
- const labelFor = (key: string) =>
- classConfig?.labels?.[key] || destConfig?.labels?.[key] || defaultLabels[key] || key;
-
+ // ── Config dinámica desde la BD (dual-read) ──
+ const { visible, labelFor } = resolveFieldConfig(
+ riskClass,
+ propertyType,
+ propertyClassifications,
+ housingDestinations,
+ );
  const isFieldVisible = (key: string) => visible.has(key);
+
+ // ── Filtrar clasificaciones según destino seleccionado ──
+ const filteredClassifications = filterClassificationsByDestination(
+ propertyClassifications,
+ housingDestinations,
+ classificationDestinations,
+ propertyType,
+ );
 
  return (
  <div className="modal-grid-3">
  <div className="modal-field">
  <Label className="app-field-label">Clasificacion del Bien</Label>
- {tableSelect("property_risk.risk_class", propertyClassifications)}
+ {tableSelect("property_risk.risk_class", filteredClassifications)}
  </div>
  <div className="modal-field">
  <Label className="app-field-label">Destino del Bien</Label>

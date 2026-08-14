@@ -15,6 +15,7 @@ import type {
   PolicyType,
   ClaimType,
   HousingDestination,
+  ClassificationDestination,
   BuildingAge,
   Relationship,
   LookupCatalog,
@@ -486,8 +487,14 @@ export async function deleteClaimType(id: string) {
 
 export async function getHousingDestinations() {
   return fetchAllSorted<HousingDestination>("housing_destinations", {
-    select: "id, name, description, is_active, field_config, created_at, updated_at",
+    select: "id, name, description, is_active, field_config, destination_type, created_at, updated_at",
     eq: { is_active: true },
+  });
+}
+
+export async function getClassificationDestinations() {
+  return fetchAll<ClassificationDestination>("classification_destinations", {
+    select: "id, classification_id, destination_id, created_at",
   });
 }
 

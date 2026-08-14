@@ -5,10 +5,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { getReport, createReport, updateReport, completeInspection } from "@/services/inspections";
 import { getPropertyClassifications, getHousingDestinations } from "@/services/catalogs";
+import { resolveFieldConfig } from "@/lib/field-config";
 import { issueClaimAction } from "@/services/claim-actions";
 import { toast } from "sonner";
 import { FileText, Printer, CheckCircle2, RefreshCw, Lock, Download, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getUserTimeZone } from "@/lib/timezone";
 import type { SessionDetail } from "@/services/inspections";
 
 const SEVERITY_LABELS: Record<string, string> = {
@@ -20,12 +22,17 @@ const SEVERITY_LABELS: Record<string, string> = {
 
 function fmtDateTime(s?: string | null): string {
   if (!s) return "—";
-  return new Date(s).toLocaleString("es-CL", { timeZone: "America/Santiago", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
+  return new Date(s).toLocaleString("es-CL", { timeZone: getUserTimeZone(), day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
+}
+
+function fmtDateTimeSeconds(s?: string | null): string {
+  if (!s) return "—";
+  return new Date(s).toLocaleString("es-CL", { timeZone: getUserTimeZone(), day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
 }
 
 function fmtDate(s?: string | null): string {
   if (!s) return "—";
-  return new Date(s).toLocaleDateString("es-CL", { timeZone: "America/Santiago", day: "2-digit", month: "2-digit", year: "numeric" });
+  return new Date(s).toLocaleDateString("es-CL", { timeZone: getUserTimeZone(), day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 function fmtAge(s?: string | null): string {
@@ -173,15 +180,33 @@ export default function ReportTab({
 
   const generateMutation = useMutation({
     mutationFn: async () => {
+      // 1. Refrescar la sesión completa para traer los últimos cambios del acta
+      await queryClient.refetchQueries({ queryKey: ["inspection-session-full", sessionId], type: "active" });
+      // Esperar a que React re-renderice con los datos actualizados
+      await new Promise((r) => setTimeout(r, 200));
+
+      // 2. Generar el PDF del contenido visible (borrador)
+      const pdfBlob = await generatePdf();
+      let reportUrl: string | null = null;
+      if (pdfBlob) {
+        reportUrl = await uploadPdf(pdfBlob);
+      }
+
+      // 3. Crear o actualizar el registro del reporte con la URL del PDF
       const reportType = isCancellation ? "cancellation" : "completion";
       const status = "draft";
       if (report) {
-        return updateReport(report.id, { status, generated_at: new Date().toISOString(), report_type: reportType });
+        return updateReport(report.id, {
+          status,
+          generated_at: new Date().toISOString(),
+          report_type: reportType,
+          ...(reportUrl ? { report_url: reportUrl } : {}),
+        });
       }
       return createReport({
         session_id: sessionId,
         claim_id: session.claim_id || null,
-        report_url: null,
+        report_url: reportUrl,
         generated_at: new Date().toISOString(),
         status,
         report_type: reportType,
@@ -489,44 +514,24 @@ export default function ReportTab({
   // Solo una firma por rol (insured + adjuster = máximo 2)
   const uniqueSignatures = useMemo(() => signatures.filter((s, i, arr) => arr.findIndex(x => x.role === s.role) === i), [signatures]);
 
-  // Config dinámica de campos del acta (classification + destination)
+  // Config dinámica de campos del acta (dual-read: modelo nuevo o viejo)
   const { visible, labelFor } = useMemo(() => {
     const riskClass = session.property_risk?.risk_class || "";
     const propertyType = session.property_risk?.property_type || "";
-    const classConfig = propertyClassifications.find((c) => c.name === riskClass)?.field_config as {
-      show?: string[]; hide?: string[]; labels?: Record<string, string>;
-    } | undefined;
-    const destConfig = housingDestinations.find((d) => d.name === propertyType)?.field_config as {
-      show?: string[]; hide?: string[]; labels?: Record<string, string>;
-    } | undefined;
-
-    const ALWAYS_VISIBLE = ["age_years", "owner_name", "worker_resident_count"];
-    const visible = new Set<string>(ALWAYS_VISIBLE);
-    classConfig?.show?.forEach((f) => visible.add(f));
-    destConfig?.show?.forEach((f) => visible.add(f));
-    classConfig?.hide?.forEach((f) => visible.delete(f));
-    destConfig?.hide?.forEach((f) => visible.delete(f));
-
-    const defaultLabels: Record<string, string> = {
-      risk_class: "Clasificación del Bien",
-      property_type: "Destino del Bien",
-      age_years: "Antigüedad",
-      owner_name: "Propietario",
-      worker_resident_count: "N° Habitantes",
-      apartment_number: "N° Dpto / Oficina",
-      floor_count: "Número de Pisos",
-      built_surface: "Metros Cuadrados",
-      room_count: "Habitaciones",
-      bathroom_count: "Baños",
-      is_habitable: "¿Habitable?",
-      office_count: "N° Oficinas",
-      warehouse_count: "N° Bodegas",
-      branch_count: "Sucursales",
-      business_line: "Rubro de la Empresa",
+    const result = resolveFieldConfig(
+      riskClass,
+      propertyType,
+      propertyClassifications,
+      housingDestinations,
+    );
+    // Override de labels para el header del informe
+    const baseLabelFor = result.labelFor;
+    const labelFor = (key: string) => {
+      if (key === "risk_class") return "Clasificación del Bien";
+      if (key === "property_type") return "Destino del Bien";
+      return baseLabelFor(key);
     };
-    const labelFor = (key: string) =>
-      classConfig?.labels?.[key] || destConfig?.labels?.[key] || defaultLabels[key] || key;
-    return { visible, labelFor };
+    return { visible: result.visible, labelFor };
   }, [session.property_risk?.risk_class, session.property_risk?.property_type, propertyClassifications, housingDestinations]);
 
   // Descargar ZIP: reporte PDF + todas las evidencias + croquis (sin firmas)
@@ -782,6 +787,7 @@ export default function ReportTab({
               <p>Siniestro: {claimNumber || "—"}</p>
               <p>Correlativo: {shortInspectionNumber(session.inspection_number)}</p>
               <p>Número interno: {claimLiquidationNumber || "—"}</p>
+              <p>Generado: {fmtDateTimeSeconds(report?.generated_at)}</p>
             </div>
           </div>
 
