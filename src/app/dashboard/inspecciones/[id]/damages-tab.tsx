@@ -1264,7 +1264,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <tr>
  <th>Espacio</th>
  <th>Categoría</th>
- <th>Materialidad / Aclaración</th>
+ <th>Materialidad</th>
  <th className="text-right">Superficie / Daño</th>
  <th className="text-right">Monto</th>
  <th className="w-[80px]">Acciones</th>
