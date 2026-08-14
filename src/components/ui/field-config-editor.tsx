@@ -95,6 +95,11 @@ export function FieldConfigEditor({ open, onOpenChange, currentConfig, onSave, i
       const next = { ...prev, [destType]: new Set(prev[destType]) };
       if (next[destType].has(field)) {
         next[destType].delete(field);
+        // Limpiar el label al desactivar
+        setLabels((lp) => ({
+          ...lp,
+          [field]: { ...lp[field], [destType]: "" },
+        }));
       } else {
         next[destType].add(field);
       }
