@@ -844,8 +844,8 @@ export default function ReportTab({
               <div className="report-acta-title app-body">
                 Antecedentes del Riesgo
               </div>
-              {fieldRow(labelFor("risk_class"), session.property_risk.risk_class)}
               {fieldRow(labelFor("property_type"), session.property_risk.property_type)}
+              {fieldRow(labelFor("risk_class"), session.property_risk.risk_class)}
               {visible.has("age_years") && fieldRow(labelFor("age_years"), fmtAge(session.property_risk.age_years))}
               {visible.has("owner_name") && fieldRow(labelFor("owner_name"), session.property_risk.owner_name)}
               {visible.has("worker_resident_count") && fieldRow(labelFor("worker_resident_count"), session.property_risk.worker_resident_count)}

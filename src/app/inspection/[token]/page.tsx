@@ -988,8 +988,8 @@ function ActaTab({ session, actaStep }: { session: LiveSession; actaStep: string
             const isResidential = riskClass === "Residencial";
             return (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2 app-body">
-                <Field label="Clasificacion del Bien" value={riskClass} />
                 <Field label="Destino del Bien" value={val(pr, "property_type")} />
+                <Field label="Clasificacion del Bien" value={riskClass} />
                 <Field label="N° Dpto / Oficina" value={val(pr, "apartment_number")} />
                 <Field label="N° Pisos" value={val(pr, "floor_count")} />
                 <Field label="Antiguedad del Inmueble" value={val(pr, "age_years")} />

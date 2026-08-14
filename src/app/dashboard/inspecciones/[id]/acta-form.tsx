@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useRef, Fragment } from "react";
 import { useForm } from "react-hook-form";
@@ -239,6 +239,23 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  useEffect(() => {
  updateInspectionSession(session.id, { acta_step: currentStepKey }).catch(() => {});
  }, [currentStepKey, session.id]);
+
+ // ── Reset risk_class si no está en las clasificaciones filtradas por destino ──
+ useEffect(() => {
+  const propertyType = String(form.watch("property_risk.property_type") ?? "");
+  const riskClass = String(form.watch("property_risk.risk_class") ?? "");
+  if (!riskClass || !propertyType) return;
+  const filtered = filterClassificationsByDestination(
+   propertyClassifications,
+   housingDestinations,
+   classificationDestinations,
+   propertyType,
+  );
+  const stillValid = filtered.some((c) => c.name === riskClass);
+  if (!stillValid) {
+   form.setValue("property_risk.risk_class" as never, "" as never);
+  }
+ }, [propertyClassifications, housingDestinations, classificationDestinations, form]);
 
  // Helpers sin tipado estricto para evitar conflictos con react-hook-form + paths anidados
  const field = (name: string) => form.register(name as never);
@@ -519,12 +536,12 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  return (
  <div className="modal-grid-3">
  <div className="modal-field">
- <Label className="app-field-label">Clasificacion del Bien</Label>
- {tableSelect("property_risk.risk_class", filteredClassifications)}
- </div>
- <div className="modal-field">
  <Label className="app-field-label">Destino del Bien</Label>
  {tableSelect("property_risk.property_type", housingDestinations)}
+ </div>
+ <div className="modal-field">
+ <Label className="app-field-label">Clasificacion del Bien</Label>
+ {tableSelect("property_risk.risk_class", filteredClassifications)}
  </div>
  {isFieldVisible("apartment_number") && (
  <div className="modal-field">
