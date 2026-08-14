@@ -1024,22 +1024,19 @@
   cursor: not-allowed !important;
 }
 
-/* ═══════════════════════════════════════════════════════════════
- * FIELD CONFIG MATRIX — Editor de campos por destino (Habitacional/Comercial)
- * ═══════════════════════════════════════════════════════════════ */
+/* FIELD CONFIG MATRIX - Editor de campos por destino */
 
 .field-config-matrix {
-  border: 1px solid var(--border, hsl(0 0% 90%));
+  border: 1px solid hsl(0 0% 90%);
   border-radius: 10px;
   overflow: hidden;
 }
 
-/* Header de la matriz */
 .field-config-matrix-header {
   display: grid;
   grid-template-columns: 200px 1fr 1fr;
-  background: var(--muted, hsl(0 0% 96%));
-  border-bottom: 1px solid var(--border, hsl(0 0% 90%));
+  background: hsl(0 0% 96%);
+  border-bottom: 1px solid hsl(0 0% 90%);
 }
 
 .field-config-col-field {
@@ -1051,7 +1048,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--muted-foreground, hsl(0 0% 45%));
+  color: hsl(0 0% 45%);
 }
 
 .field-config-col-dest {
@@ -1063,7 +1060,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  border-left: 1px solid var(--border, hsl(0 0% 90%));
+  border-left: 1px solid hsl(0 0% 90%);
 }
 
 .field-config-col-residential {
@@ -1074,18 +1071,16 @@
   color: hsl(210 70% 50%);
 }
 
-/* Body de la matriz */
 .field-config-matrix-body {
   display: flex;
   flex-direction: column;
 }
 
-/* Cada fila */
 .field-config-matrix-row {
   display: grid;
   grid-template-columns: 200px 1fr 1fr;
   align-items: center;
-  border-bottom: 1px solid var(--border, hsl(0 0% 94%));
+  border-bottom: 1px solid hsl(0 0% 94%);
   transition: background-color 0.15s ease;
 }
 
@@ -1097,34 +1092,29 @@
   background: hsl(0 0% 97%);
 }
 
-/* Fila con campo siempre visible (locked) */
 .field-config-row-locked .field-config-col-field {
-  color: var(--muted-foreground, hsl(0 0% 45%));
+  color: hsl(0 0% 45%);
 }
 
-/* Columna campo: nombre + icono lock */
 .field-config-matrix-row .field-config-col-field {
   padding: 8px 12px;
   font-size: 13px;
 }
 
-/* Columna destino: eye toggle + input */
 .field-config-matrix-row .field-config-col-dest {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  border-left: 1px solid var(--border, hsl(0 0% 94%));
+  border-left: 1px solid hsl(0 0% 94%);
 }
 
-/* Input bloqueado cuando el campo no está visible */
 .field-config-matrix-row .field-config-col-dest .app-input:disabled {
   opacity: 0.35 !important;
   background: transparent !important;
   cursor: not-allowed !important;
 }
 
-/* Dark mode */
 .dark .field-config-matrix {
   border-color: hsl(0 0% 20%);
 }
