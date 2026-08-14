@@ -1296,7 +1296,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  d.observations ? (
    <tr key={`${d.id}-obs`} className="observation-row">
      <td colSpan={6} className="grid-observation">
-       {d.observations}
+       <strong>Aclaratoria:</strong> {d.observations}
      </td>
    </tr>
  ) : null,
@@ -1374,7 +1374,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  d.observations ? (
    <tr key={`${d.id}-obs`} className="observation-row">
      <td colSpan={7} className="grid-observation">
-       {d.observations}
+       <strong>Aclaratoria:</strong> {d.observations}
      </td>
    </tr>
  ) : null,

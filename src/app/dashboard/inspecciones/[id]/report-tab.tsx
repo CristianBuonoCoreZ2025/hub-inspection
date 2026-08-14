@@ -967,7 +967,7 @@ export default function ReportTab({
                     d.observations ? (
                       <tr key={`${d.id}-obs`} className="report-observation-row">
                         <td colSpan={6} className="report-td report-observation">
-                          {d.observations}
+                          <strong>Aclaratoria:</strong> {d.observations}
                         </td>
                       </tr>
                     ) : null,
@@ -1009,7 +1009,7 @@ export default function ReportTab({
                     d.observations ? (
                       <tr key={`${d.id}-obs`} className="report-observation-row">
                         <td colSpan={7} className="report-td report-observation">
-                          {d.observations}
+                          <strong>Aclaratoria:</strong> {d.observations}
                         </td>
                       </tr>
                     ) : null,
