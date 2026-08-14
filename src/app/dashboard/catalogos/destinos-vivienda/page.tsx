@@ -8,9 +8,8 @@ import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { getHousingDestinations, createHousingDestination, updateHousingDestination, deleteHousingDestination } from "@/services/catalogs";
 import { toast } from "sonner";
-import { Search, Pencil, Ban, Warehouse, Home, Settings2 } from "lucide-react";
+import { Search, Pencil, Ban, Warehouse, Home } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
-import type { HousingDestination } from "@/types";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +20,21 @@ import {
  DialogTitle,
 } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { FieldConfigEditor, type FieldConfig } from "@/components/ui/field-config-editor";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const DESTINATION_TYPES: { value: "residential" | "commercial"; label: string }[] = [
+  { value: "residential", label: "Habitacional" },
+  { value: "commercial", label: "Comercial" },
+];
+
+const destinationTypeLabel = (t: string | null | undefined) =>
+  DESTINATION_TYPES.find((d) => d.value === t)?.label ?? "—";
+
+interface FormData {
+  name: string;
+  description: string;
+  destination_type: "residential" | "commercial" | "";
+}
 
 export default function HousingDestinationPage() {
  const queryClient = useQueryClient();
@@ -29,9 +42,7 @@ export default function HousingDestinationPage() {
  const [search, setSearch] = useState("");
  const [open, setOpen] = useState(false);
  const [editingId, setEditingId] = useState<string | null>(null);
- const [formData, setFormData] = useState<{ name: string; description: string }>({"name":"","description":""});
- const [configOpen, setConfigOpen] = useState(false);
- const [configItem, setConfigItem] = useState<HousingDestination | null>(null);
+ const [formData, setFormData] = useState<FormData>({ name: "", description: "", destination_type: "" });
 
  const { data: items, isLoading } = useQuery({
  queryKey: ["destinos_vivienda"],
@@ -43,8 +54,9 @@ export default function HousingDestinationPage() {
  onSuccess: () => {
  toast.success("Destinos del Bien creado");
  queryClient.invalidateQueries({ queryKey: ["destinos_vivienda"] });
+ queryClient.invalidateQueries({ queryKey: ["housing-destinations"] });
  setOpen(false);
- setFormData({"name":"","description":""});
+ setFormData({ name: "", description: "", destination_type: "" });
  },
  onError: (err: Error) => toast.error(err.message),
  });
@@ -54,18 +66,10 @@ export default function HousingDestinationPage() {
  onSuccess: () => {
  toast.success("Destinos del Bien actualizado");
  queryClient.invalidateQueries({ queryKey: ["destinos_vivienda"] });
+ queryClient.invalidateQueries({ queryKey: ["housing-destinations"] });
  setOpen(false);
  setEditingId(null);
- setFormData({"name":"","description":""});
- },
- onError: (err: Error) => toast.error(err.message),
- });
-
- const updateConfigMutation = useMutation({
- mutationFn: ({ id, config }: { id: string; config: FieldConfig }) => updateHousingDestination(id, { field_config: config as unknown as Record<string, unknown> }),
- onSuccess: () => {
- toast.success("Configuración de campos actualizada");
- queryClient.invalidateQueries({ queryKey: ["destinos_vivienda"] });
+ setFormData({ name: "", description: "", destination_type: "" });
  },
  onError: (err: Error) => toast.error(err.message),
  });
@@ -75,12 +79,13 @@ export default function HousingDestinationPage() {
  onSuccess: () => {
  toast.success("Destinos del Bien desactivado");
  queryClient.invalidateQueries({ queryKey: ["destinos_vivienda"] });
+ queryClient.invalidateQueries({ queryKey: ["housing-destinations"] });
  },
  onError: (err: Error) => toast.error(err.message),
  });
 
  const filtered = items?.filter((c) =>
- [c.name, c.description].join(" ").toLowerCase().includes(search.toLowerCase())
+ [c.name, c.description, destinationTypeLabel(c.destination_type)].join(" ").toLowerCase().includes(search.toLowerCase())
  );
 
  const { sorted, sortKey, sortDir, toggleSort } = useTableSort(filtered, {
@@ -95,10 +100,15 @@ export default function HousingDestinationPage() {
  toast.error("Nombre es requerido");
  return;
  }
+ if (!formData.destination_type) {
+ toast.error("Debe seleccionar un tipo de destino");
+ return;
+ }
+ const payload = { name: formData.name, description: formData.description, destination_type: formData.destination_type };
  if (editingId) {
- updateMutation.mutate({ id: editingId, input: formData });
+ updateMutation.mutate({ id: editingId, input: payload });
  } else {
- createMutation.mutate(formData);
+ createMutation.mutate(payload);
  }
  };
 
@@ -115,7 +125,7 @@ export default function HousingDestinationPage() {
  </div>
  <div className="app-grid-header-right">
  {canCreate("catalogos") && (
- <Button onClick={() => { setEditingId(null); setFormData({"name":"","description":""}); setOpen(true); }} className="pg-btn-platinum">
+ <Button onClick={() => { setEditingId(null); setFormData({ name: "", description: "", destination_type: "" }); setOpen(true); }} className="pg-btn-platinum">
  Nuevo
  </Button>
  )}
@@ -139,34 +149,30 @@ export default function HousingDestinationPage() {
  <th className="w-10"></th>
  <SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh>
  <SortableTh sortKey="description" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Descripcion</SortableTh>
+ <th>Tipo</th>
  <th className="w-[80px]"></th>
  </tr>
  </thead>
  <tbody>
  {isLoading ? (
- <tr><td colSpan={4} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
+ <tr><td colSpan={5} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
  ) : filtered?.length === 0 ? (
- <tr><td colSpan={4} className="text-center text-muted-foreground py-4">No se encontraron registros.</td></tr>
+ <tr><td colSpan={5} className="text-center text-muted-foreground py-4">No se encontraron registros.</td></tr>
  ) : (
  paginatedData.map((item) => (
  <tr key={item.id}>
  <td><StatusBadge status={item.is_active ? "active" : "inactive"} label={item.is_active ? "Activo" : "Inactivo"} /></td>
  <td className="font-medium">{item.name}</td>
  <td className="font-medium">{item.description}</td>
+ <td className="font-medium">{destinationTypeLabel(item.destination_type)}</td>
  <td>
  <div className="app-row-actions">
  {canEdit("catalogos") && (
  <button type="button" className="btn-icon-sm" onClick={() => {
  setEditingId(item.id);
- setFormData({ name: item.name || "", description: item.description || "" });
+ setFormData({ name: item.name || "", description: item.description || "", destination_type: item.destination_type || "" });
  setOpen(true);
  }}><Pencil className="h-4 w-4" /></button>
- )}
- {canEdit("catalogos") && (
- <button type="button" className="btn-icon-sm" onClick={() => {
- setConfigItem(item);
- setConfigOpen(true);
- }}><Settings2 className="h-4 w-4" /></button>
  )}
  {canDelete("catalogos") && (
  <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("Desactivar?")) deleteMutation.mutate(item.id); }}>
@@ -204,6 +210,22 @@ export default function HousingDestinationPage() {
  <Label className="app-field-label">Descripcion</Label>
  <Input value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Descripcion" className="app-input" />
  </div>
+ <div className="modal-field">
+ <Label className="app-field-label">Tipo <span className="text-red-500">*</span></Label>
+ <Select
+ value={formData.destination_type || undefined}
+ onValueChange={(v) => setFormData({ ...formData, destination_type: v as "residential" | "commercial" })}
+ >
+ <SelectTrigger className="app-input w-full">
+ <SelectValue placeholder="Seleccionar..." />
+ </SelectTrigger>
+ <SelectContent>
+ {DESTINATION_TYPES.map((t) => (
+ <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+ ))}
+ </SelectContent>
+ </Select>
+ </div>
  </div>
  <div className="modal-footer">
  <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)} className="pg-btn-platinum">Cancelar</Button>
@@ -214,16 +236,6 @@ export default function HousingDestinationPage() {
  </form>
  </DialogContent>
  </Dialog>
-
- {configItem && (
- <FieldConfigEditor
- open={configOpen}
- onOpenChange={setConfigOpen}
- currentConfig={configItem.field_config as FieldConfig | undefined}
- onSave={(config) => updateConfigMutation.mutate({ id: configItem.id, config })}
- itemName={configItem.name}
- />
- )}
  </div>
  );
 }

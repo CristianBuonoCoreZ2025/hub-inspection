@@ -498,11 +498,11 @@ export async function getClassificationDestinations() {
   });
 }
 
-export async function createHousingDestination(input: { name: string; description?: string }) {
+export async function createHousingDestination(input: { name: string; description?: string; destination_type?: string }) {
   return insertRow<HousingDestination>("housing_destinations", {
     ...input,
     is_active: true,
-  }, "id, name, description, is_active, field_config");
+  }, "id, name, description, is_active, field_config, destination_type");
 }
 
 export async function updateHousingDestination(id: string, input: Partial<HousingDestination>) {
@@ -510,7 +510,7 @@ export async function updateHousingDestination(id: string, input: Partial<Housin
   for (const [key, value] of Object.entries(input)) {
     if (value !== undefined) set[key] = value;
   }
-  return updateRow<HousingDestination>("housing_destinations", id, set, "id, name, description, is_active, field_config");
+  return updateRow<HousingDestination>("housing_destinations", id, set, "id, name, description, is_active, field_config, destination_type");
 }
 
 export async function deleteHousingDestination(id: string) {
