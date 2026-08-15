@@ -304,38 +304,33 @@ export default function SignaturesTab({ sessionId, sessionStatus, magicLinkToken
             </div>
           )}
 
-          {/* Banner: firma capturada */}
-          {signatureCapturedAt && (
-            <div className="flex items-center gap-2 rounded-xl border border-emerald-300/40 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-700 dark:text-emerald-300">
-              <Lock className="h-3.5 w-3.5 shrink-0" />
-              Firma capturada por el inspector — el asegurado ya no puede modificarla
-              {!readOnly && (
-                <button
-                  type="button"
-                  onClick={handleReleaseCapture}
-                  disabled={captureMutation.isPending}
-                  className="ml-auto underline hover:text-emerald-800 dark:hover:text-emerald-200"
-                >
-                  {captureMutation.isPending ? "Liberando..." : "Liberar"}
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Botón Capturar firma (inspector) */}
-          {!readOnly && insuredSig && !signatureCapturedAt && inspectionType === "remote" && (
+          {/* Botón Capturar/Liberar firma (inspector) */}
+          {!readOnly && insuredSig && (
             <div className="app-panel">
               <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleCapture}
-                  disabled={captureMutation.isPending}
-                  className="pg-btn-platinum text-emerald-700 dark:text-emerald-300 flex items-center gap-2"
-                >
-                  {captureMutation.isPending ? "Capturando..." : "Capturar firma"}
-                </button>
+                {signatureCapturedAt ? (
+                  <button
+                    type="button"
+                    onClick={handleReleaseCapture}
+                    disabled={captureMutation.isPending}
+                    className="pg-btn-platinum flex items-center gap-2"
+                  >
+                    {captureMutation.isPending ? "Liberando..." : "Liberar"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleCapture}
+                    disabled={captureMutation.isPending}
+                    className="pg-btn-platinum text-emerald-700 dark:text-emerald-300 flex items-center gap-2"
+                  >
+                    {captureMutation.isPending ? "Capturando..." : "Capturar"}
+                  </button>
+                )}
                 <p className="text-[11px] text-muted-foreground">
-                  Al capturar la firma, el asegurado ya no podrá modificarla desde el enlace mágico.
+                  {signatureCapturedAt
+                    ? "Firma capturada — el asegurado ya no puede modificarla."
+                    : "Al capturar, el asegurado ya no podrá modificar la firma."}
                 </p>
               </div>
             </div>
