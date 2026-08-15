@@ -12,7 +12,6 @@ import {
   Video,
   Unlock,
   Loader2,
-  ArrowLeft,
   Radio,
   MapPin,
   User,
@@ -179,17 +178,6 @@ export default function SupervisionPage() {
   if (selectedSessionId && profile?.id) {
     return (
       <div className="flex flex-col h-[calc(100vh-4rem)]">
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
-          <button
-            type="button"
-            onClick={() => setSelectedSessionId(null)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-muted hover:bg-muted/80 text-sm transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Volver a la lista
-          </button>
-          <h1 className="app-page-title">Supervisión en vivo</h1>
-        </div>
         <div className="flex-1 p-4 min-h-0">
           <SupervisorLiveView
             sessionId={selectedSessionId}

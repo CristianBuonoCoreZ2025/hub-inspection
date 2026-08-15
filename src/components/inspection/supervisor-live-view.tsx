@@ -10,6 +10,7 @@ import {
 import { getInspectionSessionById, type SessionDetail } from "@/services/inspections";
 import type { InspectionDamage } from "@/types";
 import { formatUserDateTime as formatDateTime } from "@/lib/timezone";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   Video,
   VideoOff,
@@ -190,14 +191,20 @@ export function SupervisorLiveView({ sessionId, userId, onLeave }: SupervisorLiv
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-black/40 border-b border-white/10">
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onLeave}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-white/10 hover:bg-white/20 text-white/80 transition-colors app-body"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Volver
-          </button>
+          <Tooltip>
+            <TooltipTrigger render={
+              <button
+                type="button"
+                onClick={onLeave}
+                className="btn-icon-sm shrink-0"
+              />
+            }>
+              <ArrowLeft className="h-4 w-4" />
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <p>Volver</p>
+            </TooltipContent>
+          </Tooltip>
           <div className="flex items-center gap-2">
             {connected ? (
               <Wifi className="h-4 w-4 text-emerald-500" />
