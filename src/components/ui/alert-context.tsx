@@ -136,20 +136,39 @@ export function DialogProvider({ children }: { children: ReactNode }) {
   return (
     <DialogContext.Provider value={{ alert, confirm, flash }}>
       {children}
-      <Dialog open={open} onOpenChange={(nextOpen: boolean) => { if (!nextOpen) handleClose(false); }} dismissible={false} modal={!isFlash}>
-        <DialogContent className="modal-sm" showCloseButton={false}>
-          <div className="modal-header">
-            <DialogTitle className="modal-title">
-              <div className={cn("alert-icon", isDestructive ? "alert-icon--error" : "alert-icon--info")}>
-                <Icon className="h-4 w-4" />
+      {/* Flash: div flotante sin overlay, no bloquea interacción */}
+      {isFlash && open && (
+        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none">
+          <div className="modal-sm rounded-xl bg-popover/90 backdrop-blur-xl text-sm text-popover-foreground ring-1 ring-foreground/10 shadow-[0_8px_24px_rgba(0,0,0,0.18)] animate-in fade-in-0 zoom-in-95 duration-100">
+            <div className="modal-header">
+              <div className="modal-title">
+                <div className={cn("alert-icon", isDestructive ? "alert-icon--error" : "alert-icon--info")}>
+                  <Icon className="h-4 w-4" />
+                </div>
+                {title}
               </div>
-              {title}
-            </DialogTitle>
-            <DialogDescription className="modal-subtitle">
-              {description}
-            </DialogDescription>
+              <div className="modal-subtitle">
+                {description}
+              </div>
+            </div>
           </div>
-          {!isFlash && (
+        </div>
+      )}
+      {/* Alert / Confirm: Dialog modal normal */}
+      {!isFlash && (
+        <Dialog open={open} onOpenChange={(nextOpen: boolean) => { if (!nextOpen) handleClose(false); }} dismissible={false}>
+          <DialogContent className="modal-sm" showCloseButton={false}>
+            <div className="modal-header">
+              <DialogTitle className="modal-title">
+                <div className={cn("alert-icon", isDestructive ? "alert-icon--error" : "alert-icon--info")}>
+                  <Icon className="h-4 w-4" />
+                </div>
+                {title}
+              </DialogTitle>
+              <DialogDescription className="modal-subtitle">
+                {description}
+              </DialogDescription>
+            </div>
             <div className="modal-footer">
               {isConfirm ? (
                 <>
@@ -170,9 +189,9 @@ export function DialogProvider({ children }: { children: ReactNode }) {
                 </Button>
               )}
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
     </DialogContext.Provider>
   );
 }
