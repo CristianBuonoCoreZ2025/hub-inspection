@@ -25,7 +25,7 @@ import {
   Lock,
   HardHat,
 } from "lucide-react";
-import { toast } from "sonner";
+import { useFlash } from "@/components/ui/alert-context";
 import {
   Select,
   SelectContent,
@@ -105,6 +105,7 @@ export default function SupervisionPage() {
   const { can } = usePermissions();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const flash = useFlash();
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [inspectionType, setInspectionType] = useState<"remote" | "onsite" | "all">("all");
   const [search, setSearch] = useState("");
@@ -115,19 +116,19 @@ export default function SupervisionPage() {
   const liftMutation = useMutation({
     mutationFn: (sessionId: string) => liftInspectionLock(sessionId, profile!.id),
     onSuccess: () => {
-      toast.success("Inspección desbloqueada");
+      flash({ title: "Desbloqueada", description: "Inspección desbloqueada", type: "success" });
       queryClient.invalidateQueries({ queryKey: ["active-remote-sessions", inspectionType] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => flash({ title: "Error", description: err.message, type: "error", duration: 4000 }),
   });
 
   const restoreMutation = useMutation({
     mutationFn: (sessionId: string) => restoreInspectionLock(sessionId),
     onSuccess: () => {
-      toast.success("Inspección bloqueada");
+      flash({ title: "Bloqueada", description: "Inspección bloqueada", type: "success" });
       queryClient.invalidateQueries({ queryKey: ["active-remote-sessions", inspectionType] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => flash({ title: "Error", description: err.message, type: "error", duration: 4000 }),
   });
 
   const { data: sessions, isLoading } = useQuery({
