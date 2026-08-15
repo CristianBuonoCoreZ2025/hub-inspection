@@ -302,7 +302,7 @@ export default function SupervisionPage() {
                     {session.lock_overridden_by ? (
                       <>
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 text-[10px] font-medium">
-                          Bloqueo levantado
+                          Desbloqueada
                         </span>
                         <button
                           type="button"
