@@ -211,7 +211,7 @@ export default function SupervisionPage() {
                 tabIndex={0}
                 onClick={() => setSelectedSessionId(session.id)}
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setSelectedSessionId(session.id); }}
-                className="app-panel !p-0 text-left hover:ring-2 hover:ring-emerald-500/40 transition-all cursor-pointer overflow-hidden"
+                className="app-panel p-0! text-left hover:ring-2 hover:ring-emerald-500/40 transition-all cursor-pointer overflow-hidden"
               >
                 <div className="px-3 py-1.5 flex items-center gap-2.5">
                   {/* Indicador en vivo + tipo */}
