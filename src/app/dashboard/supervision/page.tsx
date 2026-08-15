@@ -45,20 +45,48 @@ const TAB_LABELS: Record<string, string> = {
   firmas: "Firmas",
 };
 
-function ElapsedTime({ startedAt }: { startedAt: string | null }) {
+/**
+ * Badge de tiempo transcurrido con colores según duración:
+ * - < 12h: verde
+ * - 12h–24h: amarillo con texto naranja
+ * - 24h–36h: naranja con texto amarillo
+ * - > 36h: rojo
+ * - > 48h: rojo + signo de exclamación
+ */
+function ElapsedBadge({ startedAt }: { startedAt: string | null }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
-  if (!startedAt) return <span>—</span>;
+  if (!startedAt) return null;
   const sec = Math.floor((now - new Date(startedAt).getTime()) / 1000);
+  const hours = sec / 3600;
   const h = Math.floor(sec / 3600);
   const m = Math.floor((sec % 3600) / 60);
   const s = sec % 60;
-  if (h > 0) return <span>{h}h {m}m</span>;
-  if (m > 0) return <span>{m}m {s}s</span>;
-  return <span>{s}s</span>;
+  const timeText = h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m ${s}s` : `${s}s`;
+
+  let classes: string;
+  let showAlert = false;
+  if (hours < 12) {
+    classes = "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300";
+  } else if (hours < 24) {
+    classes = "bg-amber-100 text-orange-600 dark:bg-amber-900/30 dark:text-orange-400";
+  } else if (hours < 36) {
+    classes = "bg-orange-100 text-yellow-600 dark:bg-orange-900/30 dark:text-yellow-400";
+  } else {
+    classes = "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
+    showAlert = hours >= 48;
+  }
+
+  return (
+    <span className={`flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full shrink-0 ml-2 ${classes}`}>
+      <Clock className="h-3 w-3" />
+      {timeText}
+      {showAlert && <span className="font-bold">!</span>}
+    </span>
+  );
 }
 
 export default function SupervisionPage() {
@@ -340,12 +368,7 @@ export default function SupervisionPage() {
                   )}
 
                   {/* Tiempo transcurrido — badge destacado entre inspector y controles */}
-                  {session.started_at && (
-                    <span className="flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 shrink-0 ml-2">
-                      <Clock className="h-3 w-3" />
-                      <ElapsedTime startedAt={session.started_at} />
-                    </span>
-                  )}
+                  <ElapsedBadge startedAt={session.started_at} />
 
                   {/* Controles */}
                   <div className="app-row-actions flex items-center gap-1.5 shrink-0 ml-auto">
