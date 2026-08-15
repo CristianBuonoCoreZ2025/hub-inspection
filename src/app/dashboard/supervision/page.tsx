@@ -86,7 +86,16 @@ function ElapsedBadge({ startedAt }: { startedAt: string | null }) {
         <Clock className="h-3 w-3" />
         {timeText}
       </span>
-      {showAlert && <span className="text-sm leading-none">⚠️</span>}
+      {showAlert && (
+        <Tooltip>
+          <TooltipTrigger className="shrink-0">
+            <span className="text-sm leading-none">⚠️</span>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p>Inspección con más de 48 horas abierta</p>
+          </TooltipContent>
+        </Tooltip>
+      )}
     </span>
   );
 }
@@ -358,7 +367,7 @@ export default function SupervisionPage() {
                   {session.inspector?.full_name && (
                     <Tooltip>
                       <TooltipTrigger className="shrink-0">
-                        <span className="flex items-center gap-1 text-[11px] text-muted-foreground cursor-help">
+                        <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
                           <HardHat className="h-3 w-3 text-cyan-600" />
                           {session.inspector.full_name}
                         </span>
