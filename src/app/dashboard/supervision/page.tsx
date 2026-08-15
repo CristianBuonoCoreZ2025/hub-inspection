@@ -82,10 +82,12 @@ function ElapsedBadge({ startedAt }: { startedAt: string | null }) {
   }
 
   return (
-    <span className={`flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full shrink-0 ml-2 ${classes}`}>
-      <Clock className="h-3 w-3" />
-      {timeText}
-      {showAlert && <AlertTriangle className="h-3 w-3 text-yellow-400" />}
+    <span className="flex items-center gap-1 shrink-0 ml-2">
+      <span className={`flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full ${classes}`}>
+        <Clock className="h-3 w-3" />
+        {timeText}
+      </span>
+      {showAlert && <AlertTriangle className="h-3.5 w-3.5 text-yellow-400" />}
     </span>
   );
 }
