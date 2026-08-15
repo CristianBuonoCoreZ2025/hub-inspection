@@ -147,7 +147,7 @@ function SignatureCanvas({ onSave, label }: { onSave: (dataUrl: string) => Promi
   );
 }
 
-export default function SignaturesTab({ sessionId, sessionStatus, magicLinkToken, inspectionType, signatureWaiverReason }: { sessionId: string; sessionStatus?: string; magicLinkToken?: string; inspectionType?: "onsite" | "remote"; signatureWaiverReason?: string | null }) {
+export default function SignaturesTab({ sessionId, sessionStatus, magicLinkToken, inspectionType, signatureWaiverReason, signatureCapturedAt }: { sessionId: string; sessionStatus?: string; magicLinkToken?: string; inspectionType?: "onsite" | "remote"; signatureWaiverReason?: string | null; signatureCapturedAt?: string | null }) {
   const queryClient = useQueryClient();
   const readOnly = sessionStatus === "completed" || sessionStatus === "cancelled";
   const [showWaiverInput, setShowWaiverInput] = useState(false);
@@ -177,6 +177,26 @@ export default function SignaturesTab({ sessionId, sessionStatus, magicLinkToken
 
   const handleRemoveWaiver = () => {
     waiverMutation.mutate("");
+  };
+
+  const captureMutation = useMutation({
+    mutationFn: async (capturedAt: string | null) => {
+      return updateInspectionSession(sessionId, { signature_captured_at: capturedAt });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
+      queryClient.invalidateQueries({ queryKey: ["signatures", sessionId] });
+      if (magicLinkToken) queryClient.invalidateQueries({ queryKey: ["magic-link-live", magicLinkToken] });
+    },
+    onError: (err: Error) => toast.error(err.message || "Error al capturar firma"),
+  });
+
+  const handleCapture = () => {
+    captureMutation.mutate(new Date().toISOString());
+  };
+
+  const handleReleaseCapture = () => {
+    captureMutation.mutate(null);
   };
 
   const { data: signatures, isLoading } = useQuery({
@@ -284,11 +304,48 @@ export default function SignaturesTab({ sessionId, sessionStatus, magicLinkToken
             </div>
           )}
 
-          {/* Canvas de firma (oculto si readOnly o remota) */}
-          {!readOnly && !insuredSig && inspectionType !== "remote" && (
+          {/* Banner: firma capturada */}
+          {signatureCapturedAt && (
+            <div className="flex items-center gap-2 rounded-xl border border-emerald-300/40 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-700 dark:text-emerald-300">
+              <Lock className="h-3.5 w-3.5 shrink-0" />
+              Firma capturada por el inspector — el asegurado ya no puede modificarla
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={handleReleaseCapture}
+                  disabled={captureMutation.isPending}
+                  className="ml-auto underline hover:text-emerald-800 dark:hover:text-emerald-200"
+                >
+                  {captureMutation.isPending ? "Liberando..." : "Liberar"}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Botón Capturar firma (inspector) */}
+          {!readOnly && insuredSig && !signatureCapturedAt && inspectionType === "remote" && (
+            <div className="app-panel">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleCapture}
+                  disabled={captureMutation.isPending}
+                  className="pg-btn-platinum text-emerald-700 dark:text-emerald-300 flex items-center gap-2"
+                >
+                  {captureMutation.isPending ? "Capturando..." : "Capturar firma"}
+                </button>
+                <p className="text-[11px] text-muted-foreground">
+                  Al capturar la firma, el asegurado ya no podrá modificarla desde el enlace mágico.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Canvas de firma (oculto si readOnly, capturada o remota) */}
+          {!readOnly && !insuredSig && !signatureCapturedAt && inspectionType !== "remote" && (
             <SignatureCanvas label="Firma del Asegurado" onSave={(url) => handleSave("insured", url)} />
           )}
-          {!readOnly && !insuredSig && inspectionType === "remote" && !signatureWaiverReason && (
+          {!readOnly && !insuredSig && !signatureCapturedAt && inspectionType === "remote" && !signatureWaiverReason && (
             <div className="app-panel space-y-3">
               <p className="text-muted-foreground app-body">
                 La firma del asegurado se realiza desde el enlace mágico.

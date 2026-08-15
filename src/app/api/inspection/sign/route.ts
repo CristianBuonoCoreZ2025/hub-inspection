@@ -23,7 +23,26 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAdminClient();
 
-    // 0. Si ya existe una firma para (session_id, role), borrarla de R2 y BD
+    // 0. Verificar que la firma no esté capturada ni la inspección cerrada
+    const { data: session } = await supabase
+      .from("inspection_sessions")
+      .select("status, signature_captured_at")
+      .eq("id", sessionId)
+      .maybeSingle();
+
+    if (!session) {
+      return NextResponse.json({ error: "Inspección no encontrada" }, { status: 404 });
+    }
+
+    if (session.status === "completed" || session.status === "cancelled") {
+      return NextResponse.json({ error: "La inspección está cerrada. No se puede firmar." }, { status: 403 });
+    }
+
+    if (session.signature_captured_at) {
+      return NextResponse.json({ error: "La firma ya fue capturada por el inspector. No se puede modificar." }, { status: 403 });
+    }
+
+    // 1. Si ya existe una firma para (session_id, role), borrarla de R2 y BD
     const { data: existing } = await supabase
       .from("inspection_signatures")
       .select("id, signature_url")
@@ -53,7 +72,7 @@ export async function POST(request: NextRequest) {
         .eq("id", existing.id);
     }
 
-    // 1. Convertir base64 a buffer y subir a R2 con path estructurado (FIR = firma)
+    // 2. Convertir base64 a buffer y subir a R2 con path estructurado (FIR = firma)
     const base64Response = await fetch(signatureDataUrl);
     const blob = await base64Response.blob();
     const buffer = Buffer.from(await blob.arrayBuffer());
@@ -66,7 +85,7 @@ export async function POST(request: NextRequest) {
       ".png"
     );
 
-    // 2. Crear registro en inspection_signatures
+    // 3. Crear registro en inspection_signatures
     const { data: signature, error: insertError } = await supabase
       .from("inspection_signatures")
       .insert({

@@ -35,6 +35,7 @@ export async function GET(
         geo_latitude, geo_longitude, geo_captured_at, geo_captured_by, geo_distance_meters, geo_status, geo_map_url, geo_recapture_enabled,
         property_risk, property_materiality, security_measures,
         insured_statement, third_parties,
+        signature_waiver_reason, signature_captured_at,
         action_template:action_template!inspection_sessions_action_template_id_fkey ( code ),
         claim_action:claim_actions!inspection_sessions_claim_action_id_fkey ( code ),
         inspection_notes:inspection_notes!inspection_notes_session_id_fkey ( id, content, created_at ),

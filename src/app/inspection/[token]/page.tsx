@@ -83,6 +83,7 @@ interface LiveSession {
   geo_captured_at: string | null; geo_captured_by: string | null; geo_distance_meters: number | null;
   geo_status: string | null; geo_map_url: string | null; geo_recapture_enabled: boolean;
   signature_waiver_reason: string | null;
+  signature_captured_at: string | null;
   property_risk: Record<string, unknown> | null;
   property_materiality: Record<string, unknown> | null;
   security_measures: Record<string, unknown> | null;
@@ -1515,7 +1516,7 @@ function SignaturesTab({ session }: { session: LiveSession }) {
 
   const insuredSig = session.inspection_signatures?.find((s) => s.role === "insured");
   const adjusterSig = session.inspection_signatures?.find((s) => s.role === "adjuster");
-  const canSign = session.status !== "completed" && session.status !== "cancelled" && !(session.status === "scheduled" && session.substate === "paused");
+  const canSign = session.status !== "completed" && session.status !== "cancelled" && !(session.status === "scheduled" && session.substate === "paused") && !session.signature_captured_at;
   const confirmKey = `signature-confirmed-${session.id}`;
   const [confirmed, setConfirmed] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -1726,7 +1727,9 @@ function SignaturesTab({ session }: { session: LiveSession }) {
           <p className="app-body text-slate-400 text-center py-4">
             {confirmed
               ? "Firma confirmada. Esperando la firma del ajustador..."
-              : "La inspección está cerrada. Ya no es posible modificar las firmas."}
+              : session.signature_captured_at
+                ? "Tu firma fue capturada por el inspector. Ya no es posible modificarla."
+                : "La inspección está cerrada. Ya no es posible modificar las firmas."}
           </p>
         </Panel>
       )}

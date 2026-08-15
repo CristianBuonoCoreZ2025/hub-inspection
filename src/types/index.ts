@@ -451,6 +451,7 @@ export interface InspectionSession {
   lock_overridden_by: string | null;
   lock_overridden_at: string | null;
   signature_waiver_reason: string | null;
+  signature_captured_at: string | null;
   started_from_mobile: boolean;
   property_risk?: ActaPropertyRisk | null;
   property_materiality?: ActaPropertyMateriality | null;

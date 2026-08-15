@@ -1300,7 +1300,7 @@ enabled: activeTab === "informe",
  {session.status === "scheduled" ? (
  <NotStartedNotice />
  ) : (
- <SignaturesTab sessionId={session.id} sessionStatus={session.status} magicLinkToken={session.magic_link_token || undefined} inspectionType={session.inspection_type} signatureWaiverReason={session.signature_waiver_reason} />
+ <SignaturesTab sessionId={session.id} sessionStatus={session.status} magicLinkToken={session.magic_link_token || undefined} inspectionType={session.inspection_type} signatureWaiverReason={session.signature_waiver_reason} signatureCapturedAt={session.signature_captured_at} />
  )}
  </div>
  )}
