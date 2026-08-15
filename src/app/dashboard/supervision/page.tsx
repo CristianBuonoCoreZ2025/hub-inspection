@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getActiveRemoteSessions, liftInspectionLock, restoreInspectionLock } from "@/services/inspections";
@@ -67,6 +67,7 @@ export default function SupervisionPage() {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [inspectionType, setInspectionType] = useState<"remote" | "onsite" | "all">("all");
   const [search, setSearch] = useState("");
+  const [inspectorFilter, setInspectorFilter] = useState<string[]>([]);
   const canViewSupervision = can("supervision", "view");
   const canLift = dataAccess?.is_admin;
 
@@ -94,8 +95,22 @@ export default function SupervisionPage() {
     refetchInterval: selectedSessionId ? false : 5000,
   });
 
-  // Filtro client-side por búsqueda (liquidation_number, insured, inspector)
+  // Opciones de inspector construidas desde las sesiones cargadas (no query extra)
+  const inspectorOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    (sessions || []).forEach((s) => {
+      if (s.inspector?.id && s.inspector?.full_name) {
+        map.set(s.inspector.id, s.inspector.full_name);
+      }
+    });
+    return Array.from(map.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [sessions]);
+
+  // Filtro client-side por búsqueda + inspector
   const filteredSessions = (sessions || []).filter((s) => {
+    if (inspectorFilter.length > 0 && (!s.inspector?.id || !inspectorFilter.includes(s.inspector.id))) return false;
     if (!search.trim()) return true;
     const q = search.toLowerCase().trim();
     const liq = s.claim?.liquidation_number?.toLowerCase() || "";
@@ -181,6 +196,21 @@ export default function SupervisionPage() {
               <SelectItem value="all">Todas</SelectItem>
               <SelectItem value="remote">Remotas</SelectItem>
               <SelectItem value="onsite">Presenciales</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            multiple
+            value={inspectorFilter}
+            onValueChange={(v: string[]) => setInspectorFilter(v ?? [])}
+            items={inspectorOptions}
+          >
+            <SelectTrigger className="app-input app-filter-narrow">
+              <SelectValue placeholder="Inspector" />
+            </SelectTrigger>
+            <SelectContent>
+              {inspectorOptions.map((c: { value: string; label: string }) => (
+                <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
