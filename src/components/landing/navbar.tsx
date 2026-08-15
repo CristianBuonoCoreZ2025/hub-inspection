@@ -49,7 +49,7 @@ export function Navbar() {
             href="#login"
             className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
           >
-            Iniciar Sesión
+            Iniciar
           </a>
           <a
             href="#demo"
@@ -92,7 +92,7 @@ export function Navbar() {
               onClick={() => setMobileOpen(false)}
               className={cn(buttonVariants({ variant: "outline" }), "w-full")}
             >
-              Iniciar Sesión
+              Iniciar
             </a>
             <a
               href="#demo"

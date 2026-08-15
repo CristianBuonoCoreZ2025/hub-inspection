@@ -117,7 +117,7 @@ export default function LoginPage() {
             <ShieldCheck className="size-5" />
           </div>
           <p className="auth-brand">Claims Hub</p>
-          <h1 className="auth-title">Iniciar Sesión</h1>
+          <h1 className="auth-title">Iniciar</h1>
           <p className="auth-subtitle">
             Ingresa tus credenciales para acceder a tu cuenta
           </p>
@@ -164,7 +164,7 @@ export default function LoginPage() {
 
           <div className="flex flex-col gap-3 pt-1">
             <Button type="submit" className="w-full pg-btn-platinum" disabled={isLoading}>
-              {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
+              {isLoading ? "Iniciando..." : "Iniciar"}
               {!isLoading && <ArrowRight className="ml-1.5 size-3.5" />}
             </Button>
             <div className="flex flex-col items-center gap-2 text-[11px] text-muted-foreground">

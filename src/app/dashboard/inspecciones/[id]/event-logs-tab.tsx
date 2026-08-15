@@ -8,7 +8,7 @@ import {
   ChevronDown, ChevronUp, Clock, Smartphone, Monitor, Tablet,
 } from "lucide-react";
 import { getInspectionEventLogs, type InspectionEventLog } from "@/services/inspection-events";
-import { formatUserDateTime, formatUserTime } from "@/lib/timezone";
+import { formatUserTime } from "@/lib/timezone";
 
 interface EventLogsTabProps {
   sessionId: string;
@@ -117,7 +117,7 @@ export default function EventLogsTab({ sessionId }: EventLogsTabProps) {
             {logs.length === 0 ? (
               <p className="text-sm text-slate-500">No hay registros.</p>
             ) : (
-              <div className="space-y-2 max-h-[500px] overflow-y-auto">
+              <div className="space-y-2 max-h-125 overflow-y-auto">
                 {logs.map((log) => {
                   const cfg = eventTypeConfig[log.event_type] || {
                     label: log.event_type,
@@ -139,7 +139,7 @@ export default function EventLogsTab({ sessionId }: EventLogsTabProps) {
 
                       <div className="flex items-center gap-3 text-xs text-slate-500 sm:ml-auto">
                         {log.event_detail && (
-                          <span className="truncate max-w-[200px]" title={log.event_detail}>
+                          <span className="truncate max-w-50" title={log.event_detail}>
                             {log.event_detail}
                           </span>
                         )}

@@ -106,6 +106,46 @@ sin estilo y sin animación. Está PROHIBIDO usarlo.**
 - El tooltip nativo no respeta dark mode, no tiene animación y se ve poco profesional.
 - El componente `Tooltip` es accesible y se puede personalizar.
 
+### REGLA #4 — NUNCA usar alert/confirm/prompt nativo del navegador (OBLIGATORIO)
+**Los cuadros de diálogo nativos del navegador (`alert()`, `confirm()`, `prompt()`)
+se ven feos, sin estilo, sin dark mode y sin animación. Está PROHIBIDO usarlos.**
+
+#### Prohibido
+- **NUNCA** usar `alert("...")`, `window.alert("...")` en ningún lugar del código.
+- **NUNCA** usar `confirm("...")`, `window.confirm("...")` en ningún lugar del código.
+- **NUNCA** usar `prompt("...")`, `window.prompt("...")` en ningún lugar del código.
+
+#### Obligatorio
+- **Para confirmaciones** (¿eliminar?, ¿cerrar?, ¿salir sin guardar?): usar `useConfirm` de `@/hooks/use-confirm`:
+  ```tsx
+  import { useConfirm } from "@/hooks/use-confirm";
+  const confirm = useConfirm();
+  const ok = await confirm({
+    title: "Eliminar siniestro",
+    description: "¿Estás seguro? Esta acción no se puede revertir.",
+    confirmLabel: "Eliminar",
+    destructive: true,
+  });
+  if (!ok) return;
+  ```
+- **Para alertas** (errores, avisos, información): usar `useAlert` de `@/components/ui/alert-context`:
+  ```tsx
+  import { useAlert } from "@/components/ui/alert-context";
+  const alert = useAlert();
+  await alert({
+    title: "Error",
+    description: "No se pudo guardar el registro.",
+    type: "error",
+  });
+  ```
+- Ambos componentes usan `Dialog` de shadcn/ui con estilos premium (iconos, botones,
+  dark mode, animación) y son consistentes en toda la app.
+
+#### Motivo
+- Consistencia visual: todos los diálogos se ven iguales y profesionales.
+- Los diálogos nativos no respetan dark mode, no tienen animación y se ven poco profesionales.
+- `useConfirm` y `useAlert` son accesibles, estilados y se pueden personalizar.
+
 ### REGLA #2 — CERO inline styles en componentes (OBLIGATORIO)
 **Esta regla tiene prioridad máxima sobre la conveniencia.** No hay excepciones para
 estilos visuales, tamaños, colores, gradientes, espaciados o layout.

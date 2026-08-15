@@ -67,9 +67,9 @@ export function getSortedVisibleFields(visible: Set<string>, customOrder?: Recor
 }
 
 type FieldConfigViejo = {
-  show?: string[];
-  hide?: string[];
-  labels?: Record<string, string>;
+  show?: string[] | Record<string, string[]>;
+  hide?: string[] | Record<string, string[]>;
+  labels?: Record<string, string | Record<string, string>>;
 };
 
 type FieldConfigNuevo = {
@@ -144,17 +144,58 @@ export function resolveFieldConfig(
   }
 
   // ── Modelo viejo (fallback): merge classConfig + destConfig ──
+  // Se activa cuando property_type es vacío o no coincide con ningún destino.
+  // IMPORTANTE: después de la migración 346, classConfig.show puede ser
+  // objeto {residential: [...], commercial: [...]} en vez de array.
+  // Hay que manejar ambos formatos para no romper inspecciones viejas.
   const classConfig = classification?.field_config as FieldConfigViejo | undefined;
   const destConfig = destination?.field_config as FieldConfigViejo | undefined;
 
   const visible = new Set<string>(ALWAYS_VISIBLE_FIELDS);
-  classConfig?.show?.forEach((f) => visible.add(f));
-  destConfig?.show?.forEach((f) => visible.add(f));
-  classConfig?.hide?.forEach((f) => visible.delete(f));
-  destConfig?.hide?.forEach((f) => visible.delete(f));
 
-  const labelFor = (key: string): string =>
-    classConfig?.labels?.[key] || destConfig?.labels?.[key] || DEFAULT_LABELS[key] || key;
+  // show: puede ser array (viejo) u objeto (nuevo). Si es objeto, combinar ambos tipos.
+  const classShow = classConfig?.show;
+  if (Array.isArray(classShow)) {
+    classShow.forEach((f) => visible.add(f));
+  } else if (classShow && typeof classShow === "object") {
+    [...(classShow.residential || []), ...(classShow.commercial || [])].forEach((f) => visible.add(f));
+  }
+  const destShow = destConfig?.show;
+  if (Array.isArray(destShow)) {
+    destShow.forEach((f) => visible.add(f));
+  } else if (destShow && typeof destShow === "object") {
+    [...(destShow.residential || []), ...(destShow.commercial || [])].forEach((f) => visible.add(f));
+  }
+
+  // hide: mismo tratamiento
+  const classHide = classConfig?.hide;
+  if (Array.isArray(classHide)) {
+    classHide.forEach((f) => visible.delete(f));
+  } else if (classHide && typeof classHide === "object") {
+    [...(classHide.residential || []), ...(classHide.commercial || [])].forEach((f) => visible.delete(f));
+  }
+  const destHide = destConfig?.hide;
+  if (Array.isArray(destHide)) {
+    destHide.forEach((f) => visible.delete(f));
+  } else if (destHide && typeof destHide === "object") {
+    [...(destHide.residential || []), ...(destHide.commercial || [])].forEach((f) => visible.delete(f));
+  }
+
+  // labels: puede ser string (viejo) u objeto {residential: "...", commercial: "..."} (nuevo).
+  // Si es objeto, preferir residential (fallback más común para inspecciones viejas sin destino).
+  const labelFor = (key: string): string => {
+    const classRaw = classConfig?.labels?.[key];
+    if (typeof classRaw === "string") return classRaw;
+    if (typeof classRaw === "object" && classRaw !== null) {
+      return classRaw.residential || classRaw.commercial || DEFAULT_LABELS[key] || key;
+    }
+    const destRaw = destConfig?.labels?.[key];
+    if (typeof destRaw === "string") return destRaw;
+    if (typeof destRaw === "object" && destRaw !== null) {
+      return destRaw.residential || destRaw.commercial || DEFAULT_LABELS[key] || key;
+    }
+    return DEFAULT_LABELS[key] || key;
+  };
 
   return { visible, labelFor };
 }

@@ -57,7 +57,7 @@ import { Button } from "@/components/ui/button";
 import { ToggleChip } from "@/components/ui/toggle-chip";
 import { Badge } from "@/components/ui/badge";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import {
  Dialog,
@@ -327,26 +327,62 @@ export default function ClaimDetailPage() {
  enabled: !!claim?.status_id && openGestionModal,
  });
 
- // ── Filtrar templates según dependencias de cadena ──
- // RES requiere COB cerrada | PCA requiere RES cerrada | RTA requiere NSA existente
- const CLOSED_STATUSES = new Set(["issued", "reviewed", "approved", "dispatched"]);
- const chainFilteredTemplates = (availableTemplates || []).filter((tpl) => {
- const code = tpl.code;
- if (!code) return true;
- const actions = claimActions || [];
- if (code === "RES") {
- return actions.some((a) => a.action_template?.code === "COB" && a.action_status?.code && CLOSED_STATUSES.has(a.action_status.code));
- }
- if (code === "AJU") {
- return actions.some((a) => a.action_template?.code === "RES" && a.action_status?.code && CLOSED_STATUSES.has(a.action_status.code));
- }
- if (code === "RTA") {
- return actions.some((a) => a.action_template?.code === "SOL");
- }
- return true;
- });
+ // ── Templates disponibles/deshabilitados con motivo ──
+const CLOSED_STATUSES = new Set(["issued", "reviewed", "approved", "dispatched"]);
+type TemplateWithReason = ActionTemplate & { disabled?: boolean; reason?: string };
 
- const editingActionId = editingGestion?.id;
+const chainFilteredTemplates: TemplateWithReason[] = (availableTemplates || []).map((tpl) => {
+const code = tpl.code;
+const actions = claimActions || [];
+
+// No duplicar una acción que ya está abierta (no cerrada)
+const openSame = actions.find((a) => a.action_template?.code === code && a.action_status?.code && !CLOSED_STATUSES.has(a.action_status.code));
+if (openSame) {
+return { ...tpl, disabled: true, reason: `Ya existe una gestión ${code} abierta (${openSame.code})` };
+}
+
+// Dependencias de cadena
+if (code === "RES") {
+const cobClosed = actions.some((a) => a.action_template?.code === "COB" && a.action_status?.code && CLOSED_STATUSES.has(a.action_status.code));
+if (!cobClosed) return { ...tpl, disabled: true, reason: "Requiere COB (Ingreso de Coberturas) cerrado" };
+}
+if (code === "AJU") {
+const resClosed = actions.some((a) => a.action_template?.code === "RES" && a.action_status?.code && CLOSED_STATUSES.has(a.action_status.code));
+if (!resClosed) return { ...tpl, disabled: true, reason: "Requiere RES (Reserva) cerrada" };
+}
+if (code === "RTA") {
+const solExists = actions.some((a) => a.action_template?.code === "SOL");
+if (!solExists) return { ...tpl, disabled: true, reason: "Requiere SOL (Notificación y Solicitud de Antecedentes) creada" };
+}
+if (code === "INS") {
+const cin = actions.find((a) => a.action_template?.code === "CIN");
+if (!cin) {
+return { ...tpl, disabled: true, reason: "Requiere CIN (Coordinación de Inspección) creada" };
+}
+if (cin.action_status?.code && !CLOSED_STATUSES.has(cin.action_status.code)) {
+return { ...tpl, disabled: true, reason: "Requiere CIN (Coordinación de Inspección) cerrada" };
+}
+const coordResult = (cin.action_data as Record<string, unknown> | undefined)?.coord_result as string | undefined;
+if (coordResult && coordResult !== "coordinada") {
+return { ...tpl, disabled: true, reason: `CIN marcada como "${coordResult}"` };
+}
+}
+
+return { ...tpl, disabled: false };
+});
+
+function shortReason(reason?: string): string {
+if (!reason) return "no disponible";
+if (reason.includes("Ya existe")) return "duplicada";
+if (reason.includes("COB")) return "falta COB";
+if (reason.includes("RES")) return "falta RES";
+if (reason.includes("SOL")) return "falta SOL";
+if (reason.includes("CIN")) return "falta CIN";
+if (reason.includes("coordinada")) return "CIN no coordinada";
+return "no disponible";
+}
+
+const editingActionId = editingGestion?.id;
  const { data: editingAction, error: editingActionError } = useQuery({
  queryKey: ["claim-action", editingActionId],
  queryFn: () => getClaimActionById(editingActionId!),
@@ -1633,7 +1669,7 @@ export default function ClaimDetailPage() {
  onValueChange={(v) => {
  const id = v === "__none" ? "" : (v ?? "");
  const tpl = chainFilteredTemplates.find((t) => t.id === id) || null;
- setSelectedTemplate(tpl);
+ if (tpl && !tpl.disabled) setSelectedTemplate(tpl);
  }}
  items={[
  { value: "__none", label: "Seleccionar..." },
@@ -1645,35 +1681,67 @@ export default function ClaimDetailPage() {
  {(val: string) => {
  if (!val || val === "__none") return "Seleccionar...";
  const tpl = chainFilteredTemplates.find((t) => t.id === val);
+ if (tpl?.disabled) return "Seleccionar...";
  return tpl ? tpl.name : "Seleccionar...";
  }}
  </SelectValue>
  </SelectTrigger>
  <SelectContent>
- <SelectItem value="__none">Seleccionar...</SelectItem>
- {chainFilteredTemplates.map((tpl) => {
- // Indicador de especificidad del match
- const tags: string[] = [];
- if (tpl.line_business_id) {
- const lineName = businessLinesCatalog?.find(b => b.id === tpl.line_business_id)?.name;
- tags.push(lineName || "Línea");
- }
- if (tpl.event_id) {
- const eventName = eventsCatalog?.find(e => e.id === tpl.event_id)?.name;
- tags.push(eventName || "Evento");
- }
- if (tpl.insurance_company_id) {
- const ciaName = insuranceCompaniesCatalog?.find(c => c.id === tpl.insurance_company_id)?.name;
- tags.push(ciaName || "Cía");
- }
- const matchLabel = tags.length > 0 ? ` · ${tags.join("+")}` : " · General";
- return (
- <SelectItem key={tpl.id} value={tpl.id}>
- {tpl.name}<span className="app-body text-muted-foreground">{matchLabel}</span>
- </SelectItem>
- );
- })}
- </SelectContent>
+<SelectItem value="__none">Seleccionar...</SelectItem>
+{(() => {
+  const available = chainFilteredTemplates
+    .filter((t) => !t.disabled)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const unavailable = chainFilteredTemplates
+    .filter((t) => t.disabled)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const renderItem = (tpl: TemplateWithReason) => {
+    const tags: string[] = [];
+    if (tpl.line_business_id) {
+      const lineName = businessLinesCatalog?.find(b => b.id === tpl.line_business_id)?.name;
+      if (lineName) tags.push(lineName);
+    }
+    if (tpl.event_id) {
+      const eventName = eventsCatalog?.find(e => e.id === tpl.event_id)?.name;
+      if (eventName) tags.push(eventName);
+    }
+    if (tpl.insurance_company_id) {
+      const ciaName = insuranceCompaniesCatalog?.find(c => c.id === tpl.insurance_company_id)?.name;
+      if (ciaName) tags.push(ciaName);
+    }
+    const matchLabel = tags.length > 0 ? ` · ${tags.join("+")}` : "";
+    const short = shortReason(tpl.reason);
+    return (
+      <SelectItem
+        key={tpl.id}
+        value={tpl.id}
+        disabled={tpl.disabled}
+        className={tpl.disabled ? "!pointer-events-auto cursor-not-allowed" : ""}
+      >
+        <span title={tpl.reason}>
+          {tpl.name}
+          <span className="app-body text-muted-foreground">{matchLabel}</span>
+          {tpl.disabled && <span className="ml-1 text-[10px] text-rose-500 opacity-100"> · {short}</span>}
+        </span>
+      </SelectItem>
+    );
+  };
+  return (
+    <>
+      {available.map(renderItem)}
+      {unavailable.length > 0 && (
+        <>
+          <SelectSeparator />
+          <SelectGroup>
+            <SelectLabel className="text-xs text-muted-foreground px-2 py-1">No disponibles</SelectLabel>
+            {unavailable.map(renderItem)}
+          </SelectGroup>
+        </>
+      )}
+    </>
+  );
+})()}
+</SelectContent>
  </Select>
  </div>
 
