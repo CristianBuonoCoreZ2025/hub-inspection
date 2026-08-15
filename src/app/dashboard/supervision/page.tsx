@@ -31,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 
 const TAB_LABELS: Record<string, string> = {
   resumen: "Resumen",
@@ -150,28 +151,29 @@ export default function SupervisionPage() {
             Inspecciones en curso. Entre a supervisar sin activar cámara ni micrófono.
           </p>
 
-      {/* Filtros: búsqueda + combo de tipo */}
-      <div className="flex items-center gap-3 mt-4">
-        <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por liquidación, asegurado, inspector..."
-            className="app-input pl-9 w-full"
-          />
+      {/* Toolbar: buscador + filtro de tipo (mismo patrón que siniestros) */}
+      <div className="app-grid-toolbar mt-4">
+        <div className="app-grid-toolbar-left">
+          <div className="app-grid-search-wrap">
+            <Search />
+            <Input
+              placeholder="Buscar liquidación, asegurado o inspector..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="liquid-search"
+            />
+          </div>
+          <Select value={inspectionType} onValueChange={(v) => setInspectionType(v as "remote" | "onsite" | "all")}>
+            <SelectTrigger className="app-input app-filter-narrow">
+              <SelectValue placeholder="Todas" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              <SelectItem value="remote">Remotas</SelectItem>
+              <SelectItem value="onsite">Presenciales</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <Select value={inspectionType} onValueChange={(v) => setInspectionType(v as "remote" | "onsite" | "all")}>
-          <SelectTrigger className="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas</SelectItem>
-            <SelectItem value="remote">Remotas</SelectItem>
-            <SelectItem value="onsite">Presenciales</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
       {isLoading && (
