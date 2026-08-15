@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getActiveRemoteSessions, liftInspectionLock } from "@/services/inspections";
+import { getActiveRemoteSessions, liftInspectionLock, restoreInspectionLock } from "@/services/inspections";
 import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/use-permissions";
 import { SupervisorLiveView } from "@/components/inspection/supervisor-live-view";
@@ -22,6 +22,7 @@ import {
   PenTool,
   FileText,
   Search,
+  Lock,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -72,7 +73,16 @@ export default function SupervisionPage() {
   const liftMutation = useMutation({
     mutationFn: (sessionId: string) => liftInspectionLock(sessionId, profile!.id),
     onSuccess: () => {
-      toast.success("Bloqueo levantado");
+      toast.success("Inspección desbloqueada");
+      queryClient.invalidateQueries({ queryKey: ["active-remote-sessions", inspectionType] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const restoreMutation = useMutation({
+    mutationFn: (sessionId: string) => restoreInspectionLock(sessionId),
+    onSuccess: () => {
+      toast.success("Inspección bloqueada");
       queryClient.invalidateQueries({ queryKey: ["active-remote-sessions", inspectionType] });
     },
     onError: (err: Error) => toast.error(err.message),
@@ -300,14 +310,25 @@ export default function SupervisionPage() {
                   {/* Controles */}
                   <div className="app-row-actions flex items-center gap-1.5 shrink-0">
                     {session.lock_overridden_by ? (
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/inspecciones/${session.id}`); }}
-                        title="Entrar a la inspección"
-                        className="btn-icon-sm"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/inspecciones/${session.id}`); }}
+                          title="Entrar a la inspección"
+                          className="btn-icon-sm"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); restoreMutation.mutate(session.id); }}
+                          disabled={!canLift || (restoreMutation.variables === session.id && restoreMutation.isPending)}
+                          title={canLift ? "Bloquear inspección" : "Solo un administrador puede bloquear la inspección"}
+                          className="btn-icon-sm"
+                        >
+                          <Lock className="h-4 w-4" />
+                        </button>
+                      </>
                     ) : (
                       <button
                         type="button"

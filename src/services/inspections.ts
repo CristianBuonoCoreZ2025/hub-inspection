@@ -1061,6 +1061,17 @@ export async function liftInspectionLock(sessionId: string, userId: string) {
 }
 
 /**
+ * Restaura el bloqueo de una inspección que fue desbloqueada.
+ * Vuelve a dejar la inspección exclusiva para el inspector asignado.
+ */
+export async function restoreInspectionLock(sessionId: string) {
+  return updateRow<InspectionSession>("inspection_sessions", sessionId, {
+    lock_overridden_by: null,
+    lock_overridden_at: null,
+  }, SESSION_SELECT);
+}
+
+/**
  * Determina si el usuario puede acceder a una inspección teniendo en cuenta
  * el bloqueo de sesiones activas: solo el inspector asignado puede entrar a
  * una inspección en curso, salvo que un internal haya levantado el bloqueo.
