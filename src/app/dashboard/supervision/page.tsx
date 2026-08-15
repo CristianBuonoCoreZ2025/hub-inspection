@@ -241,7 +241,7 @@ export default function SupervisionPage() {
                   {/* Asegurado */}
                   {insured && (
                     <span className="flex items-center gap-1 text-[11px] text-muted-foreground truncate">
-                      <User className="h-3 w-3 shrink-0" />
+                      <User className="h-3 w-3 shrink-0 text-sky-500" />
                       {insured.full_name}
                     </span>
                   )}
@@ -249,7 +249,7 @@ export default function SupervisionPage() {
                   {/* Dirección */}
                   {claim?.claim_address && (
                     <span className="flex items-center gap-1 text-[11px] text-muted-foreground truncate">
-                      <MapPin className="h-3 w-3 shrink-0" />
+                      <MapPin className="h-3 w-3 shrink-0 text-rose-500" />
                       {claim.claim_address}
                     </span>
                   )}
@@ -257,7 +257,7 @@ export default function SupervisionPage() {
                   {/* Tiempo transcurrido */}
                   {session.started_at && (
                     <span className="flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
-                      <Clock className="h-3 w-3" />
+                      <Clock className="h-3 w-3 text-amber-500" />
                       <ElapsedTime startedAt={session.started_at} />
                     </span>
                   )}
@@ -265,28 +265,28 @@ export default function SupervisionPage() {
                   {/* Pestaña activa */}
                   {session.active_tab && (
                     <span className="flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
-                      <FileText className="h-3 w-3" />
+                      <FileText className="h-3 w-3 text-indigo-500" />
                       {TAB_LABELS[session.active_tab] || session.active_tab}
                     </span>
                   )}
 
                   {/* Contadores */}
                   <span className="flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
-                    <Camera className="h-3 w-3" />
+                    <Camera className="h-3 w-3 text-violet-500" />
                     {photoCount}
                   </span>
                   {totalCount > photoCount && (
                     <span className="flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
-                      <FileText className="h-3 w-3" />
+                      <FileText className="h-3 w-3 text-teal-500" />
                       {totalCount - photoCount}
                     </span>
                   )}
                   <span className="flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
-                    <ShieldCheck className="h-3 w-3" />
+                    <ShieldCheck className="h-3 w-3 text-emerald-500" />
                     {damageCount}
                   </span>
                   <span className="flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
-                    <PenTool className="h-3 w-3" />
+                    <PenTool className="h-3 w-3 text-fuchsia-500" />
                     {sigCount}/2{hasWaiver && " (exim.)"}
                   </span>
 
