@@ -136,7 +136,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
   return (
     <DialogContext.Provider value={{ alert, confirm, flash }}>
       {children}
-      <Dialog open={open} onOpenChange={(nextOpen: boolean) => { if (!nextOpen) handleClose(false); }} dismissible={false}>
+      <Dialog open={open} onOpenChange={(nextOpen: boolean) => { if (!nextOpen) handleClose(false); }} dismissible={false} modal={!isFlash}>
         <DialogContent className="modal-sm" showCloseButton={false}>
           <div className="modal-header">
             <DialogTitle className="modal-title">
