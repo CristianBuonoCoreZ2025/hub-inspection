@@ -24,6 +24,7 @@ import {
   Search,
   Lock,
   HardHat,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -84,7 +85,7 @@ function ElapsedBadge({ startedAt }: { startedAt: string | null }) {
     <span className={`flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full shrink-0 ml-2 ${classes}`}>
       <Clock className="h-3 w-3" />
       {timeText}
-      {showAlert && <span className="font-bold">!</span>}
+      {showAlert && <AlertTriangle className="h-3 w-3" />}
     </span>
   );
 }
