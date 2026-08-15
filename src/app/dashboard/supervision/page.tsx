@@ -213,86 +213,86 @@ export default function SupervisionPage() {
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setSelectedSessionId(session.id); }}
                 className="app-panel text-left hover:ring-2 hover:ring-emerald-500/40 transition-all cursor-pointer"
               >
-                <div className="px-3 py-1.5 flex items-center gap-3">
+                <div className="px-3 py-1.5 flex items-center gap-2.5">
                   {/* Indicador en vivo + tipo */}
                   <div className="flex items-center gap-1.5 shrink-0">
                     <span className="flex h-2 w-2 relative">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
                     </span>
-                    <span className="text-sm font-medium text-emerald-600">EN VIVO</span>
+                    <span className="text-[11px] font-medium text-emerald-600">EN VIVO</span>
                     <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${session.inspection_type === "remote" ? "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300" : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"}`}>
                       {session.inspection_type === "remote" ? "Remota" : "Presencial"}
                     </span>
                   </div>
 
                   {/* Líquidación */}
-                  <span className="text-sm font-medium shrink-0">
+                  <span className="text-[11px] font-medium shrink-0">
                     {claim?.liquidation_number || "—"}
                   </span>
 
                   {/* Compañía */}
                   {claim?.insurance_company?.name && (
-                    <span className="text-sm text-muted-foreground truncate">
+                    <span className="text-[11px] text-muted-foreground truncate">
                       · {claim.insurance_company.name}
                     </span>
                   )}
 
                   {/* Asegurado */}
                   {insured && (
-                    <span className="flex items-center gap-1 text-sm text-muted-foreground truncate">
-                      <User className="h-3.5 w-3.5 shrink-0" />
+                    <span className="flex items-center gap-1 text-[11px] text-muted-foreground truncate">
+                      <User className="h-3 w-3 shrink-0" />
                       {insured.full_name}
                     </span>
                   )}
 
                   {/* Dirección */}
                   {claim?.claim_address && (
-                    <span className="flex items-center gap-1 text-sm text-muted-foreground truncate">
-                      <MapPin className="h-3.5 w-3.5 shrink-0" />
+                    <span className="flex items-center gap-1 text-[11px] text-muted-foreground truncate">
+                      <MapPin className="h-3 w-3 shrink-0" />
                       {claim.claim_address}
                     </span>
                   )}
 
                   {/* Tiempo transcurrido */}
                   {session.started_at && (
-                    <span className="flex items-center gap-1 text-sm text-muted-foreground shrink-0">
-                      <Clock className="h-3.5 w-3.5" />
+                    <span className="flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
+                      <Clock className="h-3 w-3" />
                       <ElapsedTime startedAt={session.started_at} />
                     </span>
                   )}
 
                   {/* Pestaña activa */}
                   {session.active_tab && (
-                    <span className="flex items-center gap-1 text-sm text-muted-foreground shrink-0">
-                      <FileText className="h-3.5 w-3.5" />
+                    <span className="flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
+                      <FileText className="h-3 w-3" />
                       {TAB_LABELS[session.active_tab] || session.active_tab}
                     </span>
                   )}
 
                   {/* Contadores */}
-                  <span className="flex items-center gap-1 text-sm text-muted-foreground shrink-0">
-                    <Camera className="h-3.5 w-3.5" />
+                  <span className="flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
+                    <Camera className="h-3 w-3" />
                     {photoCount}
                   </span>
                   {totalCount > photoCount && (
-                    <span className="flex items-center gap-1 text-sm text-muted-foreground shrink-0">
-                      <FileText className="h-3.5 w-3.5" />
+                    <span className="flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
+                      <FileText className="h-3 w-3" />
                       {totalCount - photoCount}
                     </span>
                   )}
-                  <span className="flex items-center gap-1 text-sm text-muted-foreground shrink-0">
-                    <ShieldCheck className="h-3.5 w-3.5" />
+                  <span className="flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
+                    <ShieldCheck className="h-3 w-3" />
                     {damageCount}
                   </span>
-                  <span className="flex items-center gap-1 text-sm text-muted-foreground shrink-0">
-                    <PenTool className="h-3.5 w-3.5" />
+                  <span className="flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
+                    <PenTool className="h-3 w-3" />
                     {sigCount}/2{hasWaiver && " (exim.)"}
                   </span>
 
                   {/* Inspector */}
                   {session.inspector?.full_name && (
-                    <span className="text-sm text-muted-foreground shrink-0 ml-auto">
+                    <span className="text-[11px] text-muted-foreground shrink-0 ml-auto">
                       {session.inspector.full_name}
                     </span>
                   )}
@@ -307,9 +307,9 @@ export default function SupervisionPage() {
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/inspecciones/${session.id}`); }}
-                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-600 text-sm font-medium hover:bg-emerald-500/20 transition-colors"
+                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-600 text-[11px] font-medium hover:bg-emerald-500/20 transition-colors"
                         >
-                          <Eye className="h-4 w-4" />
+                          <Eye className="h-3.5 w-3.5" />
                           Entrar
                         </button>
                       </>
@@ -319,9 +319,9 @@ export default function SupervisionPage() {
                         onClick={(e) => { e.stopPropagation(); liftMutation.mutate(session.id); }}
                         disabled={!canLift || (liftMutation.variables === session.id && liftMutation.isPending)}
                         title={canLift ? "Levantar bloqueo" : "Solo un administrador puede levantar el bloqueo"}
-                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-600 text-sm font-medium hover:bg-amber-500/20 transition-colors disabled:opacity-50"
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-600 text-[11px] font-medium hover:bg-amber-500/20 transition-colors disabled:opacity-50"
                       >
-                        <Unlock className="h-4 w-4" />
+                        <Unlock className="h-3.5 w-3.5" />
                         Levantar bloqueo
                       </button>
                     )}
