@@ -386,27 +386,29 @@ export default function SupervisionPage() {
                     {session.lock_overridden_by ? (
                       <>
                         <Tooltip>
-                          <TooltipTrigger className="btn-icon-sm" render={
+                          <TooltipTrigger>
                             <button
                               type="button"
                               onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/inspecciones/${session.id}`); }}
-                            />
-                          }>
-                            <Eye className="h-4 w-4" />
+                              className="btn-icon-sm"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </button>
                           </TooltipTrigger>
                           <TooltipContent side="top">
                             <p>Entrar a la inspección</p>
                           </TooltipContent>
                         </Tooltip>
                         <Tooltip>
-                          <TooltipTrigger className="btn-icon-sm" render={
+                          <TooltipTrigger>
                             <button
                               type="button"
                               onClick={(e) => { e.stopPropagation(); restoreMutation.mutate(session.id); }}
                               disabled={!canLift || (restoreMutation.variables === session.id && restoreMutation.isPending)}
-                            />
-                          }>
-                            <Lock className="h-4 w-4" />
+                              className="btn-icon-sm"
+                            >
+                              <Lock className="h-4 w-4" />
+                            </button>
                           </TooltipTrigger>
                           <TooltipContent side="top">
                             <p>{canLift ? "Bloquear inspección" : "Solo un administrador puede bloquear la inspección"}</p>
@@ -415,14 +417,15 @@ export default function SupervisionPage() {
                       </>
                     ) : (
                       <Tooltip>
-                        <TooltipTrigger className="btn-icon-sm" render={
+                        <TooltipTrigger>
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); liftMutation.mutate(session.id); }}
                             disabled={!canLift || (liftMutation.variables === session.id && liftMutation.isPending)}
-                          />
-                        }>
-                          <Unlock className="h-4 w-4" />
+                            className="btn-icon-sm"
+                          >
+                            <Unlock className="h-4 w-4" />
+                          </button>
                         </TooltipTrigger>
                         <TooltipContent side="top">
                           <p>{canLift ? "Desbloquear inspección" : "Solo un administrador puede desbloquear la inspección"}</p>
