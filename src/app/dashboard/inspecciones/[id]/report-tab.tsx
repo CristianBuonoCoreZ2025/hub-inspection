@@ -506,6 +506,15 @@ export default function ReportTab({
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     })
     .slice(0, reportMaxPhotos ?? 18), [evidences, reportMaxPhotos]);
+  // Todas las fotos (sin filtro de reporte ni límite) — para el ZIP
+  const allPhotos = useMemo(() => evidences
+    .filter(e => isPhoto(e.type))
+    .sort((a, b) => {
+      const aGeo = a.source === "geo_map" ? 0 : 1;
+      const bGeo = b.source === "geo_map" ? 0 : 1;
+      if (aGeo !== bGeo) return aGeo - bGeo;
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    }), [evidences]);
   const videos = useMemo(() => evidences.filter(e => isVideo(e.type)), [evidences]);
   const docs = useMemo(() => evidences.filter(e => isDoc(e.type)), [evidences]);
   const otherEvidences = useMemo(() => evidences.filter(e => !isPhoto(e.type) && !isVideo(e.type) && !isDoc(e.type)), [evidences]);
@@ -563,8 +572,9 @@ export default function ReportTab({
       if (pdfBlob) zip.file(`acta-${safeBase}.pdf`, pdfBlob);
 
       // 2. Evidencias (fotos, videos, documentos, otras) — sin firmas
+      // Usa allPhotos (TODAS las fotos) en vez de photos (solo las del reporte)
       const evidenceItems = [
-        ...photos.map((e, i) => ({ ev: e, folder: "fotos", index: i + 1 })),
+        ...allPhotos.map((e, i) => ({ ev: e, folder: "fotos", index: i + 1 })),
         ...videos.map((e, i) => ({ ev: e, folder: "videos", index: i + 1 })),
         ...docs.map((e, i) => ({ ev: e, folder: "documentos", index: i + 1 })),
         ...otherEvidences.map((e, i) => ({ ev: e, folder: "otras-evidencias", index: i + 1 })),

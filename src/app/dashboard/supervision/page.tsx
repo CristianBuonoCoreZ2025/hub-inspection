@@ -213,54 +213,49 @@ export default function SupervisionPage() {
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setSelectedSessionId(session.id); }}
                 className="app-panel text-left hover:ring-2 hover:ring-emerald-500/40 transition-all cursor-pointer"
               >
-                <div className="p-4 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-4 min-w-0 flex-1">
+                <div className="px-3 py-2 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                     {/* Indicador en vivo + tipo */}
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="flex h-3 w-3 relative">
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="flex h-2.5 w-2.5 relative">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
                       </span>
-                      <span className="app-body font-medium text-emerald-600">EN VIVO</span>
-                      <span className={`app-body text-[10px] font-medium px-1.5 py-0.5 rounded-full ${session.inspection_type === "remote" ? "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300" : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"}`}>
+                      <span className="app-body text-sm font-medium text-emerald-600">EN VIVO</span>
+                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${session.inspection_type === "remote" ? "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300" : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"}`}>
                         {session.inspection_type === "remote" ? "Remota" : "Presencial"}
                       </span>
                     </div>
 
                     {/* Datos del siniestro */}
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="app-body font-medium truncate">
+                      <div className="flex items-center gap-2">
+                        <span className="app-body text-sm font-medium truncate">
                           {claim?.liquidation_number || "—"}
                         </span>
                         {claim?.insurance_company?.name && (
-                          <span className="app-body text-muted-foreground truncate">
+                          <span className="app-body text-sm text-muted-foreground truncate">
                             · {claim.insurance_company.name}
                           </span>
                         )}
-                        {claim?.claim_cause?.name && (
-                          <span className="app-body text-muted-foreground truncate">
-                            · {claim.claim_cause.name}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-4 app-body text-muted-foreground text-sm flex-wrap">
                         {insured && (
-                          <span className="flex items-center gap-1 truncate">
+                          <span className="flex items-center gap-1 text-sm text-muted-foreground truncate">
                             <User className="h-3 w-3 shrink-0" />
                             {insured.full_name}
                           </span>
                         )}
+                        {session.started_at && (
+                          <span className="flex items-center gap-1 text-sm text-muted-foreground shrink-0">
+                            <Clock className="h-3 w-3" />
+                            <ElapsedTime startedAt={session.started_at} />
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                         {claim?.claim_address && (
                           <span className="flex items-center gap-1 truncate">
                             <MapPin className="h-3 w-3 shrink-0" />
                             {claim.claim_address}
-                          </span>
-                        )}
-                        {session.started_at && (
-                          <span className="flex items-center gap-1 shrink-0">
-                            <Clock className="h-3 w-3" />
-                            <ElapsedTime startedAt={session.started_at} />
                           </span>
                         )}
                         {session.active_tab && (
@@ -269,27 +264,23 @@ export default function SupervisionPage() {
                             {TAB_LABELS[session.active_tab] || session.active_tab}
                           </span>
                         )}
-                      </div>
-                      {/* Contadores rápidos */}
-                      <div className="flex items-center gap-3 mt-1.5 app-body text-muted-foreground text-xs">
-                        <span className="flex items-center gap-1">
+                        <span className="flex items-center gap-1 shrink-0">
                           <Camera className="h-3 w-3" />
                           {photoCount} fotos
                         </span>
                         {totalCount > photoCount && (
-                          <span className="flex items-center gap-1">
+                          <span className="flex items-center gap-1 shrink-0">
                             <FileText className="h-3 w-3" />
                             {totalCount - photoCount} docs
                           </span>
                         )}
-                        <span className="flex items-center gap-1">
+                        <span className="flex items-center gap-1 shrink-0">
                           <ShieldCheck className="h-3 w-3" />
                           {damageCount} daños
                         </span>
-                        <span className="flex items-center gap-1">
+                        <span className="flex items-center gap-1 shrink-0">
                           <PenTool className="h-3 w-3" />
-                          {sigCount}/2 firmas
-                          {hasWaiver && " (eximido)"}
+                          {sigCount}/2{hasWaiver && " (exim.)"}
                         </span>
                       </div>
                     </div>
