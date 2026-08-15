@@ -298,31 +298,25 @@ export default function SupervisionPage() {
                   )}
 
                   {/* Controles */}
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="app-row-actions flex items-center gap-1.5 shrink-0">
                     {session.lock_overridden_by ? (
-                      <>
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 text-[10px] font-medium">
-                          Desbloqueada
-                        </span>
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/inspecciones/${session.id}`); }}
-                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-600 text-[11px] font-medium hover:bg-emerald-500/20 transition-colors"
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                          Entrar
-                        </button>
-                      </>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/inspecciones/${session.id}`); }}
+                        title="Entrar a la inspección"
+                        className="btn-icon-sm"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
                     ) : (
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); liftMutation.mutate(session.id); }}
                         disabled={!canLift || (liftMutation.variables === session.id && liftMutation.isPending)}
                         title={canLift ? "Desbloquear inspección" : "Solo un administrador puede desbloquear la inspección"}
-                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-600 text-[11px] font-medium hover:bg-amber-500/20 transition-colors disabled:opacity-50"
+                        className="btn-icon-sm"
                       >
-                        <Unlock className="h-3.5 w-3.5" />
-                        Desbloquear
+                        <Unlock className="h-4 w-4" />
                       </button>
                     )}
                   </div>
