@@ -321,7 +321,7 @@ export default function AgendaPage() {
  <span className="ml-2 text-muted-foreground text-sm">Cargando agenda...</span>
  </div>
  ) : (
- <div className="flex overflow-x-auto border-b border-border/30">
+ <div className="flex border-b border-border/30">
  {weekDays.map((day, idx) => {
  const isToday = sameDay(day, new Date());
  const daySessions = filteredSessions
@@ -335,7 +335,7 @@ export default function AgendaPage() {
  return (
  <div
  key={idx}
- className={`flex flex-col border-r border-border/20 last:border-r-0 min-h-95 sm:min-h-125 shrink-0 w-[85%] sm:w-1/3 md:w-1/4 lg:w-auto lg:flex-1 ${
+ className={`flex flex-col border-r border-border/20 last:border-r-0 min-h-95 sm:min-h-125 flex-1 min-w-0 ${
  isToday ? "bg-primary/3" : ""
  }`}
  >
@@ -479,7 +479,7 @@ function EventCard({
  {!isRemote && session.claim?.claim_address && (
  <div className="flex items-center gap-0.5 mt-0.5 text-[9px] text-muted-foreground">
  <MapPin className="h-2.5 w-2.5 shrink-0" />
- <span className="truncate">{session.claim.claim_address}</span>
+ <span className="truncate">{session.claim.claim_address.length > 30 ? session.claim.claim_address.slice(0, 30) + "…" : session.claim.claim_address}</span>
  </div>
  )}
 
