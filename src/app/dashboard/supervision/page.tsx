@@ -296,14 +296,6 @@ export default function SupervisionPage() {
                     </span>
                   )}
 
-                  {/* Tiempo transcurrido */}
-                  {session.started_at && (
-                    <span className="flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
-                      <Clock className="h-3 w-3 text-amber-500" />
-                      <ElapsedTime startedAt={session.started_at} />
-                    </span>
-                  )}
-
                   {/* Pestaña activa */}
                   {session.active_tab && (
                     <span className="flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
@@ -345,6 +337,14 @@ export default function SupervisionPage() {
                         <p>Inspector</p>
                       </TooltipContent>
                     </Tooltip>
+                  )}
+
+                  {/* Tiempo transcurrido — badge destacado entre inspector y controles */}
+                  {session.started_at && (
+                    <span className="flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 shrink-0 ml-2">
+                      <Clock className="h-3 w-3" />
+                      <ElapsedTime startedAt={session.started_at} />
+                    </span>
                   )}
 
                   {/* Controles */}
