@@ -479,7 +479,7 @@ function EventCard({
  {!isRemote && session.claim?.claim_address && (
  <div className="flex items-start gap-0.5 mt-0.5 text-[9px] text-muted-foreground">
  <MapPin className="h-2.5 w-2.5 shrink-0 mt-0.5" />
- <span className="break-words leading-tight">{session.claim.claim_address}</span>
+ <span className="wrap-break-word leading-tight">{session.claim.claim_address}</span>
  </div>
  )}
 
