@@ -477,9 +477,9 @@ function EventCard({
 
  {/* Dirección (solo presencial) */}
  {!isRemote && session.claim?.claim_address && (
- <div className="flex items-center gap-0.5 mt-0.5 text-[9px] text-muted-foreground">
- <MapPin className="h-2.5 w-2.5 shrink-0" />
- <span className="truncate">{session.claim.claim_address.length > 30 ? session.claim.claim_address.slice(0, 30) + "…" : session.claim.claim_address}</span>
+ <div className="flex items-start gap-0.5 mt-0.5 text-[9px] text-muted-foreground">
+ <MapPin className="h-2.5 w-2.5 shrink-0 mt-0.5" />
+ <span className="break-words leading-tight">{session.claim.claim_address}</span>
  </div>
  )}
 
