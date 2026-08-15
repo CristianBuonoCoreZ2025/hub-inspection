@@ -23,6 +23,7 @@ import {
   FileText,
   Search,
   Lock,
+  HardHat,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -33,6 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 const TAB_LABELS: Record<string, string> = {
   resumen: "Resumen",
@@ -332,13 +334,21 @@ export default function SupervisionPage() {
 
                   {/* Inspector */}
                   {session.inspector?.full_name && (
-                    <span className="text-[11px] text-muted-foreground shrink-0 ml-auto">
-                      {session.inspector.full_name}
-                    </span>
+                    <Tooltip>
+                      <TooltipTrigger className="shrink-0">
+                        <span className="flex items-center gap-1 text-[11px] text-muted-foreground cursor-help">
+                          <HardHat className="h-3 w-3 text-cyan-600" />
+                          {session.inspector.full_name}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        <p>Inspector</p>
+                      </TooltipContent>
+                    </Tooltip>
                   )}
 
                   {/* Controles */}
-                  <div className="app-row-actions flex items-center gap-1.5 shrink-0">
+                  <div className="app-row-actions flex items-center gap-1.5 shrink-0 ml-auto">
                     {session.lock_overridden_by ? (
                       <>
                         <button
