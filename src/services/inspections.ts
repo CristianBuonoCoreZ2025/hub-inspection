@@ -415,13 +415,17 @@ export async function reassignInspectionSession(
 }
 
 /**
- * Obtener sesiones de inspección remotas activas para supervisión.
- * Solo retorna sesiones con status 'active' e inspection_type 'remote'.
+ * Obtener sesiones de inspección activas para supervisión.
+ * Permite filtrar por inspection_type (remote/onsite) o traer todas.
  */
-export async function getActiveRemoteSessions() {
+export async function getActiveRemoteSessions(inspectionType?: "remote" | "onsite") {
+  const eq: Record<string, string> = { status: "active" };
+  if (inspectionType) {
+    eq.inspection_type = inspectionType;
+  }
   const sessions = await fetchAll<SessionWithRelations>("inspection_sessions", {
     select: `${SESSION_SELECT}, claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), inspector:profiles!inspection_sessions_inspector_id_fkey(id, full_name, email), claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, client_reference, claim_address, liquidation_number, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, email, phone, cell_phone), insurance_company:insurance_companies!claims_insurance_company_id_fkey(name), claim_cause:claim_causes!claims_claim_cause_id_fkey(name)), inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, type), inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id, category, subcategory, description, severity, damage_type, dependency, sector, materiality_type, unit, quantity, length, width, height, damage_length, damage_width, damage_height, damage_quantity, estimated_amount, currency, observations, product, brand_model, purchase_date, created_at), inspection_signatures:inspection_signatures!inspection_signatures_session_id_fkey(id, role)`,
-    eq: { status: "active", inspection_type: "remote" },
+    eq,
     order: { column: "started_at", ascending: false },
   });
 

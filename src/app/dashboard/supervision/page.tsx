@@ -21,8 +21,16 @@ import {
   ShieldCheck,
   PenTool,
   FileText,
+  Search,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const TAB_LABELS: Record<string, string> = {
   resumen: "Resumen",
@@ -55,6 +63,8 @@ export default function SupervisionPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [inspectionType, setInspectionType] = useState<"remote" | "onsite" | "all">("all");
+  const [search, setSearch] = useState("");
   const canViewSupervision = can("supervision", "view");
   const canLift = dataAccess?.is_admin;
 
@@ -62,15 +72,25 @@ export default function SupervisionPage() {
     mutationFn: (sessionId: string) => liftInspectionLock(sessionId, profile!.id),
     onSuccess: () => {
       toast.success("Bloqueo levantado");
-      queryClient.invalidateQueries({ queryKey: ["active-remote-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["active-remote-sessions", inspectionType] });
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
   const { data: sessions, isLoading } = useQuery({
-    queryKey: ["active-remote-sessions"],
-    queryFn: () => getActiveRemoteSessions(),
+    queryKey: ["active-remote-sessions", inspectionType],
+    queryFn: () => getActiveRemoteSessions(inspectionType === "all" ? undefined : inspectionType),
     refetchInterval: selectedSessionId ? false : 5000,
+  });
+
+  // Filtro client-side por búsqueda (liquidation_number, insured, inspector)
+  const filteredSessions = (sessions || []).filter((s) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase().trim();
+    const liq = s.claim?.liquidation_number?.toLowerCase() || "";
+    const insured = s.claim?.claims_participants?.find((p) => p.type === "insured")?.full_name?.toLowerCase() || "";
+    const inspector = s.inspector?.full_name?.toLowerCase() || "";
+    return liq.includes(q) || insured.includes(q) || inspector.includes(q);
   });
 
   // Solo usuarios con permiso de supervisión pueden acceder
@@ -127,8 +147,32 @@ export default function SupervisionPage() {
         </div>
       </div>
       <p className="app-body text-muted-foreground mt-1">
-            Inspecciones remotas en curso. Entre a supervisar sin activar cámara ni micrófono.
+            Inspecciones en curso. Entre a supervisar sin activar cámara ni micrófono.
           </p>
+
+      {/* Filtros: búsqueda + combo de tipo */}
+      <div className="flex items-center gap-3 mt-4">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por liquidación, asegurado, inspector..."
+            className="app-input pl-9 w-full"
+          />
+        </div>
+        <Select value={inspectionType} onValueChange={(v) => setInspectionType(v as "remote" | "onsite" | "all")}>
+          <SelectTrigger className="w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas</SelectItem>
+            <SelectItem value="remote">Remotas</SelectItem>
+            <SelectItem value="onsite">Presenciales</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
       {isLoading && (
         <div className="flex items-center justify-center py-20">
@@ -136,21 +180,21 @@ export default function SupervisionPage() {
         </div>
       )}
 
-      {!isLoading && (!sessions || sessions.length === 0) && (
+      {!isLoading && (!filteredSessions || filteredSessions.length === 0) && (
         <div className="app-panel">
           <div className="p-12 text-center">
             <Video className="h-12 w-12 mx-auto mb-4 text-muted-foreground/40" />
             <h2 className="app-section-title mb-2">No hay inspecciones activas</h2>
             <p className="app-body text-muted-foreground">
-              No hay inspecciones remotas en curso en este momento.
+              {search ? "No se encontraron resultados para la búsqueda." : "No hay inspecciones en curso en este momento."}
             </p>
           </div>
         </div>
       )}
 
-      {!isLoading && sessions && sessions.length > 0 && (
-        <div className="grid gap-3">
-          {sessions.map((session) => {
+      {!isLoading && filteredSessions && filteredSessions.length > 0 && (
+        <div className="grid gap-3 mt-4">
+          {filteredSessions.map((session) => {
             const claim = session.claim;
             const insured = claim?.claims_participants?.find((p) => p.type === "insured");
             const photoCount = (session.inspection_evidences || []).filter((e: { type: string }) => ["photo", "image", "jpg", "jpeg", "png"].includes((e.type || "").toLowerCase())).length;
@@ -169,13 +213,16 @@ export default function SupervisionPage() {
               >
                 <div className="p-4 flex items-center justify-between gap-4">
                   <div className="flex items-center gap-4 min-w-0 flex-1">
-                    {/* Indicador en vivo */}
+                    {/* Indicador en vivo + tipo */}
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="flex h-3 w-3 relative">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                         <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
                       </span>
                       <span className="app-body font-medium text-emerald-600">EN VIVO</span>
+                      <span className={`app-body text-[10px] font-medium px-1.5 py-0.5 rounded-full ${session.inspection_type === "remote" ? "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300" : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"}`}>
+                        {session.inspection_type === "remote" ? "Remota" : "Presencial"}
+                      </span>
                     </div>
 
                     {/* Datos del siniestro */}
