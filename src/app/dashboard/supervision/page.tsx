@@ -318,11 +318,11 @@ export default function SupervisionPage() {
                         type="button"
                         onClick={(e) => { e.stopPropagation(); liftMutation.mutate(session.id); }}
                         disabled={!canLift || (liftMutation.variables === session.id && liftMutation.isPending)}
-                        title={canLift ? "Levantar bloqueo" : "Solo un administrador puede levantar el bloqueo"}
+                        title={canLift ? "Desbloquear inspección" : "Solo un administrador puede desbloquear la inspección"}
                         className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-600 text-[11px] font-medium hover:bg-amber-500/20 transition-colors disabled:opacity-50"
                       >
                         <Unlock className="h-3.5 w-3.5" />
-                        Levantar bloqueo
+                        Desbloquear
                       </button>
                     )}
                   </div>
