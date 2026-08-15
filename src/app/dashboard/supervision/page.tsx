@@ -385,34 +385,49 @@ export default function SupervisionPage() {
                   <div className="app-row-actions flex items-center gap-1.5 shrink-0 ml-auto">
                     {session.lock_overridden_by ? (
                       <>
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/inspecciones/${session.id}`); }}
-                          title="Entrar a la inspección"
-                          className="btn-icon-sm"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); restoreMutation.mutate(session.id); }}
-                          disabled={!canLift || (restoreMutation.variables === session.id && restoreMutation.isPending)}
-                          title={canLift ? "Bloquear inspección" : "Solo un administrador puede bloquear la inspección"}
-                          className="btn-icon-sm"
-                        >
-                          <Lock className="h-4 w-4" />
-                        </button>
+                        <Tooltip>
+                          <TooltipTrigger className="btn-icon-sm" render={
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/inspecciones/${session.id}`); }}
+                            />
+                          }>
+                            <Eye className="h-4 w-4" />
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            <p>Entrar a la inspección</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger className="btn-icon-sm" render={
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); restoreMutation.mutate(session.id); }}
+                              disabled={!canLift || (restoreMutation.variables === session.id && restoreMutation.isPending)}
+                            />
+                          }>
+                            <Lock className="h-4 w-4" />
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            <p>{canLift ? "Bloquear inspección" : "Solo un administrador puede bloquear la inspección"}</p>
+                          </TooltipContent>
+                        </Tooltip>
                       </>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); liftMutation.mutate(session.id); }}
-                        disabled={!canLift || (liftMutation.variables === session.id && liftMutation.isPending)}
-                        title={canLift ? "Desbloquear inspección" : "Solo un administrador puede desbloquear la inspección"}
-                        className="btn-icon-sm"
-                      >
-                        <Unlock className="h-4 w-4" />
-                      </button>
+                      <Tooltip>
+                        <TooltipTrigger className="btn-icon-sm" render={
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); liftMutation.mutate(session.id); }}
+                            disabled={!canLift || (liftMutation.variables === session.id && liftMutation.isPending)}
+                          />
+                        }>
+                          <Unlock className="h-4 w-4" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          <p>{canLift ? "Desbloquear inspección" : "Solo un administrador puede desbloquear la inspección"}</p>
+                        </TooltipContent>
+                      </Tooltip>
                     )}
                   </div>
                 </div>

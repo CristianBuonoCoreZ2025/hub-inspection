@@ -75,6 +75,37 @@ Sin excepciones. Configuración, catálogos, transacciones, auditoría, todo.
 - Preferir **Server Components** por defecto; usar `"use client"` solo cuando sea necesario (hooks del browser, eventos, etc.).
 - Validar todos los inputs de usuario con **Zod**.
 
+### REGLA #3 — NUNCA usar tooltip nativo del navegador (OBLIGATORIO)
+**El atributo `title` de HTML genera un tooltip nativo del navegador que se ve feo,
+sin estilo y sin animación. Está PROHIBIDO usarlo.**
+
+#### Prohibido
+- **NUNCA** usar `title="..."` en ningún elemento HTML para mostrar un tooltip.
+- **NUNCA** usar el tooltip nativo del navegador en ningún componente.
+
+#### Obligatorio
+- **SIEMPRE** usar el componente `Tooltip` de `@/components/ui/tooltip`
+  (`Tooltip`, `TooltipTrigger`, `TooltipContent`).
+- Importar: `import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";`
+- Patrón:
+  ```tsx
+  <Tooltip>
+    <TooltipTrigger className="...">
+      <button>...</button>
+    </TooltipTrigger>
+    <TooltipContent side="top">
+      <p>Texto del tooltip</p>
+    </TooltipContent>
+  </Tooltip>
+  ```
+- El componente `Tooltip` tiene estilos premium (fondo amber, blur, animación)
+  y es consistente en toda la app.
+
+#### Motivo
+- Consistencia visual: todos los tooltips se ven iguales.
+- El tooltip nativo no respeta dark mode, no tiene animación y se ve poco profesional.
+- El componente `Tooltip` es accesible y se puede personalizar.
+
 ### REGLA #2 — CERO inline styles en componentes (OBLIGATORIO)
 **Esta regla tiene prioridad máxima sobre la conveniencia.** No hay excepciones para
 estilos visuales, tamaños, colores, gradientes, espaciados o layout.
