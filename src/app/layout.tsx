@@ -21,6 +21,7 @@ export const metadata: Metadata = {
   title: "Claims Hub — Gestión Integral de Siniestros",
   description:
     "Plataforma empresarial para la gestión del ciclo de vida de siniestros. Inspecciones remotas, gestión documental, asignaciones y liquidación en un solo lugar.",
+  manifest: "/manifest.json",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",

@@ -456,6 +456,9 @@ export interface InspectionSession {
   reopened_at: string | null;
   reopened_by: string | null;
   reopened_reason: string | null;
+  offline_downloaded_at: string | null;
+  offline_downloaded_by: string | null;
+  offline_synced_at: string | null;
   property_risk?: ActaPropertyRisk | null;
   property_materiality?: ActaPropertyMateriality | null;
   security_measures?: ActaSecurityMeasures | null;

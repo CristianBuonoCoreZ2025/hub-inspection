@@ -7,6 +7,8 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { Button } from "@/components/ui/button";
 import { ClipboardCheck, LogOut, ArrowLeft, RefreshCw } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { ServiceWorkerRegister } from "@/components/mobile/sw-register";
+import { OfflineBanner } from "@/components/mobile/offline-banner";
 
 /**
  * Layout del módulo mobile.
@@ -69,6 +71,8 @@ export function MobileLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="mobile-skin flex h-dvh flex-col bg-background">
+      <ServiceWorkerRegister />
+      <OfflineBanner />
       {/* Header minimal */}
       <header className="flex items-center justify-between border-b bg-background/95 backdrop-blur px-4 py-3 shrink-0">
         <div className="flex items-center gap-2">
