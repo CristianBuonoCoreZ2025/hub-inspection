@@ -70,7 +70,7 @@ export default function MobileInspectionsPage() {
     isFetching,
   } = useQuery<SessionWithRelations[]>({
     queryKey: ["inspection-sessions-mobile", page],
-    queryFn: () => getInspectionSessionsLight(undefined, { page, pageSize: 20 }),
+    queryFn: () => getInspectionSessionsLight(undefined, { page, pageSize: 50, inspectionType: "onsite", statusFilter: ["scheduled", "active", "completed"] }),
     staleTime: 30 * 1000,
   });
 
@@ -258,7 +258,7 @@ export default function MobileInspectionsPage() {
           })
         )}
 
-        {!isLoading && sessionsPage && sessionsPage.length === 20 && (
+        {!isLoading && sessionsPage && sessionsPage.length >= 50 && (
           <div className="mt-4 flex justify-center">
             <button
               onClick={() => setPage((p) => p + 1)}

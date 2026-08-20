@@ -175,6 +175,7 @@ export async function getInspectionSessionsLight(
     sortDir?: "asc" | "desc";
     q?: string;
     internalNumber?: string;
+    inspectionType?: string;
   }
 ) {
   const supabase = getSupabaseClient();
@@ -249,6 +250,7 @@ export async function getInspectionSessionsLight(
     if (claimId) query = query.eq("claim_id", claimId);
     if (options?.statusFilter?.length) query = query.in("status", options.statusFilter);
     if (options?.inspectorFilter?.length) query = query.in("inspector_id", options.inspectorFilter);
+    if (options?.inspectionType) query = query.eq("inspection_type", options.inspectionType);
     if (options?.internalNumber) {
       const digits = options.internalNumber.replace(/\D/g, "");
       if (digits) query = query.ilike("claim.liquidation_number", `%${digits}%`);
