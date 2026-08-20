@@ -29,13 +29,12 @@ export function DashboardMobileRedirect() {
       const pathname = window.location.pathname;
       // Evitar loop: no redirigir si ya estamos en /mobile/inspecciones
       if (pathname.startsWith("/mobile/inspecciones")) return;
-      // No redirigir si el usuario eligio explicitamente el sistema tradicional.
-      // Se guarda en localStorage para que la eleccion persista mientras navegue.
-      if (typeof window !== "undefined" && localStorage.getItem("no-mobile-redirect") === "1") return;
       // No redirigir si está viendo el detalle de una inspección
       // (/dashboard/inspecciones/[id]) — el mobile no tiene equivalente
       // y el inspector necesita poder revisar la inspección desde el móvil
       if (/^\/dashboard\/inspecciones\/[^/]+/.test(pathname)) return;
+      // Limpiar flag legacy (ya no existe el botón "Sistema tradicional")
+      if (typeof window !== "undefined") localStorage.removeItem("no-mobile-redirect");
       router.replace("/mobile/inspecciones");
     }
   }, [isLoading, profile, dataAccess, isMobile, router]);
