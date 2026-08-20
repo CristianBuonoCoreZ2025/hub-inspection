@@ -61,31 +61,25 @@ export default function MobileInspectionsPage() {
 
   useRealtime("inspection_sessions", [["inspection-sessions-mobile"]]);
 
-  const [page, setPage] = useState(1);
   const [allSessions, setAllSessions] = useState<SessionWithRelations[]>([]);
 
   const {
-    data: sessionsPage,
+    data: sessions,
     isLoading,
     isFetching,
     error: queryError,
   } = useQuery<SessionWithRelations[]>({
-    queryKey: ["inspection-sessions-mobile", page],
-    queryFn: () => getInspectionSessionsLight(undefined, { page, pageSize: 50, inspectionType: "onsite", statusFilter: ["scheduled", "active", "completed"] }),
+    queryKey: ["inspection-sessions-mobile"],
+    queryFn: () => getInspectionSessionsLight(),
     staleTime: 30 * 1000,
   });
 
   useEffect(() => {
-    if (!sessionsPage) return;
-    console.log("[mobile-insp] sessionsPage:", sessionsPage.length, "page:", page, "profile:", profile?.id, "canSeeAll:", canSeeAll);
+    if (!sessions) return;
+    console.log("[mobile-insp] sessions:", sessions.length, "profile:", profile?.id, "canSeeAll:", canSeeAll);
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setAllSessions((prev) => {
-      if (page === 1) return sessionsPage;
-      const existingIds = new Set(prev.map((s) => s.id));
-      const newItems = sessionsPage.filter((s) => !existingIds.has(s.id));
-      return [...prev, ...newItems];
-    });
-  }, [sessionsPage, page, profile, canSeeAll]);
+    setAllSessions(sessions);
+  }, [sessions, profile, canSeeAll]);
 
   // Filtrar: solo inspecciones presenciales (onsite) del inspector logueado
   // El mobile NO sirve para inspecciones remotas — nunca se muestran
@@ -128,8 +122,6 @@ export default function MobileInspectionsPage() {
   }, [mySessions, activeTab]);
 
   const handleRefresh = () => {
-    setPage(1);
-    setAllSessions([]);
     queryClient.invalidateQueries({ queryKey: ["inspection-sessions-mobile"] });
   };
 
@@ -263,22 +255,6 @@ export default function MobileInspectionsPage() {
               </button>
             );
           })
-        )}
-
-        {!isLoading && sessionsPage && sessionsPage.length >= 50 && (
-          <div className="mt-4 flex justify-center">
-            <button
-              onClick={() => setPage((p) => p + 1)}
-              disabled={isFetching}
-              className="mobile-btn"
-            >
-              {isFetching ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                "Cargar"
-              )}
-            </button>
-          </div>
         )}
       </div>
     </div>
