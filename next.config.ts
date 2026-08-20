@@ -1,11 +1,17 @@
 import type { NextConfig } from "next";
 import withSerwistInit from "@serwist/next";
 
-const withSerwist = withSerwistInit({
-  swSrc: "src/app/sw.ts",
-  swDest: "public/sw.js",
-  disable: process.env.NODE_ENV === "development",
-});
+// Serwist solo se aplica en build (producción).
+// En dev, Next.js 16 usa Turbopack y Serwist añade config de webpack que choca.
+// El SW se genera en `next build` y se sirve como archivo estático en prod.
+const isDev = process.env.NODE_ENV === "development";
+const withSerwist = isDev
+  ? (config: NextConfig) => config
+  : withSerwistInit({
+      swSrc: "src/app/sw.ts",
+      swDest: "public/sw.js",
+      disable: false,
+    });
 
 const nextConfig: NextConfig = {
   // sharp se importa dinámicamente en route handlers (optimización de imágenes
