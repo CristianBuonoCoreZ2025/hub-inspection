@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getInspectionSessionsLight, canAccessInspectionSession, type SessionWithRelations } from "@/services/inspections";
@@ -61,8 +61,6 @@ export default function MobileInspectionsPage() {
 
   useRealtime("inspection_sessions", [["inspection-sessions-mobile"]]);
 
-  const [allSessions, setAllSessions] = useState<SessionWithRelations[]>([]);
-
   const {
     data: sessions,
     isLoading,
@@ -74,18 +72,11 @@ export default function MobileInspectionsPage() {
     staleTime: 30 * 1000,
   });
 
-  useEffect(() => {
-    if (!sessions) return;
-    console.log("[mobile-insp] sessions:", sessions.length, "profile:", profile?.id, "canSeeAll:", canSeeAll);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setAllSessions(sessions);
-  }, [sessions, profile, canSeeAll]);
-
   // Filtrar: solo inspecciones presenciales (onsite) del inspector logueado
   // El mobile NO sirve para inspecciones remotas — nunca se muestran
   const mySessions = useMemo(() => {
-    if (!allSessions || !profile?.id) return [];
-    return allSessions.filter((s) => {
+    if (!sessions || !profile?.id) return [];
+    return sessions.filter((s) => {
       // Canceladas no se muestran en mobile
       if (s.status === "cancelled") return false;
       // Solo presenciales
@@ -94,7 +85,7 @@ export default function MobileInspectionsPage() {
       const effInspector = s.inspector_id || s.claim?.inspector_id;
       return effInspector === profile.id; // inspector ve solo las suyas
     });
-  }, [allSessions, profile, canSeeAll]);
+  }, [sessions, profile, canSeeAll]);
 
   // Filtrar por tab
   const filteredSessions = useMemo(() => {
