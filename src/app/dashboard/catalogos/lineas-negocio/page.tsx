@@ -11,6 +11,7 @@ import { getDocumentRequirementsByBusinessLine, createDocumentRequirement, delet
 import { toast } from "sonner";
 import { Search, Pencil, Ban, Tag, Layers, FileText } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useConfirm } from "@/hooks/use-confirm";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,10 +30,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 export default function LineasNegocioPage() {
   const queryClient = useQueryClient();
   const { canCreate, canEdit, canDelete } = usePermissions();
+  const confirm = useConfirm();
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -146,13 +149,20 @@ export default function LineasNegocioPage() {
                   <td>
                     <div className="app-row-actions">
                       {canEdit("catalogos") && (
-                        <button type="button" className="btn-icon-sm" onClick={() => { setDocsLineId(l.id); setDocsLineName(l.name); setOpenDocs(true); }} title="Documentos a solicitar"><FileText className="h-4 w-4" /></button>
+                        <Tooltip>
+                          <TooltipTrigger render={<button type="button" className="btn-icon-sm" onClick={() => { setDocsLineId(l.id); setDocsLineName(l.name); setOpenDocs(true); }} />}>
+                            <FileText className="h-4 w-4" />
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            <p>Documentos a solicitar</p>
+                          </TooltipContent>
+                        </Tooltip>
                       )}
                       {canEdit("catalogos") && (
                         <button type="button" className="btn-icon-sm" onClick={() => { setEditingId(l.id); setFormData({ country_id: l.country_id || "", name: l.name, code_prefix: (l as { code_prefix?: string }).code_prefix || "", claim_type: l.claim_type || "", claim_type_id: l.claim_type_id || "", ramo_fecu: l.ramo_fecu || "", description: l.description || "", color: l.color || "#0095DA" }); setOpen(true); }}><Pencil className="h-4 w-4" /></button>
                       )}
                       {canDelete("catalogos") && (
-                        <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar esta linea?")) deleteMutation.mutate(l.id); }}><Ban className="h-4 w-4" /></button>
+                        <button type="button" className="btn-icon-sm btn-danger-hover" onClick={async () => { const ok = await confirm({ title: "Desactivar", description: "¿Desactivar esta linea?", confirmLabel: "Desactivar", destructive: true }); if (!ok) return; deleteMutation.mutate(l.id); }}><Ban className="h-4 w-4" /></button>
                       )}
                     </div>
                   </td>

@@ -19,12 +19,14 @@ import {
 import { toast } from "sonner";
 import { Plus, Search, Pencil, Ban, ShieldCheck, ChevronRight, ChevronDown, Layers, Globe, ExternalLink } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useConfirm } from "@/hooks/use-confirm";
 import { getCountries } from "@/services/countries";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
  Dialog,
  DialogContent,
@@ -37,6 +39,7 @@ const CHILE_CODE = "CL";
 export default function CoberturasPage() {
  const queryClient = useQueryClient();
  const { canCreate, canEdit, canDelete } = usePermissions();
+ const confirm = useConfirm();
  const [search, setSearch] = useState("");
  const [selectedTheme, setSelectedTheme] = useState("");
  const [selectedCountryId, setSelectedCountryId] = useState<string>("");
@@ -354,9 +357,9 @@ export default function CoberturasPage() {
  <th className="px-3 py-2 text-left font-medium text-muted-foreground w-[130px]">Código</th>
  <th className="px-3 py-2 text-left font-medium text-muted-foreground">Nombre</th>
  {showThemeCol && (
- <th className="px-3 py-2 text-left font-medium text-muted-foreground w-[120px]">Tema</th>
+ <th className="px-3 py-2 text-left font-medium text-muted-foreground w-30">Tema</th>
  )}
- <th className="px-3 py-2 text-center font-medium text-muted-foreground w-[60px]">Subcob.</th>
+ <th className="px-3 py-2 text-center font-medium text-muted-foreground w-15">Subcob.</th>
  <th className="px-3 py-2 w-[70px]"></th>
  </tr>
  </thead>
@@ -377,12 +380,14 @@ export default function CoberturasPage() {
  setFormData({ code: c.code, name: c.name, description: c.description || "", theme: c.theme });
  setOpen(true);
  }}
- onDelete={() => {
+ onDelete={async () => {
  const subs = c.subcoverage_count ?? 0;
  const msg = subs > 0
  ? `¿Desactivar "${c.name}"? Se desactivarán también ${subs} subcobertura${subs !== 1 ? "s" : ""}.`
  : `¿Desactivar "${c.name}"?`;
- if (confirm(msg)) deleteMut.mutate(c.id);
+ const ok = await confirm({ title: "Desactivar", description: msg, confirmLabel: "Desactivar", destructive: true });
+ if (!ok) return;
+ deleteMut.mutate(c.id);
  }}
  onAddSub={() => {
  setSubParentId(c.id);
@@ -396,8 +401,10 @@ export default function CoberturasPage() {
  setSubFormData({ code: sub.code, name: sub.name, description: sub.description || "" });
  setSubOpen(true);
  }}
- onDeleteSub={(subId) => {
- if (confirm("¿Desactivar esta subcobertura?")) deleteSubMut.mutate(subId);
+ onDeleteSub={async (subId) => {
+ const ok = await confirm({ title: "Desactivar", description: "¿Desactivar esta subcobertura?", confirmLabel: "Desactivar", destructive: true });
+ if (!ok) return;
+ deleteSubMut.mutate(subId);
  }}
  />
  ))}
@@ -567,26 +574,38 @@ function CoberturaRow({
  <tr className="border-b border-border hover:bg-muted/30 transition-colors group">
  <td className="px-3 py-2 w-8">
  {hasSubs && (
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <button
  onClick={onToggle}
  className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-muted"
- title={expanded ? "Contraer" : "Expandir subcoberturas"}
  >
  {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
  </button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>{expanded ? "Contraer" : "Expandir subcoberturas"}</p>
+ </TooltipContent>
+ </Tooltip>
  )}
  </td>
  <td className="px-3 py-2 w-8">
  {coverage.document_url && (
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <a
  href={coverage.document_url}
  target="_blank"
  rel="noopener noreferrer"
  className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:text-primary hover:bg-muted"
- title="Ver documento CMF"
  >
  <ExternalLink className="h-3.5 w-3.5" />
  </a>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>Ver documento CMF</p>
+ </TooltipContent>
+ </Tooltip>
  )}
  </td>
  <td className="px-3 py-2 font-mono text-[11px] whitespace-nowrap">{coverage.code}</td>
@@ -594,13 +613,19 @@ function CoberturaRow({
  {showTheme && <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{coverage.theme}</td>}
  <td className="px-3 py-2 text-center">
  {hasSubs ? (
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <button
  onClick={onToggle}
  className="inline-flex min-w-[22px] items-center justify-center rounded-full bg-primary/10 px-1.5 text-[11px] font-semibold text-primary hover:bg-primary/20"
- title={`${subCount} subcobertura${subCount !== 1 ? "s" : ""}`}
  >
  {subCount}
  </button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>{`${subCount} subcobertura${subCount !== 1 ? "s" : ""}`}</p>
+ </TooltipContent>
+ </Tooltip>
  ) : (
  <span className="text-[11px] text-muted-foreground/50">0</span>
  )}
@@ -649,20 +674,26 @@ function CoberturaRow({
  className="flex items-start gap-2 px-2 py-1 rounded hover:bg-muted/40 transition-colors group/sub"
  >
  {s.document_url ? (
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <a
  href={s.document_url}
  target="_blank"
  rel="noopener noreferrer"
  className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:text-primary hover:bg-muted shrink-0 mt-0.5"
- title="Ver documento CMF"
  >
  <ExternalLink className="h-3 w-3" />
  </a>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>Ver documento CMF</p>
+ </TooltipContent>
+ </Tooltip>
  ) : (
  <span className="w-5 shrink-0" />
  )}
  <Layers className="h-3 w-3 text-violet-500 shrink-0 mt-1" />
- <span className="font-mono text-[10px] text-muted-foreground shrink-0 w-[120px] whitespace-nowrap mt-0.5">{s.code}</span>
+ <span className="font-mono text-[10px] text-muted-foreground shrink-0 w-30 whitespace-nowrap mt-0.5">{s.code}</span>
  <div className="flex-1 min-w-0">
  <span className="text-[11px] font-medium text-foreground/90 wrap-break-word">{s.name}</span>
  {s.description && (
@@ -671,22 +702,34 @@ function CoberturaRow({
  </div>
  <div className="flex items-center gap-0.5 opacity-0 group-hover/sub:opacity-100 transition-opacity shrink-0 mt-0.5">
  {canEdit && (
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <button
  onClick={() => onEditSub(s)}
  className="btn-icon-xs"
- title="Editar"
  >
  <Pencil className="h-3 w-3" />
  </button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>Editar</p>
+ </TooltipContent>
+ </Tooltip>
  )}
  {canDelete && (
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <button
  onClick={() => onDeleteSub(s.id)}
  className="btn-icon-xs btn-danger-hover"
- title="Desactivar"
  >
  <Ban className="h-3 w-3" />
  </button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>Desactivar</p>
+ </TooltipContent>
+ </Tooltip>
  )}
  </div>
  </div>

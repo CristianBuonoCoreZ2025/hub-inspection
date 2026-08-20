@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePagination } from "@/hooks/use-pagination";
 import { useTableSort } from "@/hooks/use-table-sort";
+import { useConfirm } from "@/hooks/use-confirm";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { getDocumentTypes, createDocumentType, updateDocumentType, deleteDocumentType, getCountries } from "@/services/catalogs";
@@ -31,6 +32,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 export default function TiposDocumentosPage() {
  const queryClient = useQueryClient();
  const { canCreate, canEdit, canDelete } = usePermissions();
+ const confirm = useConfirm();
  const [search, setSearch] = useState("");
  const [open, setOpen] = useState(false);
  const [editingId, setEditingId] = useState<string | null>(null);
@@ -148,7 +150,7 @@ export default function TiposDocumentosPage() {
  <button type="button" className="btn-icon-sm" onClick={() => { setEditingId(d.id); setFormData({ country_id: d.country_id || "", code: d.code || "", name: d.name, description: d.description || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></button>
  )}
  {canDelete("catalogos") && (
- <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este tipo de documento?")) deleteMutation.mutate(d.id); }}><Ban className="h-4 w-4" /></button>
+ <button type="button" className="btn-icon-sm btn-danger-hover" onClick={async () => { const ok = await confirm({ title: "Desactivar", description: "¿Desactivar este tipo de documento?", confirmLabel: "Desactivar", destructive: true }); if (!ok) return; deleteMutation.mutate(d.id); }}><Ban className="h-4 w-4" /></button>
  )}
  </div>
  </td>

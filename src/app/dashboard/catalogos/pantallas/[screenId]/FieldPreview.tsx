@@ -44,12 +44,12 @@ export function FieldPreview({ field, allFields }: FieldPreviewProps) {
       <span className="app-body font-medium">{field.label}</span>
       {field.required && <span className="text-red-500 app-body">*</span>}
       {field.requiredRule && (
-        <span title={`Obligatorio cuando ${field.requiredRule.field} ${field.requiredRule.operator} ${Array.isArray(field.requiredRule.value) ? field.requiredRule.value.join(",") : field.requiredRule.value}`}>
+        <span aria-label={`Obligatorio cuando ${field.requiredRule.field} ${field.requiredRule.operator} ${Array.isArray(field.requiredRule.value) ? field.requiredRule.value.join(",") : field.requiredRule.value}`}>
           <span className="app-body rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 px-1 py-0">⚠ req</span>
         </span>
       )}
       {field.visibilityRule && (
-        <span title={`Visible cuando ${field.visibilityRule.field} ${field.visibilityRule.operator} ${Array.isArray(field.visibilityRule.value) ? field.visibilityRule.value.join(",") : field.visibilityRule.value}`}>
+        <span aria-label={`Visible cuando ${field.visibilityRule.field} ${field.visibilityRule.operator} ${Array.isArray(field.visibilityRule.value) ? field.visibilityRule.value.join(",") : field.visibilityRule.value}`}>
           <span className="app-body rounded bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300 px-1 py-0">👁 if</span>
         </span>
       )}

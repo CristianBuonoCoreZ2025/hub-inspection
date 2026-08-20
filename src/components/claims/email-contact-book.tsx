@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search, X, Users, Building2, UserCircle2, Globe } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { fetchClaimContacts, type EmailContact } from "@/services/email-contacts";
 
 interface EmailContactBookProps {
@@ -79,14 +80,20 @@ export function EmailContactBook({
             </span>
           )}
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          title="Cerrar"
-          className="inline-flex h-6 w-6 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-        >
-          <X className="h-3 w-3" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger className="inline-flex">
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-6 w-6 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p>Cerrar</p>
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       {/* Search */}
@@ -143,7 +150,7 @@ export function EmailContactBook({
                       key={contact.email}
                       className="flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors border-b border-border/15 hover:bg-primary/8"
                       onClick={() => onAddRecipient(contact.email, "to")}
-                      title={`Agregar ${contact.email} a Para`}
+                      aria-label={`Agregar ${contact.email} a Para`}
                     >
                       <div className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-medium text-white shrink-0 email-icon-gradient">
                         {initials}
@@ -173,22 +180,34 @@ export function EmailContactBook({
                         ))}
                       </div>
                       <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          type="button"
-                          onClick={() => onAddRecipient(contact.email, "to")}
-                          className="text-[8px] px-1 py-0.5 rounded font-medium bg-muted/30 text-muted-foreground hover:bg-primary/15 hover:text-primary transition-colors"
-                          title="Para"
-                        >
-                          Para
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onAddRecipient(contact.email, "cc")}
-                          className="text-[8px] px-1 py-0.5 rounded font-medium bg-muted/30 text-muted-foreground hover:bg-primary/15 hover:text-primary transition-colors"
-                          title="CC"
-                        >
-                          CC
-                        </button>
+                        <Tooltip>
+                          <TooltipTrigger className="inline-flex">
+                            <button
+                              type="button"
+                              onClick={() => onAddRecipient(contact.email, "to")}
+                              className="text-[8px] px-1 py-0.5 rounded font-medium bg-muted/30 text-muted-foreground hover:bg-primary/15 hover:text-primary transition-colors"
+                            >
+                              Para
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            <p>Para</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger className="inline-flex">
+                            <button
+                              type="button"
+                              onClick={() => onAddRecipient(contact.email, "cc")}
+                              className="text-[8px] px-1 py-0.5 rounded font-medium bg-muted/30 text-muted-foreground hover:bg-primary/15 hover:text-primary transition-colors"
+                            >
+                              CC
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            <p>CC</p>
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
                     </div>
                   );

@@ -15,6 +15,7 @@ import type { Company, Profile, UserClient, UserRole, SecondaryRole, UserSeconda
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm, useWatch } from "react-hook-form";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useConfirm } from "@/hooks/use-confirm";
 import { toast } from "sonner";
 import { Search, Pencil, UserX, Users, Star, Trash2, RotateCcw } from "lucide-react";
 
@@ -35,6 +36,7 @@ import {
  SelectValue,
 } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 const roleLabels: Record<UserRole, string> = {
  internal: "Interno",
@@ -80,6 +82,7 @@ type UserFilter = "active" | "inactive" | "deleted";
 export default function UsersPage() {
  const queryClient = useQueryClient();
  const { canCreate, canEdit, canDelete } = usePermissions();
+ const confirm = useConfirm();
  const [search, setSearch] = useState("");
  const [open, setOpen] = useState(false);
  const [editingId, setEditingId] = useState<string | null>(null);
@@ -441,7 +444,7 @@ export default function UsersPage() {
  <DialogContent className="modal-md" showCloseButton={false}>
  <div className="modal-header">
  <DialogTitle className="modal-title flex items-center gap-2.5">
- <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
+ <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-gradient text-white shadow-sm">
  <Users className="h-4 w-4" />
  </div>
  {editingId ? "Editar Usuario" : "Invitar Usuario"}
@@ -893,31 +896,66 @@ export default function UsersPage() {
  <div className="app-row-actions">
  {isDeleted ? (
  canEdit("users") && (
- <button type="button" className="btn-icon-sm" onClick={() => reactivateMutation.mutate(user.id)} title="Reactivar">
- <RotateCcw className="h-4 w-4" />
- </button>
+ <Tooltip>
+   <TooltipTrigger className="inline-flex">
+     <button type="button" className="btn-icon-sm" onClick={() => reactivateMutation.mutate(user.id)}>
+       <RotateCcw className="h-4 w-4" />
+     </button>
+   </TooltipTrigger>
+   <TooltipContent side="top">
+     <p>Reactivar</p>
+   </TooltipContent>
+ </Tooltip>
  )
  ) : (
  <>
  {canEdit("users") && (
- <button type="button" className="btn-icon-sm" onClick={() => openEdit(user)} title="Editar">
- <Pencil className="h-4 w-4" />
- </button>
+ <Tooltip>
+   <TooltipTrigger className="inline-flex">
+     <button type="button" className="btn-icon-sm" onClick={() => openEdit(user)}>
+       <Pencil className="h-4 w-4" />
+     </button>
+   </TooltipTrigger>
+   <TooltipContent side="top">
+     <p>Editar</p>
+   </TooltipContent>
+ </Tooltip>
  )}
  {canDelete("users") && user.is_active && (
- <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este usuario?")) deactivateMutation.mutate(user.id); }} title="Desactivar">
- <UserX className="h-4 w-4" />
- </button>
+ <Tooltip>
+   <TooltipTrigger className="inline-flex">
+     <button type="button" className="btn-icon-sm btn-danger-hover" onClick={async () => { const ok = await confirm({ title: "Desactivar usuario", description: "¿Desactivar este usuario?", confirmLabel: "Desactivar", destructive: true }); if (!ok) return; deactivateMutation.mutate(user.id); }}>
+       <UserX className="h-4 w-4" />
+     </button>
+   </TooltipTrigger>
+   <TooltipContent side="top">
+     <p>Desactivar</p>
+   </TooltipContent>
+ </Tooltip>
  )}
  {canDelete("users") && !user.is_active && (
- <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => handleDeleteClick(user)} title="Eliminar">
- <Trash2 className="h-4 w-4" />
- </button>
+ <Tooltip>
+   <TooltipTrigger className="inline-flex">
+     <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => handleDeleteClick(user)}>
+       <Trash2 className="h-4 w-4" />
+     </button>
+   </TooltipTrigger>
+   <TooltipContent side="top">
+     <p>Eliminar</p>
+   </TooltipContent>
+ </Tooltip>
  )}
  {canEdit("users") && !user.is_active && (
- <button type="button" className="btn-icon-sm" onClick={() => reactivateMutation.mutate(user.id)} title="Reactivar">
- <RotateCcw className="h-4 w-4" />
- </button>
+ <Tooltip>
+   <TooltipTrigger className="inline-flex">
+     <button type="button" className="btn-icon-sm" onClick={() => reactivateMutation.mutate(user.id)}>
+       <RotateCcw className="h-4 w-4" />
+     </button>
+   </TooltipTrigger>
+   <TooltipContent side="top">
+     <p>Reactivar</p>
+   </TooltipContent>
+ </Tooltip>
  )}
  </>
  )}

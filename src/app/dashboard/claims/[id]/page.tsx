@@ -21,6 +21,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { useAuth } from "@/hooks/use-auth";
 import { useRecentClaims } from "@/hooks/use-recent-claims";
 import { useRealtime } from "@/hooks/use-realtime";
+import { useConfirm } from "@/hooks/use-confirm";
 import { toast } from "sonner";
 import {
  ArrowLeft,
@@ -77,6 +78,7 @@ import { EmailPreviewModal } from "@/components/claims/email-preview-modal";
 import { getEmailLogsByClaim, type EmailLog } from "@/services/email-logs";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 // Fix iconos de Leaflet en Next.js (CDN)
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
@@ -165,6 +167,7 @@ export default function ClaimDetailPage() {
  const queryClient = useQueryClient();
  const { canEdit, canView } = usePermissions();
  const { profile, dataAccess, isLoading: isAuthLoading } = useAuth();
+ const confirm = useConfirm();
 
  const isUserAssignedToClaim = useCallback((c: Claim | undefined): boolean => {
    if (!c || !profile?.id) return false;
@@ -395,20 +398,6 @@ const editingActionId = editingGestion?.id;
  enabled: !!editingAction,
  });
 
- // Debug temporal — diagnosticar por qué se queda en "Cargando gestión..."
- useEffect(() => {
- if (openEditGestionModal && editingActionId) {
- console.log("[EditGestion Modal] estado:", {
- editingActionId,
- editingAction: editingAction ? "cargado" : "null/undefined",
- editingActionError: editingActionError?.message || null,
- editingScreens: editingScreens ? `array[${editingScreens.length}]` : "undefined",
- editingScreensError: editingScreensError?.message || null,
- hasScreenSnapshot: editingAction?.screen_snapshot ? "SÍ" : "NO",
- hasActionFeature: editingAction?.action_feature ? "SÍ" : "NO",
- });
- }
- }, [openEditGestionModal, editingActionId, editingAction, editingScreens, editingActionError, editingScreensError]);
 
  const createGestionMutation = useMutation({
  mutationFn: (template: ActionTemplate) =>
@@ -779,18 +768,37 @@ const editingActionId = editingGestion?.id;
  </Button>
  )}
  {canEdit("claims") && currentStatusCode === "closed" && (
+ (() => {
+ const tooltipMsg = !claim?.policy_id ? "Asigna una póliza al siniestro primero" : undefined;
+ const btn = (
  <Button
  variant="outline"
  size="sm"
  className="pg-btn-platinum hidden sm:inline-flex"
- onClick={() => {
- if (confirm("¿Cerrar este caso? No se podrá revertir.")) closeMutation.mutate();
+ onClick={async () => {
+ const ok = await confirm({
+ title: "Cerrar caso",
+ description: "¿Cerrar este caso? No se podrá revertir.",
+ confirmLabel: "Cerrar",
+ destructive: true,
+ });
+ if (!ok) return;
+ closeMutation.mutate();
  }}
  disabled={closeMutation.isPending || !claim?.policy_id}
- title={!claim?.policy_id ? "Asigna una póliza al siniestro primero" : undefined}
  >
  Cerrar
  </Button>
+ );
+ return tooltipMsg ? (
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">{btn}</TooltipTrigger>
+ <TooltipContent side="top">
+ <p>{tooltipMsg}</p>
+ </TooltipContent>
+ </Tooltip>
+ ) : btn;
+ })()
  )}
  </>
  )}
@@ -996,6 +1004,8 @@ const editingActionId = editingGestion?.id;
  <DataField label="Email" value={contractor.email || "—"} />
  <DataField label="Teléfono" value={uniquePhones(contractor.phone, contractor.cell_phone) || "—"} />
  <DataField label="Dirección" value={contractor.address || "—"} />
+ <DataField label="País" value={contractor.country || "—"} />
+ <DataField label="Región" value={contractor.region || "—"} />
  <DataField label="Ciudad" value={contractor.city || "—"} />
  <DataField label="Comuna" value={contractor.commune || "—"} />
  </div>
@@ -1020,6 +1030,8 @@ const editingActionId = editingGestion?.id;
  <DataField label="Email" value={beneficiary.email || "—"} />
  <DataField label="Teléfono" value={uniquePhones(beneficiary.phone, beneficiary.cell_phone) || "—"} />
  <DataField label="Dirección" value={beneficiary.address || "—"} />
+ <DataField label="País" value={beneficiary.country || "—"} />
+ <DataField label="Región" value={beneficiary.region || "—"} />
  <DataField label="Ciudad" value={beneficiary.city || "—"} />
  <DataField label="Comuna" value={beneficiary.commune || "—"} />
  </div>
@@ -1045,14 +1057,20 @@ const editingActionId = editingGestion?.id;
  Dirección del Siniestro
  </h3>
  {claim.claim_latitude && claim.claim_longitude && (
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <button
  type="button"
  className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-border bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0"
- title="Ver en mapa"
  onClick={() => setMapOpen(true)}
  >
  <MapPin className="h-3.5 w-3.5" />
  </button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>Ver en mapa</p>
+ </TooltipContent>
+ </Tooltip>
  )}
  </div>
  <div className="app-data-grid-4">
@@ -1164,15 +1182,27 @@ const editingActionId = editingGestion?.id;
  </ToggleChip>
  )}
  {canEdit("claims") && gestionSubTab === "lista" && (
+ (() => {
+ const tooltipMsg = !claim?.policy_id ? "Asigna una póliza al siniestro primero" : undefined;
+ const btn = (
  <Button
  size="sm"
  className="pg-btn-platinum hidden sm:inline-flex"
  onClick={() => setOpenGestionModal(true)}
  disabled={!claim?.policy_id}
- title={!claim?.policy_id ? "Asigna una póliza al siniestro primero" : undefined}
  >
  Nuevo
  </Button>
+ );
+ return tooltipMsg ? (
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">{btn}</TooltipTrigger>
+ <TooltipContent side="top">
+ <p>{tooltipMsg}</p>
+ </TooltipContent>
+ </Tooltip>
+ ) : btn;
+ })()
  )}
  </div>
  </div>
@@ -1375,14 +1405,20 @@ const editingActionId = editingGestion?.id;
  <td className="whitespace-nowrap pr-1">
  <div className="flex items-center gap-1">
  <GestionCodeCell g={g} />
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <span
  className={`app-origin-badge app-origin-${
  g.origin === "W" ? "w" : g.origin === "A" ? "a" : g.origin === "M" ? "m" : "default"
  }`}
- title={g.origin === "W" ? "Workflow" : g.origin === "A" ? "Automática" : g.origin === "M" ? "Manual" : "—"}
  >
  {g.origin}
  </span>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>{g.origin === "W" ? "Workflow" : g.origin === "A" ? "Automática" : g.origin === "M" ? "Manual" : "—"}</p>
+ </TooltipContent>
+ </Tooltip>
  </div>
  </td>
  <td className="font-medium app-body">
@@ -1466,14 +1502,20 @@ const editingActionId = editingGestion?.id;
    // Sin correos: botón directo que abre redactar (sin dropdown)
    if (emails.length === 0) {
      return (
-       <button
-         type="button"
-         onClick={openCompose}
-         className="btn-icon-sm relative"
-         title="Redactar correo"
-       >
-         <CorreoIcon size={20} />
-       </button>
+       <Tooltip>
+         <TooltipTrigger className="inline-flex">
+           <button
+             type="button"
+             onClick={openCompose}
+             className="btn-icon-sm relative"
+           >
+             <CorreoIcon size={20} />
+           </button>
+         </TooltipTrigger>
+         <TooltipContent side="top">
+           <p>Redactar correo</p>
+         </TooltipContent>
+       </Tooltip>
      );
    }
 
@@ -1482,17 +1524,23 @@ const editingActionId = editingGestion?.id;
      <DropdownMenu>
        <DropdownMenuTrigger
          render={
-           <button
-             type="button"
-             onClick={(e) => e.stopPropagation()}
-             className="btn-icon-sm relative"
-             title={`${emails.length} correo${emails.length > 1 ? "s" : ""}`}
-           >
-             <CorreoIcon size={20} />
-             <span className="absolute -top-1 -right-1 min-w-3.5 h-3.5 px-0.5 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[8px] font-bold leading-none">
-               {emails.length}
-             </span>
-           </button>
+           <Tooltip>
+             <TooltipTrigger className="inline-flex">
+               <button
+                 type="button"
+                 onClick={(e) => e.stopPropagation()}
+                 className="btn-icon-sm relative"
+               >
+                 <CorreoIcon size={20} />
+                 <span className="absolute -top-1 -right-1 min-w-3.5 h-3.5 px-0.5 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[8px] font-bold leading-none">
+                   {emails.length}
+                 </span>
+               </button>
+             </TooltipTrigger>
+             <TooltipContent side="top">
+               <p>{`${emails.length} correo${emails.length > 1 ? "s" : ""}`}</p>
+             </TooltipContent>
+           </Tooltip>
          }
        />
        <DropdownMenuContent align="end" arrow className="w-64 p-1.5 dropdown-emerge" sideOffset={4}>
@@ -1559,18 +1607,24 @@ const editingActionId = editingGestion?.id;
                          <span className="font-mono app-body text-primary font-medium">{emailCode}</span>
                          <div className="flex items-center gap-1.5">
                            {log.status === "failed" && (
-                             <button
-                               type="button"
-                               onClick={(e: { stopPropagation: () => void }) => {
-                                 e.stopPropagation();
-                                 resendEmailMutation.mutate(log.id);
-                               }}
-                               disabled={resendEmailMutation.isPending && resendEmailMutation.variables === log.id}
-                               title="Reenviar correo"
-                               className="inline-flex h-5 w-5 items-center justify-center rounded border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors disabled:opacity-50"
-                             >
-                               <RotateCw className={`h-3 w-3 ${resendEmailMutation.isPending && resendEmailMutation.variables === log.id ? "animate-spin" : ""}`} />
-                             </button>
+                             <Tooltip>
+                               <TooltipTrigger className="inline-flex">
+                                 <button
+                                   type="button"
+                                   onClick={(e: { stopPropagation: () => void }) => {
+                                     e.stopPropagation();
+                                     resendEmailMutation.mutate(log.id);
+                                   }}
+                                   disabled={resendEmailMutation.isPending && resendEmailMutation.variables === log.id}
+                                   className="inline-flex h-5 w-5 items-center justify-center rounded border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors disabled:opacity-50"
+                                 >
+                                   <RotateCw className={`h-3 w-3 ${resendEmailMutation.isPending && resendEmailMutation.variables === log.id ? "animate-spin" : ""}`} />
+                                 </button>
+                               </TooltipTrigger>
+                               <TooltipContent side="top">
+                                 <p>Reenviar correo</p>
+                               </TooltipContent>
+                             </Tooltip>
                            )}
                            <span className="text-[10px] text-muted-foreground tabular-nums">
                              {new Date(log.sent_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
@@ -1718,7 +1772,7 @@ const editingActionId = editingGestion?.id;
         disabled={tpl.disabled}
         className={tpl.disabled ? "!pointer-events-auto cursor-not-allowed" : ""}
       >
-        <span title={tpl.reason}>
+        <span aria-label={tpl.reason}>
           {tpl.name}
           <span className="app-body text-muted-foreground">{matchLabel}</span>
           {tpl.disabled && <span className="ml-1 text-[10px] text-rose-500 opacity-100"> · {short}</span>}
@@ -2001,7 +2055,7 @@ function ActionHistoryView({ actionId }: { actionId: string }) {
  className="flex items-center gap-1.5 app-body text-muted-foreground hover:text-foreground transition-colors"
  >
  <History className="h-3.5 w-3.5" />
- {showHistory ? "Ocultar historial" : "Ver historial"}
+ {showHistory ? "Ocultar" : "Historial"}
  </button>
  {showHistory && (
  <div className="mt-2 rounded-lg border border-white/10 dark:border-white/5 bg-white/5 dark:bg-white/5 backdrop-blur-md p-3 max-h-[200px] overflow-y-auto">
@@ -2522,7 +2576,7 @@ function GestionCodeCell({ g }: { g: {
  </PopoverContent>
  </Popover>
  {g.isActive === false && (
- <span className="inline-flex items-center justify-center rounded px-0.5 app-body font-bold bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400" title="Gestión deshabilitada">OFF</span>
+ <span className="inline-flex items-center justify-center rounded px-0.5 app-body font-bold bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400" aria-label="Gestión deshabilitada">OFF</span>
  )}
  </div>
  );

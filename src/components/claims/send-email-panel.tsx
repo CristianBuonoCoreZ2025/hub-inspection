@@ -24,6 +24,7 @@ import { getEmailLogs } from "@/services/email-logs";
 import { renderEmailTemplate, wrapHtmlEmail } from "@/services/email-render";
 import { getSupabaseClient } from "@/lib/supabase/db";
 import { toast } from "sonner";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 interface SendEmailPanelProps {
   claim: Record<string, unknown> | null;
@@ -332,16 +333,21 @@ export function SendEmailPanel({ claim, action, businessLineId, disabled }: Send
                 <Label className="app-field-label">Destinatarios sugeridos</Label>
                 <div className="flex flex-wrap gap-1.5">
                   {recipientSuggestions.map((r) => (
-                    <button
-                      key={`${r.role}-${r.email}`}
-                      type="button"
-                      onClick={() => addRecipientToField(r.email!, "to")}
-                      className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[10px] hover:border-primary hover:bg-primary/10 transition-colors"
-                      title={`Agregar ${r.email} a Para`}
-                    >
-                      <Plus className="h-2.5 w-2.5" />
-                      {r.label}: <span className="font-mono truncate max-w-30">{r.email}</span>
-                    </button>
+                    <Tooltip key={`${r.role}-${r.email}`}>
+                      <TooltipTrigger render={
+                        <button
+                          type="button"
+                          onClick={() => addRecipientToField(r.email!, "to")}
+                          className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[10px] hover:border-primary hover:bg-primary/10 transition-colors"
+                        />
+                      }>
+                        <Plus className="h-2.5 w-2.5" />
+                        {r.label}: <span className="font-mono truncate max-w-30">{r.email}</span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        <p>{`Agregar ${r.email} a Para`}</p>
+                      </TooltipContent>
+                    </Tooltip>
                   ))}
                 </div>
               </div>
@@ -400,7 +406,7 @@ export function SendEmailPanel({ claim, action, businessLineId, disabled }: Send
                     className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <History className="h-3 w-3" />
-                    {showHistory ? "Ocultar historial" : "Ver historial de envíos"}
+                    {showHistory ? "Ocultar" : "Historial"}
                   </button>
                   {showHistory && logs && logs.length > 0 && (
                     <div className="rounded-lg border border-border p-2 space-y-1 max-h-40 overflow-auto">

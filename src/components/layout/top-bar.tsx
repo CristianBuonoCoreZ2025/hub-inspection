@@ -53,6 +53,7 @@ import { useDockMagnification } from "@/hooks/use-dock-magnification";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { HelpButton } from "@/components/layout/help-panel";
 import { MyProfileModal } from "@/components/layout/my-profile-modal";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 function getInitials(email?: string | null) {
   if (!email) return "U";
@@ -73,16 +74,25 @@ interface StatChipProps {
 
 function StatChip({ lightIcon, darkIcon, count, label, href, variant = "default", iconClassName }: StatChipProps) {
   return (
-    <Link
-      href={href}
-      className={`topbar-chip topbar-chip-${variant} dock-item`}
-      title={`${label}: ${count}`}
-    >
-      <span className="topbar-chip-icon">
-        <TopbarIcon lightIcon={lightIcon} darkIcon={darkIcon} size={18} className={iconClassName} />
-      </span>
-      {count > 0 && <span className="topbar-chip-count">{count}</span>}
-    </Link>
+    <Tooltip>
+      <TooltipTrigger
+        delay={0}
+        render={
+          <Link
+            href={href}
+            className={`topbar-chip topbar-chip-${variant} dock-item`}
+          />
+        }
+      >
+        <span className="topbar-chip-icon">
+          <TopbarIcon lightIcon={lightIcon} darkIcon={darkIcon} size={18} className={iconClassName} />
+        </span>
+        {count > 0 && <span className="topbar-chip-count">{count}</span>}
+      </TooltipTrigger>
+      <TooltipContent side="top">
+        <p>{`${label}: ${count}`}</p>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -97,7 +107,7 @@ function ThemeSelectorCompact() {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <button type="button" className="topbar-action dock-item" title="Tema">
+          <button type="button" className="topbar-action dock-item" aria-label="Tema">
             <TopbarIcon lightIcon={SkinIcon} darkIcon={Palette} size={18} />
           </button>
         }
@@ -135,7 +145,7 @@ function RecentClaimsButton() {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <button type="button" className="topbar-chip topbar-action-recents dock-item" title="Siniestros recientes">
+          <button type="button" className="topbar-chip topbar-action-recents dock-item" aria-label="Siniestros recientes">
             <span className="topbar-chip-icon">
               <TopbarIcon lightIcon={RecientesIcon} darkIcon={History} size={18} />
             </span>
@@ -182,7 +192,7 @@ function RecentClaimsButton() {
                     <span className="recent-claim-time">
                       {new Date(r.visitedAt).toLocaleDateString("es-CL", { day: "2-digit", month: "2-digit" })}
                     </span>
-                    <span className="recent-claim-bl-icon" title={r.businessLineName ?? "Tipo de Siniestro"}>
+                    <span className="recent-claim-bl-icon" aria-label={r.businessLineName ?? "Tipo de Siniestro"}>
                       <BlIcon className="size-3" />
                     </span>
                     {flagUrl ? (
@@ -190,7 +200,7 @@ function RecentClaimsButton() {
                         src={flagUrl}
                         alt={r.countryCode ?? ""}
                         className="recent-claim-flag-img"
-                        title={r.countryCode ?? ""}
+                        aria-label={r.countryCode ?? ""}
                         width={18}
                         height={13}
                         unoptimized
@@ -199,14 +209,20 @@ function RecentClaimsButton() {
                       <span className="recent-claim-flag-placeholder" />
                     )}
                   </Link>
-                  <button
-                    type="button"
-                    onClick={() => remove(r.id)}
-                    className="recent-claim-remove"
-                    title="Quitar"
-                  >
-                    <X className="size-3" />
-                  </button>
+                  <Tooltip>
+                    <TooltipTrigger className="inline-flex">
+                      <button
+                        type="button"
+                        onClick={() => remove(r.id)}
+                        className="recent-claim-remove"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <p>Quitar</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
               );
             })}
@@ -263,16 +279,23 @@ export function TopBar() {
           >
             <Menu />
           </button>
-          <button type="button" onClick={() => setProfileOpen(true)} title="Mi perfil" className="topbar-avatar-btn">
-            <Avatar size="sm">
-              {profile?.avatar_url ? (
-                <AvatarImage src={profile.avatar_url} alt={profile.full_name || "Avatar"} />
-              ) : null}
-              <AvatarFallback className="bg-primary/20 text-primary text-[10px] border border-primary/20">
-                {isLoading ? "..." : getInitials(user?.email)}
-              </AvatarFallback>
-            </Avatar>
-          </button>
+          <Tooltip>
+            <TooltipTrigger className="inline-flex">
+              <button type="button" onClick={() => setProfileOpen(true)} className="topbar-avatar-btn">
+                <Avatar size="sm">
+                  {profile?.avatar_url ? (
+                    <AvatarImage src={profile.avatar_url} alt={profile.full_name || "Avatar"} />
+                  ) : null}
+                  <AvatarFallback className="bg-primary/20 text-primary text-[10px] border border-primary/20">
+                    {isLoading ? "..." : getInitials(user?.email)}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p>Mi perfil</p>
+            </TooltipContent>
+          </Tooltip>
           <div className="topbar-user-info">
             <span className="topbar-user-name">
               {profile?.full_name || user?.email || "Usuario"}
@@ -320,15 +343,21 @@ export function TopBar() {
           <RecentClaimsButton />
           <ThemeSelectorCompact />
           <HelpButton />
-          <button
-            type="button"
-            onClick={() => signOut()}
-            disabled={isLoading}
-            className="topbar-action topbar-action-logout dock-item"
-            title="Salir"
-          >
-            {isLoading ? <Loader2 className="animate-spin" /> : <TopbarIcon lightIcon={LogoutIcon} darkIcon={LogOut} size={18} />}
-          </button>
+          <Tooltip>
+            <TooltipTrigger className="inline-flex">
+              <button
+                type="button"
+                onClick={() => signOut()}
+                disabled={isLoading}
+                className="topbar-action topbar-action-logout dock-item"
+              >
+                {isLoading ? <Loader2 className="animate-spin" /> : <TopbarIcon lightIcon={LogoutIcon} darkIcon={LogOut} size={18} />}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p>Salir</p>
+            </TooltipContent>
+          </Tooltip>
           {/* placeholder for help below */}
         </div>
       </div>

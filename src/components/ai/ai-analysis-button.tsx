@@ -219,7 +219,7 @@ export function AiAnalysisButton({
               </DialogTitle>
             </div>
             {fileName && (
-              <span className="text-[8px] text-muted-foreground truncate max-w-[300px]">
+              <span className="text-[8px] text-muted-foreground truncate max-w-75">
                 {fileName}
               </span>
             )}

@@ -49,6 +49,8 @@ import {
   Menu as MenuIcon,
   Sparkles,
   Radio,
+  LayersArrowUp,
+  Import,
   type LucideIcon,
 } from "lucide-react";
 
@@ -162,10 +164,13 @@ export const gestionCatalogLinks: NavLink[] = [
 // ── Operaciones ──
 export const operationLinks: NavLink[] = [
   { href: "/dashboard/operaciones/carga-siniestros", label: "Carga Siniestros", icon: Upload },
-  { href: "/dashboard/operaciones/carga-catalogos", label: "Carga Catálogos", icon: Upload },
+  { href: "/dashboard/operaciones/carga-casos", label: "Carga Casos", icon: LayersArrowUp },
+  { href: "/dashboard/operaciones/carga-aloclaim", label: "Carga AloClaim", icon: FileSpreadsheet },
+  { href: "/dashboard/operaciones/carga-catalogos", label: "Carga Catálogos", icon: Import },
   { href: "/dashboard/operaciones/gestiones", label: "Gestiones", icon: Ban },
   { href: "/dashboard/operaciones/inhabilitar", label: "Inhabilitar", icon: Ban },
   { href: "/dashboard/operaciones/reabrir", label: "Reabrir", icon: LockOpen },
+  { href: "/dashboard/operaciones/reabrir-inspecciones", label: "Reabrir Inspecciones", icon: LockOpen },
   { href: "/dashboard/operaciones/reasignar-inspecciones", label: "Reasignar Inspecciones", icon: Users },
 ];
 

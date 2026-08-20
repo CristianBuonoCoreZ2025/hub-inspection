@@ -13,6 +13,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -157,16 +158,21 @@ export default function PromptsPage() {
                   </td>
                   <td className="font-medium">{p.name}</td>
                   <td className="max-w-100">
-                    <div className="truncate text-muted-foreground text-[11px]" title={p.system_prompt}>
+                    <div className="truncate text-muted-foreground text-[11px]" aria-label={p.system_prompt}>
                       {p.system_prompt.slice(0, 120)}...
                     </div>
                   </td>
                   <td>
                     <div className="app-row-actions">
                       {canEdit("catalogos") && (
-                        <button type="button" className="btn-icon-sm" onClick={() => openEdit(p)} title="Editar">
-                          <Pencil className="h-4 w-4" />
-                        </button>
+                        <Tooltip>
+                          <TooltipTrigger render={<button type="button" className="btn-icon-sm" onClick={() => openEdit(p)} />}>
+                            <Pencil className="h-4 w-4" />
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            <p>Editar</p>
+                          </TooltipContent>
+                        </Tooltip>
                       )}
                     </div>
                   </td>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePagination } from "@/hooks/use-pagination";
 import { useTableSort } from "@/hooks/use-table-sort";
+import { useConfirm } from "@/hooks/use-confirm";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { getClaimTypes, createClaimType, updateClaimType, deleteClaimType } from "@/services/catalogs";
@@ -21,6 +22,7 @@ import {
  DialogTitle,
 } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 // Map icon names from lucide-react to actual icon components
 // (ICON_MAP e ICON_OPTIONS importados desde @/lib/claim-type-icons)
@@ -28,6 +30,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 export default function ClaimTypePage() {
  const queryClient = useQueryClient();
  const { canCreate, canEdit, canDelete } = usePermissions();
+ const confirm = useConfirm();
  const [search, setSearch] = useState("");
  const [open, setOpen] = useState(false);
  const [editingId, setEditingId] = useState<string | null>(null);
@@ -134,7 +137,7 @@ export default function ClaimTypePage() {
  <SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh>
  <SortableTh sortKey="description" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Descripción</SortableTh>
  <th>Ícono</th>
- <th className="w-[80px]"></th>
+ <th className="w-20"></th>
  </tr>
  </thead>
  <tbody>
@@ -165,7 +168,7 @@ export default function ClaimTypePage() {
  }}><Pencil className="h-4 w-4" /></button>
  )}
  {canDelete("catalogos") && (
- <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("Desactivar?")) deleteMutation.mutate(item.id); }}>
+ <button type="button" className="btn-icon-sm btn-danger-hover" onClick={async () => { const ok = await confirm({ title: "Desactivar", description: "¿Desactivar este registro?", confirmLabel: "Desactivar", destructive: true }); if (!ok) return; deleteMutation.mutate(item.id); }}>
  <Ban className="h-4 w-4" />
  </button>
  )}
@@ -207,8 +210,9 @@ export default function ClaimTypePage() {
  {ICON_OPTIONS.map((iconName) => {
  const IconComponent = ICON_MAP[iconName];
  return (
+ <Tooltip key={iconName}>
+ <TooltipTrigger className="inline-flex">
  <button
- key={iconName}
  type="button"
  onClick={() => setFormData({ ...formData, icon: iconName })}
  className={`flex h-10 w-10 items-center justify-center rounded-lg border transition-colors ${
@@ -216,10 +220,14 @@ export default function ClaimTypePage() {
  ? "border-primary bg-primary/10 text-primary"
  : "border-input bg-background hover:bg-muted"
  }`}
- title={iconName}
  >
  <IconComponent className="h-5 w-5" />
  </button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>{iconName}</p>
+ </TooltipContent>
+ </Tooltip>
  );
  })}
  </div>

@@ -55,8 +55,10 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   };
 
   if (provider === "console") {
-    console.log("--- E-mail (modo console) ---");
-    console.log(JSON.stringify({ ...payload, html: isHtml ? "[HTML body]" : undefined }, null, 2));
+    if (process.env.NODE_ENV !== "production") {
+      console.log("--- E-mail (modo console) ---");
+      console.log(JSON.stringify({ ...payload, html: isHtml ? "[HTML body]" : undefined }, null, 2));
+    }
     return {
       status: "sent",
       provider,

@@ -18,6 +18,7 @@ import {
   MousePointer2, Pencil, Tag, MessageSquare, Undo2, Redo2, Save, X,
   Slash, Square, Circle, Hexagon, ChevronDown, Eraser,
 } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { ANNOTATION_COLORS } from "./entity-types";
 import type { AnnotationColor } from "./entity-types";
 
@@ -89,17 +90,22 @@ export function SketchToolbar({
       {/* Herramientas principales */}
       <div className="sketch-toolbar-group">
         {MAIN_BUTTONS.map(({ mode: m, icon: Icon, title }) => (
-          <button
-            key={m}
-            type="button"
-            className={`sketch-mode-btn ${mode === m ? "is-active" : ""}`}
-            onClick={() => onModeChange(m)}
-            title={title}
-            aria-label={title}
-            aria-pressed={mode === m}
-          >
-            <Icon className="size-3.5" />
-          </button>
+          <Tooltip key={m}>
+            <TooltipTrigger className="inline-flex">
+              <button
+                type="button"
+                className={`sketch-mode-btn ${mode === m ? "is-active" : ""}`}
+                onClick={() => onModeChange(m)}
+                aria-label={title}
+                aria-pressed={mode === m}
+              >
+                <Icon className="size-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p>{title}</p>
+            </TooltipContent>
+          </Tooltip>
         ))}
       </div>
 
@@ -108,21 +114,26 @@ export function SketchToolbar({
       {/* Paleta de 5 colores fijos (para anotaciones) */}
       <div className="sketch-toolbar-group">
         {ANNOTATION_COLORS.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            className={`sketch-mode-btn ${annotationColor === c.id ? "is-active" : ""}`}
-            onClick={() => onAnnotationColorChange(c.id)}
-            title={c.label}
-            aria-label={`Color ${c.label}`}
-            aria-pressed={annotationColor === c.id}
-          >
-            <span
-              className="sketch-block-swatch"
-              // Excepción REGLA #2: color dinámico de la paleta de anotaciones.
-              style={{ backgroundColor: c.hex }}
-            />
-          </button>
+          <Tooltip key={c.id}>
+            <TooltipTrigger className="inline-flex">
+              <button
+                type="button"
+                className={`sketch-mode-btn ${annotationColor === c.id ? "is-active" : ""}`}
+                onClick={() => onAnnotationColorChange(c.id)}
+                aria-label={`Color ${c.label}`}
+                aria-pressed={annotationColor === c.id}
+              >
+                <span
+                  className="sketch-block-swatch"
+                  // Excepción REGLA #2: color dinámico de la paleta de anotaciones.
+                  style={{ backgroundColor: c.hex }}
+                />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p>{c.label}</p>
+            </TooltipContent>
+          </Tooltip>
         ))}
       </div>
 
@@ -130,30 +141,41 @@ export function SketchToolbar({
 
       {/* Más herramientas (desplegable) */}
       <div className="sketch-toolbar-group">
-        <button
-          type="button"
-          className={`sketch-mode-btn ${showMore ? "is-active" : ""}`}
-          onClick={() => setShowMore(!showMore)}
-          title="Más herramientas"
-          aria-label="Más herramientas"
-          aria-expanded={showMore}
-        >
-          <ChevronDown className={`size-3.5 transition-transform ${showMore ? "rotate-180" : ""}`} />
-        </button>
+        <Tooltip>
+          <TooltipTrigger className="inline-flex">
+            <button
+              type="button"
+              className={`sketch-mode-btn ${showMore ? "is-active" : ""}`}
+              onClick={() => setShowMore(!showMore)}
+              aria-label="Más herramientas"
+              aria-expanded={showMore}
+            >
+              <ChevronDown className={`size-3.5 transition-transform ${showMore ? "rotate-180" : ""}`} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p>Más herramientas</p>
+          </TooltipContent>
+        </Tooltip>
         {showMore && (
           <div className="sketch-more-tools">
             {MORE_BUTTONS.map(({ mode: m, icon: Icon, title }) => (
-              <button
-                key={m}
-                type="button"
-                className={`sketch-mode-btn ${mode === m ? "is-active" : ""}`}
-                onClick={() => { onModeChange(m); setShowMore(false); }}
-                title={title}
-                aria-label={title}
-                aria-pressed={mode === m}
-              >
-                <Icon className="size-3.5" />
-              </button>
+              <Tooltip key={m}>
+                <TooltipTrigger className="inline-flex">
+                  <button
+                    type="button"
+                    className={`sketch-mode-btn ${mode === m ? "is-active" : ""}`}
+                    onClick={() => { onModeChange(m); setShowMore(false); }}
+                    aria-label={title}
+                    aria-pressed={mode === m}
+                  >
+                    <Icon className="size-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>{title}</p>
+                </TooltipContent>
+              </Tooltip>
             ))}
           </div>
         )}
@@ -163,36 +185,54 @@ export function SketchToolbar({
 
       {/* Acciones de historial */}
       <div className="sketch-toolbar-group">
-        <button
-          type="button"
-          className="sketch-mode-btn"
-          onClick={onUndo}
-          disabled={!canUndo}
-          title="Deshacer"
-          aria-label="Deshacer"
-        >
-          <Undo2 className="size-3.5" />
-        </button>
-        <button
-          type="button"
-          className="sketch-mode-btn"
-          onClick={onRedo}
-          disabled={!canRedo}
-          title="Rehacer"
-          aria-label="Rehacer"
-        >
-          <Redo2 className="size-3.5" />
-        </button>
-        <button
-          type="button"
-          className="sketch-mode-btn"
-          onClick={onClear}
-          disabled={!canClear}
-          title="Limpiar"
-          aria-label="Limpiar"
-        >
-          <Eraser className="size-3.5" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger className="inline-flex">
+            <button
+              type="button"
+              className="sketch-mode-btn"
+              onClick={onUndo}
+              disabled={!canUndo}
+              aria-label="Deshacer"
+            >
+              <Undo2 className="size-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p>Deshacer</p>
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger className="inline-flex">
+            <button
+              type="button"
+              className="sketch-mode-btn"
+              onClick={onRedo}
+              disabled={!canRedo}
+              aria-label="Rehacer"
+            >
+              <Redo2 className="size-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p>Rehacer</p>
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger className="inline-flex">
+            <button
+              type="button"
+              className="sketch-mode-btn"
+              onClick={onClear}
+              disabled={!canClear}
+              aria-label="Limpiar"
+            >
+              <Eraser className="size-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p>Limpiar</p>
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       {/* Acciones principales: Cancelar + Guardar juntos a la derecha */}

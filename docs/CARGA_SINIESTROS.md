@@ -24,9 +24,11 @@ Si necesitas corregir un siniestro mal cargado:
 
 | Archivo | Descripción |
 |---------|-------------|
-| `src/app/dashboard/operaciones/carga-siniestros/page.tsx` | Página principal del importador (UI + lógica) |
-| `src/lib/claim-import/schema.ts` | Definición de campos, sinónimos, autodetección, validación |
-| `src/services/claims.ts` | `createClaimMinimal` + funciones de staging |
+| `src/app/dashboard/operaciones/carga-siniestros/page.tsx` | Página principal del importador de siniestros (UI + lógica) |
+| `src/app/dashboard/operaciones/carga-casos/page.tsx` | Página del importador de casos (UI + lógica) |
+| `src/lib/claim-import/schema.ts` | Definición de campos, sinónimos, autodetección, validación (siniestros) |
+| `src/lib/claim-import/schema-casos.ts` | Definición de campos, sinónimos, autodetección, validación (casos) |
+| `src/services/claims.ts` | `createClaimMinimal` + `createClaimFromCaso` + funciones de staging |
 | `src/services/import-mappings.ts` | Service de aprendizaje (field/value/fixed mappings) |
 | `src/app/styles/components.css` | Clases CSS del mapper y staging (`.bulk-*`, `.staging-*`) |
 | `migrations/100_import_mappings.sql` | Tablas `import_field_mappings` + `import_value_mappings` |
@@ -1067,3 +1069,95 @@ El campo `notes` se agregó al flujo completo:
 - **`loadMutation`:** guarda `notes` en `raw_data`
 - **`confirmMutation`:** pasa `notes` a `createClaimMinimal`
 - **`createClaimParticipant`:** acepta `notes` (para `contactRole` del contacto)
+
+---
+
+## Carga de Casos (`carga-casos`) — Notas y fixes (2026-08-17)
+
+El flujo de **carga-casos** es similar al de carga-siniestros pero usa `schema-casos.ts`
+y `createClaimFromCaso` en vez de `createClaimMinimal` directo.
+
+### Campos de referencia (refFields) — valores fijos
+
+Los campos que se pueden configurar como **valor fijo** en carga-casos son:
+
+| fieldKey | Label | Catálogo | Resolver |
+|----------|-------|----------|----------|
+| `insuranceCompany` | Compañía Seguros | `insurance_companies` | `resolveByName` |
+| `broker` | Corredor | `brokers` | `resolveByName` |
+| `event` | Evento | `events` | `resolveByName` |
+| `businessLine` | Línea Negocio | `business_lines` | `resolveByName` |
+| `insuranceProduct` | Ramo/Producto | `insurance_products` | `resolveByName` |
+| `inspector` | Inspector | `profiles` (role=inspector) | `resolveInspector` |
+| `adjuster` | Ajustador/Liquidador | `profiles` (role=adjuster) | `resolveAdjuster` |
+| `currency` | Moneda | `currencies` | `resolveCurrency` |
+| `claimType` | Tipo Siniestro | `claim_types` | `resolveByName` |
+| `claimCause` | Causal | `claim_causes` | `resolveByName` |
+
+### Valores fijos obligatorios
+
+El botón **Confirmar** se deshabilita (con tooltip explicativo) si faltan estos valores fijos:
+
+1. **Compañía Seguros** — sin esta no se puede resolver/crear la póliza → "Siniestro sin póliza asignada"
+2. **Ramo/Producto** — necesario para que el caso esté en Liquidación
+3. **Ajustador/Liquidador** — necesario para que el caso esté en Liquidación
+
+### Resolución de catálogos (orden de prioridad)
+
+Para cada campo de referencia en `confirmMutation`:
+
+```
+1. Si el valor del Excel es UUID válido → usar directo
+2. Si no, resolver por nombre en el catálogo → resolveByName / resolveInspector / resolveAdjuster / resolveCurrency
+3. Si no se encuentra, usar el fixedValue (catalogUuid) como fallback
+4. Si tampoco hay fixedValue → null
+```
+
+### Validación de fixedValues en parsedRows
+
+Antes de confirmar, cada fila se valida con `validateCasosRow` + validación de fixedValues:
+- Si un fixedValue tiene `catalogUuid` → verifica que el UUID exista en el catálogo (no fue eliminado)
+- Si un fixedValue tiene `value` (texto) sin `catalogUuid` → intenta resolver por nombre
+- Si no se resuelve → la fila se marca inválida con error descriptivo
+
+### `createClaimFromCaso` — replicación de participantes
+
+Cuando se crea un claim desde carga-casos, se crean 4 participantes:
+
+| Participante | Origen de datos | `linked_to_insured` |
+|-------------|----------------|---------------------|
+| **Asegurado** | Datos del Excel (insuredName, lastName, rut, email, phone, address) | — |
+| **Contratante** | Réplica del asegurado | `true` |
+| **Beneficiario** | Réplica del asegurado | `true` |
+| **Contacto** | Si viene `contactName` del Excel: usa ese nombre. Si NO viene (sin mapear): réplica TOTAL del asegurado (nombre, apellido, RUT, email, teléfono, dirección, person_type) | `true` |
+
+#### `person_type` del contacto
+
+Se calcula desde el RUT del asegurado con `personTypeFromRut(rut)`:
+- RUT < 60.000.000 → `natural` (first_name + last_name)
+- RUT >= 60.000.000 → `legal` (razón social en full_name, sin first_name/last_name)
+- Sin RUT → `natural` (default)
+
+El contacto SIEMPRE hereda el `person_type` del asegurado, sin importar si viene
+mapeado o no desde el Excel.
+
+### `linkContact` vs `linkParticipants`
+
+`createClaimMinimal` acepta un parámetro `linkContact` (9º argumento) independiente
+de `linkParticipants` (8º argumento):
+
+- `linkParticipants` controla `linked_to_insured` de contratante y beneficiario
+- `linkContact` controla `linked_to_insured` del contacto
+- Si `linkContact` no se pasa (undefined), hereda `linkParticipants` (backward compatible)
+
+En `createClaimFromCaso`, ambos se pasan como `true`.
+
+### Bug histórico: RUT con dígito verificador concatenado
+
+**Problema:** `rut.replace(/[^0-9]/g, "")` concatenaba el cuerpo del RUT con el
+dígito verificador, inflando el número. Ej: `17698103-2` → `176981032` (176M) →
+clasificado como persona jurídica, cuando en realidad es `17698103` (17M) → natural.
+
+**Fix:** Usar `rutBodyNumber()` de `@/lib/validations/rut` que extrae solo el cuerpo
+sin el DV. Aplicado en `personTypeFromRut` (`claims.ts`) y en la detección de
+personas jurídicas en `carga-casos/page.tsx`.

@@ -88,9 +88,8 @@ export default function EventLogsTab({ sessionId }: EventLogsTabProps) {
                 <div
                   key={type}
                   className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${cfg.color} bg-current/10`}
-                  style={{ backgroundColor: "currentColor" }}
                 >
-                  <span className={cfg.color} style={{ background: "transparent" }}>
+                  <span className={cfg.color}>
                     <Icon className="h-3.5 w-3.5 inline" />
                     <span className="ml-1">{cfg.label}</span>
                     <span className="ml-1.5 opacity-60">({count})</span>
@@ -139,7 +138,7 @@ export default function EventLogsTab({ sessionId }: EventLogsTabProps) {
 
                       <div className="flex items-center gap-3 text-xs text-slate-500 sm:ml-auto">
                         {log.event_detail && (
-                          <span className="truncate max-w-50" title={log.event_detail}>
+                          <span className="truncate max-w-50" aria-label={log.event_detail}>
                             {log.event_detail}
                           </span>
                         )}

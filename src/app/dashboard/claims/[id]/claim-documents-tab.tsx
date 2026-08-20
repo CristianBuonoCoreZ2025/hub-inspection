@@ -49,6 +49,7 @@ import { cleanMarkdown } from "@/lib/utils";
 import { usePermissions } from "@/hooks/use-permissions";
 import { usePagination } from "@/hooks/use-pagination";
 import { Pagination } from "@/components/ui/pagination";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   Select,
   SelectContent,
@@ -624,14 +625,20 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
               )}
             </h3>
             {canCreateDocs && (
-              <button
-                type="button"
-                className="btn-icon-sm"
-                title="Subir documentos"
-                onClick={() => setUploadModal((p) => ({ ...p, visible: true, status: "idle", fileName: "", fileSize: 0, loaded: 0, isDragging: false }))}
-              >
-                <Upload className="h-3.5 w-3.5" />
-              </button>
+              <Tooltip>
+                <TooltipTrigger className="inline-flex">
+                  <button
+                    type="button"
+                    className="btn-icon-sm"
+                    onClick={() => setUploadModal((p) => ({ ...p, visible: true, status: "idle", fileName: "", fileSize: 0, loaded: 0, isDragging: false }))}
+                  >
+                    <Upload className="h-3.5 w-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Subir documentos</p>
+                </TooltipContent>
+              </Tooltip>
             )}
           </div>
           {total > 0 && (
@@ -669,7 +676,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                         {doc.subnombre && (
                           <>
                             <span className="text-muted-foreground/40 shrink-0">/</span>
-                            <span className="text-[10px] text-muted-foreground/70 truncate" title={doc.subnombre}>
+                            <span className="text-[10px] text-muted-foreground/70 truncate" aria-label={doc.subnombre}>
                               {doc.subnombre}
                             </span>
                           </>
@@ -687,31 +694,37 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                       <div className="app-row-actions">
                         {/* Re-IA — re-analizar con IA */}
                         {((doc.origen === "siniestro" && doc.docId) || doc.origen === "inspeccion") && (doc.aiStatus === "done" || doc.aiStatus === "error" || doc.aiStatus === "skipped" || (!doc.aiSummary && doc.aiStatus !== "pending" && doc.aiStatus !== "processing")) && (
-                          <button
-                            type="button"
-                            className="btn-icon-sm"
-                            onClick={async () => {
-                              try {
-                                await fetch("/api/ai/reanalyze", {
-                                  method: "POST",
-                                  headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({
-                                    table: doc.origen === "inspeccion" ? "inspection_evidences" : "claim_documents",
-                                    id: doc.origen === "inspeccion" ? doc.id : doc.docId,
-                                    claimId,
-                                  }),
-                                });
-                                queryClient.invalidateQueries({ queryKey: ["claim-documents", claimId] });
-                                queryClient.invalidateQueries({ queryKey: ["inspection-documents", claimId] });
-                                toast.success("Re-análisis iniciado");
-                              } catch {
-                                toast.error("No se pudo iniciar el re-análisis");
-                              }
-                            }}
-                            title={doc.aiSummary ? "Re-analizar con IA" : "Analizar con IA"}
-                          >
-                            <RefreshCw className="h-3.5 w-3.5" />
-                          </button>
+                          <Tooltip>
+                            <TooltipTrigger className="inline-flex">
+                              <button
+                                type="button"
+                                className="btn-icon-sm"
+                                onClick={async () => {
+                                  try {
+                                    await fetch("/api/ai/reanalyze", {
+                                      method: "POST",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({
+                                        table: doc.origen === "inspeccion" ? "inspection_evidences" : "claim_documents",
+                                        id: doc.origen === "inspeccion" ? doc.id : doc.docId,
+                                        claimId,
+                                      }),
+                                    });
+                                    queryClient.invalidateQueries({ queryKey: ["claim-documents", claimId] });
+                                    queryClient.invalidateQueries({ queryKey: ["inspection-documents", claimId] });
+                                    toast.success("Re-análisis iniciado");
+                                  } catch {
+                                    toast.error("No se pudo iniciar el re-análisis");
+                                  }
+                                }}
+                              >
+                                <RefreshCw className="h-3.5 w-3.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <p>{doc.aiSummary ? "Re-analizar con IA" : "Analizar con IA"}</p>
+                            </TooltipContent>
+                          </Tooltip>
                         )}
                         {/* Ver log del análisis — popover */}
                         {((doc.origen === "siniestro" && doc.docId) || doc.origen === "inspeccion") && doc.aiSummary && doc.aiStatus === "done" && (
@@ -797,15 +810,21 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                         )}
                         {/* Ver documento */}
                         {doc.url && (
-                          <a
-                            href={doc.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="btn-icon-sm"
-                            title="Ver documento"
-                          >
-                            <ExternalLink className="h-3.5 w-3.5" />
-                          </a>
+                          <Tooltip>
+                            <TooltipTrigger className="inline-flex">
+                              <a
+                                href={doc.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn-icon-sm"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                              </a>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <p>Ver documento</p>
+                            </TooltipContent>
+                          </Tooltip>
                         )}
                         {/* Eliminar */}
                         {doc.canDelete && doc.docId && (

@@ -137,17 +137,6 @@ export function GeoCapture({
     [mapboxToken],
   );
 
-  // Función custom para construir la URL del tile.
-  // CartoDB tiene CORS headers, no necesita proxy.
-  const buildTileUrl = React.useCallback(
-    (data: { x: number; y: number; z: number }) => {
-      const subdomains = ["a", "b", "c"];
-      const s = subdomains[Math.abs(data.x + data.y) % subdomains.length];
-      return `https://${s}.basemaps.cartocdn.com/light_all/${data.z}/${data.x}/${data.y}.png`;
-    },
-    [],
-  );
-
   const getAttribution = React.useCallback(
     (provider: "carto" | "mapbox") => {
       if (provider === "mapbox" && mapboxToken) {
@@ -177,6 +166,7 @@ export function GeoCapture({
     if (!initialCoords) {
       // Inspector habilito recaptura y limpio los campos geo_*
       // Resetear estado local para que el asegurado pueda capturar de nuevo
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset intencional al habilitar recaptura
       setCaptured(null);
       setValidation(null);
       setLocallyCaptured(false);
@@ -445,17 +435,17 @@ export function GeoCapture({
             {loading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="text-[11px]">Obteniendo ubicación...</span>
+                <span className="text-[11px]">Obteniendo...</span>
               </>
             ) : (
               <>
                 <MapPinned className="h-4 w-4" />
                 <span className="text-[11px] font-medium">
                   {captured && (disabled || locallyCaptured)
-                    ? "Ubicación ya registrada"
+                    ? "Registrada"
                     : captured
-                      ? "Recapturar ubicación"
-                      : "Establecer mi ubicación"}
+                      ? "Recapturar"
+                      : "Establecer"}
                 </span>
               </>
             )}

@@ -60,19 +60,19 @@ export function TableToolbar() {
   return (
     <div className="ee-table-toolbar">
       <span className="ee-table-toolbar-label">Tabla {rowCount}×{colCount}</span>
-      <button type="button" className="ee-table-toolbar-btn" title="Agregar fila" onMouseDown={(e) => e.preventDefault()} onClick={handleAddRow}>
+      <button type="button" className="ee-table-toolbar-btn" aria-label="Agregar fila" onMouseDown={(e) => e.preventDefault()} onClick={handleAddRow}>
         <Rows3 className="ee-table-toolbar-icon" />
         <Plus className="ee-table-toolbar-plus" />
       </button>
-      <button type="button" className="ee-table-toolbar-btn" title="Agregar columna" onMouseDown={(e) => e.preventDefault()} onClick={handleAddColumn}>
+      <button type="button" className="ee-table-toolbar-btn" aria-label="Agregar columna" onMouseDown={(e) => e.preventDefault()} onClick={handleAddColumn}>
         <Columns3 className="ee-table-toolbar-icon" />
         <Plus className="ee-table-toolbar-plus" />
       </button>
-      <button type="button" className="ee-table-toolbar-btn ee-table-toolbar-danger" title="Eliminar fila" onMouseDown={(e) => e.preventDefault()} onClick={handleRemoveRow} disabled={rowCount <= 1}>
+      <button type="button" className="ee-table-toolbar-btn ee-table-toolbar-danger" aria-label="Eliminar fila" onMouseDown={(e) => e.preventDefault()} onClick={handleRemoveRow} disabled={rowCount <= 1}>
         <Rows3 className="ee-table-toolbar-icon" />
         <Trash2 className="ee-table-toolbar-minus" />
       </button>
-      <button type="button" className="ee-table-toolbar-btn ee-table-toolbar-danger" title="Eliminar columna" onMouseDown={(e) => e.preventDefault()} onClick={handleRemoveColumn} disabled={colCount <= 1}>
+      <button type="button" className="ee-table-toolbar-btn ee-table-toolbar-danger" aria-label="Eliminar columna" onMouseDown={(e) => e.preventDefault()} onClick={handleRemoveColumn} disabled={colCount <= 1}>
         <Columns3 className="ee-table-toolbar-icon" />
         <Trash2 className="ee-table-toolbar-minus" />
       </button>

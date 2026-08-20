@@ -4,6 +4,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { useConfirm } from "@/hooks/use-confirm";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -678,6 +679,7 @@ function CanvasRoot({
 
 export default function AdminMenuPage() {
   const queryClient = useQueryClient();
+  const confirm = useConfirm();
 
   const { data: config, isLoading } = useQuery({
     queryKey: ["nav-menu-config"],
@@ -1058,8 +1060,14 @@ export default function AdminMenuPage() {
     saveMut.mutate(configItems);
   };
 
-  const handleReset = () => {
-    if (!confirm("¿Restablecer al orden por defecto? Se perderán los cambios no guardados.")) return;
+  const handleReset = async () => {
+    const ok = await confirm({
+      title: "Restablecer orden",
+      description: "¿Restablecer al orden por defecto? Se perderán los cambios no guardados.",
+      confirmLabel: "Restablecer",
+      destructive: false,
+    });
+    if (!ok) return;
     const def = defaultFlatFromNavData();
     setFlat(def);
     const expanded = new Set<string>();
@@ -1171,7 +1179,7 @@ export default function AdminMenuPage() {
                   <SortableContext items={visibleFlat.map(f => f.id)} strategy={verticalListSortingStrategy}>
                     <div className="space-y-1">
                       {visibleFlat.map(item => (
-                        <div key={item.id} style={{ paddingLeft: item.depth * 20 }}>
+                        <div key={item.id} className="admin-menu-node" style={{ "--menu-depth": item.depth * 20 } as React.CSSProperties}>
                           <SortableMenuNode
                             item={item}
                             isExpanded={expandedGroups.has(item.id)}

@@ -137,9 +137,11 @@ export const subSectionActions: Record<string, PermissionAction[]> = {
 
   // ── Operaciones (sub-páginas) ──
   operaciones_carga_siniestros: ["view", "create"], // ver + cargar
+  operaciones_carga_casos: ["view", "create"],      // ver + cargar casos
   operaciones_carga_catalogos: ["view", "create"],  // ver + cargar
   operaciones_inhabilitar: ["view", "edit", "delete"], // ver + inhabilitar + reactivar
   operaciones_reabrir: ["view", "edit"],            // ver + reabrir
+  operaciones_reabrir_inspecciones: ["view", "edit"], // ver + reabrir inspecciones
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -204,8 +206,10 @@ export const sectionSubPages: Partial<Record<PermissionSection, SubPage[]>> = {
   ],
   operaciones: [
     { section: "operaciones_carga_siniestros", label: "Carga Siniestros" },
+    { section: "operaciones_carga_casos", label: "Carga Casos" },
     { section: "operaciones_carga_catalogos", label: "Carga Catálogos" },
     { section: "operaciones_inhabilitar", label: "Inhabilitar" },
     { section: "operaciones_reabrir", label: "Reabrir" },
+    { section: "operaciones_reabrir_inspecciones", label: "Reabrir Inspecciones" },
   ],
 };

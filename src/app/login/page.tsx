@@ -181,8 +181,8 @@ export default function LoginPage() {
           </div>
         </form>
 
-        {/* Back to landing */}
-        <div className="mt-6 border-t border-border pt-4 text-center">
+        {/* Back to landing — oculto en móvil */}
+        <div className="mt-6 hidden border-t border-border pt-4 text-center sm:block">
           <Link
             href="/"
             className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"

@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 import type { GestionScreen as GestionScreenType, ClaimAction, Claim } from "@/types";
 import DynamicScreen from "./DynamicScreen";
 import type { ScreenField } from "./DynamicScreen";
@@ -18,6 +19,7 @@ interface GestionScreenSwitcherProps {
 }
 
 export default function GestionScreenSwitcher({ screens, action, claim, onChange, readOnly, onAdvance, onReject }: GestionScreenSwitcherProps) {
+  const router = useRouter();
   // Cargar sesiones de inspección del claim
   const { data: sessions, isLoading: sessionsLoading } = useQuery({
     queryKey: ["inspection-sessions", action.claim_id],
@@ -145,7 +147,7 @@ export default function GestionScreenSwitcher({ screens, action, claim, onChange
             <Button
               className="pg-btn-platinum"
               onClick={() => {
-                window.location.href = `/dashboard/inspecciones/${linkedSession.id}`;
+                router.push(`/dashboard/inspecciones/${linkedSession.id}`);
               }}
             >
               Inspección

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ToggleChip } from "@/components/ui/toggle-chip";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { HtmlEditor } from "@/components/ui/html-editor";
 import {
   Select,
@@ -538,14 +539,17 @@ export function EmailTemplateEditor({ templateId }: Props) {
                 </div>
                 <div className="flex flex-wrap gap-1 pt-0.5">
                   {["#0095DA", "#1f2937", "#0ea5e9", "#16a34a", "#dc2626", "#7c3aed", "#f59e0b", "#000000"].map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setForm({ ...form, header_color: c })}
-                      className="h-4 w-4 rounded border border-border/60 transition-transform hover:scale-110"
-                      style={{ backgroundColor: c }}
-                      title={c}
-                    />
+                    <Tooltip key={c}>
+                      <TooltipTrigger render={
+                        <button
+                          type="button"
+                          onClick={() => setForm({ ...form, header_color: c })}
+                          className="h-4 w-4 rounded border border-border/60 transition-transform hover:scale-110"
+                          style={{ backgroundColor: c }}
+                        />
+                      }>{null}</TooltipTrigger>
+                      <TooltipContent side="top"><p>{c}</p></TooltipContent>
+                    </Tooltip>
                   ))}
                 </div>
               </div>
@@ -690,14 +694,17 @@ export function EmailTemplateEditor({ templateId }: Props) {
                         {/* Presets */}
                         <div className="flex flex-wrap gap-1 pt-1">
                           {["#0095DA", "#1f2937", "#0ea5e9", "#16a34a", "#dc2626", "#7c3aed", "#f59e0b", "#000000"].map((c) => (
-                            <button
-                              key={c}
-                              type="button"
-                              onClick={() => setForm({ ...form, header_color: c })}
-                              className="h-4 w-4 rounded border border-border/60 transition-transform hover:scale-110"
-                              style={{ backgroundColor: c }}
-                              title={c}
-                            />
+                            <Tooltip key={c}>
+                              <TooltipTrigger render={
+                                <button
+                                  type="button"
+                                  onClick={() => setForm({ ...form, header_color: c })}
+                                  className="h-4 w-4 rounded border border-border/60 transition-transform hover:scale-110"
+                                  style={{ backgroundColor: c }}
+                                />
+                              }>{null}</TooltipTrigger>
+                              <TooltipContent side="top"><p>{c}</p></TooltipContent>
+                            </Tooltip>
                           ))}
                         </div>
                       </div>

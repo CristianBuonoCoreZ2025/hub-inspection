@@ -24,7 +24,7 @@ const TEXTURE_COLORS: Record<string, string> = {
 /** Crea un patrón de puntos. */
 function createDotsPattern(): fabric.Pattern {
   const tile = new fabric.StaticCanvas(undefined, { width: 16, height: 16, backgroundColor: "transparent" });
-  const dot = new fabric.Circle({ radius: 1.5, fill: TEXTURE_COLORS.dots, left: 7, top: 7, selectable: false, evented: false });
+  const dot = new fabric.Circle({ radius: 1.5, fill: TEXTURE_COLORS.dots, left: 7, top: 7, selectable: false, evented: false, originX: "left", originY: "top" });
   tile.add(dot);
   return new fabric.Pattern({ source: tile.getElement(), repeat: "repeat" });
 }
@@ -32,7 +32,7 @@ function createDotsPattern(): fabric.Pattern {
 /** Crea un patrón de líneas diagonales. */
 function createLinesPattern(): fabric.Pattern {
   const tile = new fabric.StaticCanvas(undefined, { width: 12, height: 12, backgroundColor: "transparent" });
-  const line = new fabric.Line([0, 12, 12, 0], { stroke: TEXTURE_COLORS.lines, strokeWidth: 1, selectable: false, evented: false });
+  const line = new fabric.Line([0, 12, 12, 0], { stroke: TEXTURE_COLORS.lines, strokeWidth: 1, selectable: false, evented: false, originX: "left", originY: "top" });
   tile.add(line);
   return new fabric.Pattern({ source: tile.getElement(), repeat: "repeat" });
 }
@@ -40,8 +40,8 @@ function createLinesPattern(): fabric.Pattern {
 /** Crea un patrón de cuadrícula. */
 function createGridPattern(): fabric.Pattern {
   const tile = new fabric.StaticCanvas(undefined, { width: 16, height: 16, backgroundColor: "transparent" });
-  const h = new fabric.Line([0, 8, 16, 8], { stroke: TEXTURE_COLORS.grid, strokeWidth: 0.8, selectable: false, evented: false });
-  const v = new fabric.Line([8, 0, 8, 16], { stroke: TEXTURE_COLORS.grid, strokeWidth: 0.8, selectable: false, evented: false });
+  const h = new fabric.Line([0, 8, 16, 8], { stroke: TEXTURE_COLORS.grid, strokeWidth: 0.8, selectable: false, evented: false, originX: "left", originY: "top" });
+  const v = new fabric.Line([8, 0, 8, 16], { stroke: TEXTURE_COLORS.grid, strokeWidth: 0.8, selectable: false, evented: false, originX: "left", originY: "top" });
   tile.add(h, v);
   return new fabric.Pattern({ source: tile.getElement(), repeat: "repeat" });
 }
@@ -49,7 +49,7 @@ function createGridPattern(): fabric.Pattern {
 /** Crea un patrón de baldosas. */
 function createTilesPattern(): fabric.Pattern {
   const tile = new fabric.StaticCanvas(undefined, { width: 20, height: 20, backgroundColor: "transparent" });
-  const rect = new fabric.Rect({ width: 20, height: 20, fill: "transparent", stroke: TEXTURE_COLORS.tiles, strokeWidth: 0.8, selectable: false, evented: false });
+  const rect = new fabric.Rect({ width: 20, height: 20, fill: "transparent", stroke: TEXTURE_COLORS.tiles, strokeWidth: 0.8, selectable: false, evented: false, originX: "left", originY: "top" });
   tile.add(rect);
   return new fabric.Pattern({ source: tile.getElement(), repeat: "repeat" });
 }

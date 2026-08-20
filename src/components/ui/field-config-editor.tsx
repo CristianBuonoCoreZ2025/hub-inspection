@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Settings2, Eye, EyeOff, Lock, Home, Building2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 export interface FieldConfig {
   show?: string[] | Record<string, string[]>;
@@ -215,28 +216,35 @@ export function FieldConfigEditor({
     const isAvailable = availableDestTypes.includes(destType);
     const isVisible = showFields[destType].has(field.key) || ALWAYS_VISIBLE.includes(field.key);
     const isLocked = ALWAYS_VISIBLE.includes(field.key);
+    const tooltipText = !isAvailable ? "No aplica a esta clasificacion" : isLocked ? "Siempre visible" : isVisible ? "Visible" : "Oculto";
     return (
-      <button
-        type="button"
-        onClick={() => toggleField(field.key, destType)}
-        disabled={isLocked || !isAvailable}
-        className={`shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-md transition-all ${
-          isLocked || !isAvailable
-            ? "text-muted-foreground/30 cursor-not-allowed"
-            : isVisible
-            ? "text-emerald-500 hover:bg-emerald-500/10"
-            : "text-muted-foreground hover:bg-muted"
-        }`}
-        title={!isAvailable ? "No aplica a esta clasificacion" : isLocked ? "Siempre visible" : isVisible ? "Visible" : "Oculto"}
-      >
-        {isLocked || !isAvailable ? (
-          <Lock className="h-3.5 w-3.5" />
-        ) : isVisible ? (
-          <Eye className="h-4 w-4" />
-        ) : (
-          <EyeOff className="h-4 w-4" />
-        )}
-      </button>
+      <Tooltip>
+        <TooltipTrigger className="inline-flex">
+          <button
+            type="button"
+            onClick={() => toggleField(field.key, destType)}
+            disabled={isLocked || !isAvailable}
+            className={`shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-md transition-all ${
+              isLocked || !isAvailable
+                ? "text-muted-foreground/30 cursor-not-allowed"
+                : isVisible
+                ? "text-emerald-500 hover:bg-emerald-500/10"
+                : "text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            {isLocked || !isAvailable ? (
+              <Lock className="h-3.5 w-3.5" />
+            ) : isVisible ? (
+              <Eye className="h-4 w-4" />
+            ) : (
+              <EyeOff className="h-4 w-4" />
+            )}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          <p>{tooltipText}</p>
+        </TooltipContent>
+      </Tooltip>
     );
   };
 

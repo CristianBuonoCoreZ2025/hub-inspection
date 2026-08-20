@@ -7,6 +7,7 @@ import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { refreshMagicLink } from "@/services/inspections";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 interface MagicLinkSenderProps {
   token: string;
@@ -221,38 +222,55 @@ export function MagicLinkSender({
         <span className="text-violet-700 dark:text-violet-300 shrink-0">Link:</span>
         <code className="flex-1 truncate text-muted-foreground">{link}</code>
         {/* Copiar — siempre visible */}
-        <Button size="sm" variant="outline" className="h-7 w-7 p-0 shrink-0" onClick={copyLink} title="Copiar link">
-          <Copy className="h-3.5 w-3.5" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger render={<Button size="sm" variant="outline" className="h-7 w-7 p-0 shrink-0" onClick={copyLink} />}>
+            <Copy className="h-3.5 w-3.5" />
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p>Copiar link</p>
+          </TooltipContent>
+        </Tooltip>
         {/* Renovar / Reactivar — antes de expirar o si está expirado pero sesión activa */}
         {canRenew && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-7 w-7 p-0 shrink-0"
-            onClick={() => refreshMutation.mutate()}
-            disabled={refreshMutation.isPending}
-            title={canReactivate ? "Reactivar magic link (3 horas)" : "Renovar magic link"}
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${refreshMutation.isPending ? "animate-spin" : ""}`} />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger render={
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 w-7 p-0 shrink-0"
+                onClick={() => refreshMutation.mutate()}
+                disabled={refreshMutation.isPending}
+              />
+            }>
+              <RefreshCw className={`h-3.5 w-3.5 ${refreshMutation.isPending ? "animate-spin" : ""}`} />
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p>{canReactivate ? "Reactivar magic link (3 horas)" : "Renovar magic link"}</p>
+            </TooltipContent>
+          </Tooltip>
         )}
         {/* Rehabilitar captura — solo durante validez, icono mapa con pin */}
         {isWithinValidity && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-7 w-7 p-0 shrink-0"
-            onClick={() => enableRecaptureMutation.mutate()}
-            disabled={enableRecaptureMutation.isPending}
-            title="Habilitar recaptura de ubicación"
-          >
-            {enableRecaptureMutation.isPending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <MapPinned className="h-3.5 w-3.5 text-primary" />
-            )}
-          </Button>
+          <Tooltip>
+            <TooltipTrigger render={
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 w-7 p-0 shrink-0"
+                onClick={() => enableRecaptureMutation.mutate()}
+                disabled={enableRecaptureMutation.isPending}
+              />
+            }>
+              {enableRecaptureMutation.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <MapPinned className="h-3.5 w-3.5 text-primary" />
+              )}
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p>Habilitar recaptura de ubicación</p>
+            </TooltipContent>
+          </Tooltip>
         )}
         {/* Botones de envío — en la misma línea del link.
             Visibles mientras el link no esté expirado, o si se puede reactivar. */}
@@ -260,43 +278,61 @@ export function MagicLinkSender({
           <>
             <div className="w-px h-5 bg-border mx-0.5 shrink-0" />
             {/* WhatsApp abrir app (wa.me) — icono WhatsApp real */}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-7 w-7 p-0 shrink-0"
-              onClick={sendWhatsAppMe}
-              disabled={!contactPhone}
-              title={!contactPhone ? "No hay teléfono" : "Abrir WhatsApp con mensaje pre-llenado"}
-            >
-              <WhatsAppIcon className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger render={
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 w-7 p-0 shrink-0"
+                  onClick={sendWhatsAppMe}
+                  disabled={!contactPhone}
+                />
+              }>
+                <WhatsAppIcon className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p>{!contactPhone ? "No hay teléfono" : "Abrir WhatsApp con mensaje pre-llenado"}</p>
+              </TooltipContent>
+            </Tooltip>
             {/* WhatsApp Cloud API — solo si está configurado */}
             {whatsappCloudEnabled && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-7 w-7 p-0 shrink-0"
-                onClick={sendWhatsAppCloud}
-                disabled={!contactPhone || sending === "whatsapp"}
-                title={!contactPhone ? "No hay teléfono" : "Enviar por WhatsApp Cloud API"}
-              >
-                {sending === "whatsapp" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-              </Button>
+              <Tooltip>
+                <TooltipTrigger render={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 w-7 p-0 shrink-0"
+                    onClick={sendWhatsAppCloud}
+                    disabled={!contactPhone || sending === "whatsapp"}
+                  />
+                }>
+                  {sending === "whatsapp" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>{!contactPhone ? "No hay teléfono" : "Enviar por WhatsApp Cloud API"}</p>
+                </TooltipContent>
+              </Tooltip>
             )}
             {/* Email — icono Mail */}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-7 w-7 p-0 shrink-0"
-              onClick={sendEmail}
-              disabled={!contactEmail || sending === "email"}
-              title={!contactEmail ? "No hay email" : "Enviar por email"}
-            >
-              {sending === "email" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger render={
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 w-7 p-0 shrink-0"
+                  onClick={sendEmail}
+                  disabled={!contactEmail || sending === "email"}
+                />
+              }>
+                {sending === "email" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p>{!contactEmail ? "No hay email" : "Enviar por email"}</p>
+              </TooltipContent>
+            </Tooltip>
           </>
         )}
       </div>

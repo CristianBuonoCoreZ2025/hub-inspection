@@ -8,6 +8,7 @@ import { formatUserDateTime as formatDateTime } from "@/lib/timezone";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
 import { Plus, Pencil, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { Profile } from "@/types";
 
 const actionLabels: Record<string, string> = {
@@ -339,8 +340,8 @@ export default function AuditLogSection({ claimId, users, catalogs = {} }: Audit
         <table className="app-data-table">
           <thead>
             <tr>
-              <th className="w-[40px]"></th>
-              <th className="w-[28px]"></th>
+              <th className="w-10"></th>
+              <th className="w-7"></th>
               <th>Acción</th>
               <th>Detalle</th>
               <th>Usuario</th>
@@ -378,8 +379,11 @@ export default function AuditLogSection({ claimId, users, catalogs = {} }: Audit
                       )}
                     </td>
                     <td><Badge className={color}>{label}</Badge></td>
-                    <td className="text-muted-foreground max-w-md truncate" title={summary}>
-                      {summary}
+                    <td className="text-muted-foreground max-w-md truncate">
+                      <Tooltip>
+                        <TooltipTrigger render={<span className="truncate block" />}>{summary}</TooltipTrigger>
+                        <TooltipContent side="top"><p>{summary}</p></TooltipContent>
+                      </Tooltip>
                     </td>
                     <td className="font-medium">{performerName}</td>
                     <td className="text-muted-foreground">{formatDateTime(log.created_at)}</td>
@@ -394,7 +398,7 @@ export default function AuditLogSection({ claimId, users, catalogs = {} }: Audit
                             </div>
                             {changes.map((c) => (
                               <div key={c.field} className="flex items-center gap-2 text-[11px]">
-                                <span className="font-medium min-w-[140px] text-foreground">{c.label}:</span>
+                                <span className="font-medium min-w-35 text-foreground">{c.label}:</span>
                                 <span className="text-muted-foreground line-through">{c.oldValue}</span>
                                 <span className="text-muted-foreground">→</span>
                                 <span className="text-foreground font-medium">{c.newValue}</span>
@@ -412,7 +416,7 @@ export default function AuditLogSection({ claimId, users, catalogs = {} }: Audit
                               .slice(0, 15)
                               .map(([k, v]) => (
                                 <div key={k} className="flex items-center gap-2 text-[11px]">
-                                  <span className="font-medium min-w-[140px] text-foreground">{fieldLabels[k]}:</span>
+                                  <span className="font-medium min-w-35 text-foreground">{fieldLabels[k]}:</span>
                                   <span className="text-muted-foreground">{resolveField(k, v)}</span>
                                 </div>
                               ))}

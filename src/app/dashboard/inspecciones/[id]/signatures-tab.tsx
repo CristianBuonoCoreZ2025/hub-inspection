@@ -285,7 +285,7 @@ export default function SignaturesTab({ sessionId, sessionStatus, magicLinkToken
                       <span className="text-[13px] font-medium">Asegurado</span>
                     </div>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={insuredSig.signature_url} alt="Firma asegurado" className="w-full h-[100px] object-contain bg-white rounded border" />
+                    <img src={insuredSig.signature_url} alt="Firma asegurado" className="w-full h-25 object-contain bg-white rounded border" />
                     <p className="text-[11px] text-muted-foreground mt-1">{new Date(insuredSig.signed_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}</p>
                   </div>
                 )}
@@ -296,7 +296,7 @@ export default function SignaturesTab({ sessionId, sessionStatus, magicLinkToken
                       <span className="text-[13px] font-medium">Ajustador</span>
                     </div>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={adjusterSig.signature_url} alt="Firma ajustador" className="w-full h-[100px] object-contain bg-white rounded border" />
+                    <img src={adjusterSig.signature_url} alt="Firma ajustador" className="w-full h-25 object-contain bg-white rounded border" />
                     <p className="text-[11px] text-muted-foreground mt-1">{new Date(adjusterSig.signed_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}</p>
                   </div>
                 )}
@@ -304,8 +304,8 @@ export default function SignaturesTab({ sessionId, sessionStatus, magicLinkToken
             </div>
           )}
 
-          {/* Botón Capturar/Liberar firma (inspector) */}
-          {!readOnly && insuredSig && (
+          {/* Botón Capturar/Liberar firma (inspector) — solo inspecciones remotas */}
+          {!readOnly && insuredSig && inspectionType === "remote" && (
             <div className="app-panel">
               <div className="flex items-center gap-3">
                 {signatureCapturedAt ? (
@@ -376,7 +376,7 @@ export default function SignaturesTab({ sessionId, sessionStatus, magicLinkToken
                         disabled={waiverMutation.isPending}
                         className="pg-btn-platinum text-amber-700 dark:text-amber-300"
                       >
-                        {waiverMutation.isPending ? "Guardando..." : "Confirmar exención"}
+                        {waiverMutation.isPending ? "Guardando..." : "Confirmar"}
                       </button>
                       <button
                         type="button"
@@ -410,7 +410,7 @@ export default function SignaturesTab({ sessionId, sessionStatus, magicLinkToken
                       disabled={waiverMutation.isPending}
                       className="app-body text-muted-foreground hover:text-foreground mt-2 underline"
                     >
-                      {waiverMutation.isPending ? "Quitando..." : "Quitar exención"}
+                      {waiverMutation.isPending ? "Quitando..." : "Quitar"}
                     </button>
                   )}
                 </div>

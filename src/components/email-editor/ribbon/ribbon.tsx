@@ -8,6 +8,8 @@
 "use client";
 
 import { useState, useMemo, useSyncExternalStore } from "react";
+import { usePrompt } from "@/components/ui/alert-context";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useEditorStore } from "../store/editor-store";
 import { GenericCommand, InsertBlockCommand } from "../core/commands";
 import {
@@ -81,6 +83,7 @@ export function Ribbon() {
   const zoom = useEditorStore((s) => s.zoom);
   const setZoom = useEditorStore((s) => s.setZoom);
   const layout = useEditorStore((s) => s.layout);
+  const prompt = usePrompt();
 
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showHighlightPicker, setShowHighlightPicker] = useState(false);
@@ -217,7 +220,7 @@ export function Ribbon() {
         className="ee-ribbon-select ee-font-family-select"
         onChange={(e) => { applyFontFamily(e.target.value); e.target.selectedIndex = 0; }}
         defaultValue=""
-        title="Fuente"
+        aria-label="Fuente"
       >
         <option value="" disabled>Fuente</option>
         {FONT_FAMILIES.map((f) => (
@@ -228,7 +231,7 @@ export function Ribbon() {
         className="ee-ribbon-select ee-font-size-select"
         onChange={(e) => { applyFontSize(e.target.value); e.target.selectedIndex = 0; }}
         defaultValue=""
-        title="Tamaño"
+        aria-label="Tamaño"
       >
         <option value="" disabled>12</option>
         {FONT_SIZES.map((s) => (
@@ -249,16 +252,21 @@ export function Ribbon() {
             <div className="ee-color-picker-popover">
               <div className="ee-color-picker-grid">
                 {TEXT_COLORS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    className="ee-color-swatch"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => { applyTextColor(c); setShowColorPicker(false); }}
-                    title={c}
-                  >
-                    <span className="ee-color-swatch-inner" style={{ backgroundColor: c }} />
-                  </button>
+                  <Tooltip key={c}>
+                    <TooltipTrigger className="inline-flex">
+                      <button
+                        type="button"
+                        className="ee-color-swatch"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => { applyTextColor(c); setShowColorPicker(false); }}
+                      >
+                        <span className="ee-color-swatch-inner" style={{ backgroundColor: c }} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <p>{c}</p>
+                    </TooltipContent>
+                  </Tooltip>
                 ))}
               </div>
             </div>
@@ -279,16 +287,21 @@ export function Ribbon() {
             <div className="ee-color-picker-popover">
               <div className="ee-color-picker-grid">
                 {TEXT_COLORS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    className="ee-color-swatch"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => { applyHighlightColor(c); setShowHighlightPicker(false); }}
-                    title={c}
-                  >
-                    <span className="ee-color-swatch-inner" style={{ backgroundColor: c }} />
-                  </button>
+                  <Tooltip key={c}>
+                    <TooltipTrigger className="inline-flex">
+                      <button
+                        type="button"
+                        className="ee-color-swatch"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => { applyHighlightColor(c); setShowHighlightPicker(false); }}
+                      >
+                        <span className="ee-color-swatch-inner" style={{ backgroundColor: c }} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <p>{c}</p>
+                    </TooltipContent>
+                  </Tooltip>
                 ))}
               </div>
             </div>
@@ -322,13 +335,25 @@ export function Ribbon() {
       <RibbonDivider />
 
       {/* Insertar (esenciales) */}
-      <RibbonBtn icon={Link2} title="Insertar enlace" onClick={() => {
-        const url = window.prompt("URL del enlace:", "https://");
+      <RibbonBtn icon={Link2} title="Insertar enlace" onClick={async () => {
+        const url = await prompt({
+          title: "Insertar enlace",
+          description: "URL del enlace:",
+          confirmLabel: "Aceptar",
+          placeholder: "https://",
+          defaultValue: "https://",
+        });
         if (url) insertLink(url);
       }} />
       <RibbonBtn icon={Table} title="Insertar tabla" onClick={() => insertAfterSelected(createTable(3, 3))} />
-      <RibbonBtn icon={Image} title="Insertar imagen" onClick={() => {
-        const url = window.prompt("URL de la imagen:", "https://");
+      <RibbonBtn icon={Image} title="Insertar imagen" onClick={async () => {
+        const url = await prompt({
+          title: "Insertar imagen",
+          description: "URL de la imagen:",
+          confirmLabel: "Aceptar",
+          placeholder: "https://",
+          defaultValue: "https://",
+        });
         if (url) insertAfterSelected(createImage(url, ""));
       }} />
       <RibbonBtn icon={Quote} title="Cita" onClick={() => insertAfterSelected(createQuote())} />
@@ -347,16 +372,18 @@ export function Ribbon() {
       <RibbonDivider />
 
       {/* Ver JSON — debug */}
-      <RibbonBtn icon={Code} title="Ver JSON del documento" onClick={() => {
+      <RibbonBtn icon={Code} title="Ver JSON del documento" onClick={async () => {
         const json = useEditorStore.getState().getJson();
-        console.log("[email-editor] JSON:", json);
-        // También copiar al portapapeles
-        navigator.clipboard?.writeText(json).then(() => {
-          console.log("[email-editor] JSON copiado al portapapeles");
-        }).catch(() => {});
+        // Copiar al portapapeles
+        navigator.clipboard?.writeText(json).catch(() => {});
         // Mostrar en un alert para que se pueda copiar fácilmente
         const formatted = JSON.stringify(JSON.parse(json), null, 2);
-        window.prompt("JSON del documento (Ctrl+C para copiar):", formatted.slice(0, 5000));
+        await prompt({
+          title: "JSON del documento",
+          description: "JSON del documento (Ctrl+C para copiar):",
+          confirmLabel: "Aceptar",
+          defaultValue: formatted.slice(0, 5000),
+        });
       }} />
 
       <RibbonDivider />
@@ -364,20 +391,23 @@ export function Ribbon() {
       {/* Zoom */}
       {isOffice ? (
         <div className="ee-zoom-dropdown-wrapper">
-          <button
-            type="button"
-            className="ee-ribbon-zoom-btn"
-            onClick={() => setZoom(zoom - 10)}
-            title="Alejar"
-            onMouseDown={(e) => e.preventDefault()}
-          >
-            <Minus className="ee-ribbon-btn-icon" />
-          </button>
+          <Tooltip>
+            <TooltipTrigger className="inline-flex">
+              <button
+                type="button"
+                className="ee-ribbon-zoom-btn"
+                onClick={() => setZoom(zoom - 10)}
+                onMouseDown={(e) => e.preventDefault()}
+              >
+                <Minus className="ee-ribbon-btn-icon" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom"><p>Alejar</p></TooltipContent>
+          </Tooltip>
           <button
             type="button"
             className="ee-ribbon-zoom-value"
             onClick={() => setShowZoomMenu(!showZoomMenu)}
-            title="Zoom"
             onMouseDown={(e) => e.preventDefault()}
           >
             {zoom}%
@@ -400,21 +430,35 @@ export function Ribbon() {
               </div>
             </>
           )}
-          <button
-            type="button"
-            className="ee-ribbon-zoom-btn"
-            onClick={() => setZoom(zoom + 10)}
-            title="Acercar"
-            onMouseDown={(e) => e.preventDefault()}
-          >
-            <Plus className="ee-ribbon-btn-icon" />
-          </button>
+          <Tooltip>
+            <TooltipTrigger className="inline-flex">
+              <button
+                type="button"
+                className="ee-ribbon-zoom-btn"
+                onClick={() => setZoom(zoom + 10)}
+                onMouseDown={(e) => e.preventDefault()}
+              >
+                <Plus className="ee-ribbon-btn-icon" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom"><p>Acercar</p></TooltipContent>
+          </Tooltip>
         </div>
       ) : (
         <>
-          <button type="button" className="ee-ribbon-zoom-btn" onClick={() => setZoom(zoom - 10)} title="Alejar">-</button>
+          <Tooltip>
+            <TooltipTrigger className="inline-flex">
+              <button type="button" className="ee-ribbon-zoom-btn" onClick={() => setZoom(zoom - 10)}>-</button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom"><p>Alejar</p></TooltipContent>
+          </Tooltip>
           <span className="ee-ribbon-zoom-value">{zoom}%</span>
-          <button type="button" className="ee-ribbon-zoom-btn" onClick={() => setZoom(zoom + 10)} title="Acercar">+</button>
+          <Tooltip>
+            <TooltipTrigger className="inline-flex">
+              <button type="button" className="ee-ribbon-zoom-btn" onClick={() => setZoom(zoom + 10)}>+</button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom"><p>Acercar</p></TooltipContent>
+          </Tooltip>
         </>
       )}
     </div>
@@ -435,16 +479,23 @@ function RibbonBtn({ icon: Icon, title, onClick, disabled, active }: {
   active?: boolean;
 }) {
   return (
-    <button
-      type="button"
-      className={`ee-ribbon-btn ${active ? "ee-btn-active" : ""}`}
-      title={title}
-      onMouseDown={(e) => e.preventDefault()}
-      onClick={onClick}
-      disabled={disabled}
-    >
-      <Icon className="ee-ribbon-btn-icon" />
-    </button>
+    <Tooltip>
+      <TooltipTrigger className="inline-flex">
+        <button
+          type="button"
+          className={`ee-ribbon-btn ${active ? "ee-btn-active" : ""}`}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={onClick}
+          disabled={disabled}
+          aria-label={title}
+        >
+          <Icon className="ee-ribbon-btn-icon" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom">
+        <p>{title}</p>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 

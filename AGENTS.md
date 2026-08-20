@@ -195,6 +195,46 @@ estilos visuales, tamaños, colores, gradientes, espaciados o layout.
 - Mantener separación clara entre Server Actions y Client Components.
 - Usar `@supabase/ssr` para autenticación en Next.js (cookies via middleware).
 
+### REGLA #5 — Botones de UNA sola palabra (OBLIGATORIO)
+**Todos los botones del sistema deben tener texto de UNA sola palabra.**
+Los botones con múltiples palabras se ven saturados, rompen la jerarquía visual
+y son inconsistentes. Un botón debe comunicar su acción con una palabra clara.
+
+#### Prohibido
+- **NUNCA** usar botones con más de una palabra en su texto.
+  - ❌ "Pre-cargar 25 filas nuevas"
+  - ❌ "Confirmar carga de siniestros"
+  - ❌ "Validar duplicados"
+  - ❌ "Cargar otro Excel"
+  - ❌ "Guardar cambios"
+  - ❌ "Crear nuevo siniestro"
+
+#### Obligatorio
+- **SIEMPRE** usar una sola palabra por botón.
+  - ✅ "Pre-cargar"
+  - ✅ "Confirmar"
+  - ✅ "Validar"
+  - ✅ "Recargar"
+  - ✅ "Guardar"
+  - ✅ "Crear"
+  - ✅ "Cancelar"
+  - ✅ "Eliminar"
+  - ✅ "Editar"
+  - ✅ "Seleccionar"
+- Si el contexto requiere más información (ej: cantidad), usar un tooltip o
+  un texto auxiliar fuera del botón, NO dentro del texto del botón.
+- Los estados de carga (`Loader2` + texto) también deben ser una sola palabra:
+  - ✅ "Cargando..."
+  - ✅ "Guardando..."
+  - ✅ "Validando..."
+  - ❌ "Pre-cargando filas..."
+
+#### Motivo
+- **Consistencia visual**: todos los botones se ven uniformes.
+- **Claridad**: una palabra fuerza a ser conciso y directo.
+- **Jerarquía**: el botón comunica la acción, el contexto va fuera.
+- **Responsive**: botones cortos se adaptan mejor a móvil.
+
 ## Convenciones de Lenguaje (OBLIGATORIO)
 - **Idioma: español neutro / internacional.** NO usar argentismos ni modismos regionales.
 - Prohibido: "che", "vos", "re", "laburo", "pibe", "bondi", "fiaca", "posta", "dale", "bárbaro", "lindo", etc.

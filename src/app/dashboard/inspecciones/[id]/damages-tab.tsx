@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { amountInWords } from "@/lib/amount-words";
 import type { InspectionDamage } from "@/types";
 
@@ -610,10 +611,11 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  {/* Botones de nuevo daño — estilo tiles */}
  {!isEditingNew && !readOnly && (
  <div className="grid grid-cols-2 gap-3">
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <button
  onClick={() => startNew("building")}
  disabled={!propertyClassification}
- title={propertyClassification ? "Nuevo daño constructivo" : "Selecciona la clasificación del inmueble en el acta"}
  className={`group flex items-center gap-3 rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-blue-400/50 hover:bg-blue-50/50 dark:hover:bg-blue-950/20 ${!propertyClassification ? "opacity-50 cursor-not-allowed" : ""}`}
  >
  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors ${propertyClassification ? "bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400 group-hover:bg-blue-500 group-hover:text-white" : "bg-muted text-muted-foreground"}`}>
@@ -624,6 +626,11 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <div className="app-body text-muted-foreground truncate">{propertyClassification ? "Estructura, muros, pisos, techumbre, instalaciones" : "Requiere clasificación del inmueble"}</div>
  </div>
  </button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>{propertyClassification ? "Nuevo daño constructivo" : "Selecciona la clasificación del inmueble en el acta"}</p>
+ </TooltipContent>
+ </Tooltip>
  <button
  onClick={() => startNew("content")}
  className="group flex items-center gap-3 rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-violet-400/50 hover:bg-violet-50/50 dark:hover:bg-violet-950/20"
@@ -916,7 +923,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  </div>
  <div className="modal-field col-span-4">
  <label className="app-field-label">Monto Estimado</label>
- <div className="flex items-center gap-1.5">
+ <div className="amount-field-row flex items-center gap-1.5">
  <input
  type="text"
  inputMode="decimal"
@@ -1117,7 +1124,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  </div>
  <div className='modal-field col-span-3'>
  <label className='app-field-label'>Monto estimado</label>
- <div className='flex items-center gap-1.5'>
+ <div className='amount-field-row flex items-center gap-1.5'>
  <input
  type='text'
  inputMode='decimal'

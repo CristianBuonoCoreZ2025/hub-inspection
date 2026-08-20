@@ -78,7 +78,17 @@ export function ProductSearch({
     const q = normalize(query);
     if (q.length < 2) return []; // Requiere al menos 2 caracteres
 
-    const scored = products
+    // Dedup por nombre: si dos productos tienen el mismo nombre (aunque distinto id),
+    // se muestran como uno solo para evitar confusión en la búsqueda.
+    const seen = new Set<string>();
+    const unique = products.filter((p) => {
+      const key = normalize(`${p.name}|${p.content_good_type?.name || ""}`);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    const scored = unique
       .map((p) => {
         const pName = normalize(p.name);
         const tName = normalize(p.content_good_type?.name || "");
@@ -209,7 +219,6 @@ export function ProductSearch({
         <div
           ref={listRef}
           className="absolute z-9999 mt-1 w-full max-h-70 overflow-y-auto rounded-md border border-border bg-popover shadow-md"
-          style={{ position: "fixed" }}
         >
           {filtered.map((p, idx) => (
             <button
@@ -241,7 +250,6 @@ export function ProductSearch({
       {open && query.trim().length >= 2 && filtered.length === 0 && (
         <div
           className="absolute z-9999 mt-1 w-full rounded-md border border-border bg-popover shadow-md px-3 py-2 text-[11px] text-muted-foreground"
-          style={{ position: "fixed" }}
         >
           Sin resultados. Probá con otras letras.
         </div>

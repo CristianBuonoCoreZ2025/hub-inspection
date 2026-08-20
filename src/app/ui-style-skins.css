@@ -58,6 +58,9 @@
 }
 
 .dark [data-ui-style='nordic-air'],html.dark[data-ui-style='nordic-air'] {
+  /* Tron Skin — tipografía futurista Geist */
+  --font-app-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-app-heading: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --background: var(--c-canvas-dark);
   --foreground: var(--c-gray-50);
   --card: var(--c-canvas-dark);
@@ -161,8 +164,9 @@ html.dark[data-ui-style='nordic-air'] .premium-orbs::before {
  * ═══════════════════════════════════════════════════════════════ */
 
 [data-ui-style='fluid-aurora'],html[data-ui-style='fluid-aurora'] {
-  --font-app-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-app-heading: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+  /* Neon Skin — tipografía distintiva Space Grotesk */
+  --font-app-sans: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-app-heading: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
   --radius: 0.5rem;
   --background: var(--c-aurora-bg);
   --foreground: var(--c-aurora-foreground);

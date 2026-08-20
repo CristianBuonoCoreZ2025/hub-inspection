@@ -522,15 +522,21 @@ function OverviewPanel({
             <div key={p.userId} className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-sky-500/10 border border-sky-500/30">
               <span className="h-2 w-2 rounded-full bg-sky-400" />
               <span className="app-body text-white/70">Asegurado</span>
-              <button
-                type="button"
-                onClick={() => kickPeer(p.userId)}
-                className="flex items-center gap-1 px-2 py-0.5 rounded bg-rose-600/80 hover:bg-rose-600 text-white app-body text-xs transition-colors"
-                title="Desconectar a este asegurado"
-              >
-                <UserX className="h-3 w-3" />
-                Desconectar
-              </button>
+              <Tooltip>
+                <TooltipTrigger render={
+                  <button
+                    type="button"
+                    onClick={() => kickPeer(p.userId)}
+                    className="flex items-center gap-1 px-2 py-0.5 rounded bg-rose-600/80 hover:bg-rose-600 text-white app-body text-xs transition-colors"
+                  />
+                }>
+                  <UserX className="h-3 w-3" />
+                  Desconectar
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Desconectar a este asegurado</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
           ))}
           {supervisorPeers.map((p) => (

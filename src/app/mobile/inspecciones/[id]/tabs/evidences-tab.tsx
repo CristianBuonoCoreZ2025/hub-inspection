@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { deleteEvidence } from "@/services/inspections";
 import { toast } from "sonner";
 import {
-  Camera, Upload, Trash2, Loader2, CheckCircle2, XCircle,
+  Camera, Upload, SwitchCamera, Trash2, Loader2, CheckCircle2, XCircle,
   ImageIcon, FileText, AlertCircle, MapPin,
 } from "lucide-react";
 import { convertHeicToJpeg } from "@/lib/heic-convert";
@@ -69,6 +69,7 @@ export default function MobileEvidencesTab({ sessionId, sessionStatus }: MobileE
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [uploadQueue, setUploadQueue] = useState<UploadItem[]>([]);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
+  const [useFrontCamera, setUseFrontCamera] = useState(false);
 
   const readOnly = sessionStatus === "completed" || sessionStatus === "cancelled";
 
@@ -209,7 +210,7 @@ export default function MobileEvidencesTab({ sessionId, sessionStatus }: MobileE
             ref={cameraInputRef}
             type="file"
             accept="image/*"
-            capture="environment"
+            capture={useFrontCamera ? "user" : "environment"}
             onChange={handleInput}
             className="hidden"
             id="mobile-evidence-camera"
@@ -219,8 +220,16 @@ export default function MobileEvidencesTab({ sessionId, sessionStatus }: MobileE
             className="mobile-btn mobile-btn-primary w-full cursor-pointer"
           >
             <Camera className="h-5 w-5" />
-            Tomar foto
+            {useFrontCamera ? "Cámara frontal" : "Cámara trasera"}
           </label>
+          <button
+            type="button"
+            onClick={() => setUseFrontCamera((v) => !v)}
+            className="mobile-btn mobile-btn-outline w-full"
+          >
+            <SwitchCamera className="h-5 w-5" />
+            Cambiar cámara
+          </button>
 
           {/* Seleccionar archivos */}
           <input
@@ -430,10 +439,9 @@ export default function MobileEvidencesTab({ sessionId, sessionStatus }: MobileE
           {/* eslint-disable-next-line @next/next/no-img-element -- user-uploaded image from R2 */}
           <img src={zoomImage} alt="Evidencia" className="max-w-full max-h-full object-contain" />
           <button
-            className="mobile-photo-delete-btn"
+            className="mobile-photo-close-btn mobile-photo-delete-btn"
             onClick={() => setZoomImage(null)}
             aria-label="Cerrar"
-            style={{ top: 16, right: 16, bottom: "auto", left: "auto", background: "color-mix(in srgb, white 10%, transparent)" }}
           >
             <XCircle className="h-6 w-6 text-white" />
           </button>

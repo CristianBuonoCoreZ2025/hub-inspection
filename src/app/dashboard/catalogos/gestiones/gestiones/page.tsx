@@ -32,6 +32,7 @@ import {
  AlertTriangle, Shield, Mail,
 } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useConfirm } from "@/hooks/use-confirm";
 import { userTypeLabels } from "@/services/permissions";
 import { useAuth } from "@/hooks/use-auth";
 import { getFieldPermissions, type FieldPermission } from "@/services/field-permissions";
@@ -51,6 +52,7 @@ import {
 import { DocumentTemplatesCard } from "./document-templates-card";
 import { EmailTemplatesCard } from "./email-templates-card";
 import { CamposPlantillaModal } from "./campos-plantilla-modal";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 interface FormState {
  action_type_id: string;
@@ -115,6 +117,7 @@ const emptyForm: FormState = {
 export default function GestionesPage() {
  const queryClient = useQueryClient();
  const { canCreate, canEdit, canDelete } = usePermissions();
+ const confirm = useConfirm();
  const { profile } = useAuth();
  const [search, setSearch] = useState("");
  const [filterFeature, setFilterFeature] = useState("");
@@ -482,6 +485,8 @@ export default function GestionesPage() {
  </button>
  {/* Pelotita verde de "por defecto" */}
  {active && (
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <button
  type="button"
  onClick={(e) => {
@@ -489,13 +494,17 @@ export default function GestionesPage() {
  if (!rolesDisabled) toggleDefaultRole(cfg.rolesField, r.value);
  }}
  disabled={rolesDisabled}
- title={isDefault ? "Rol por defecto (click para quitar)" : "Marcar como rol por defecto"}
  className={`absolute top-1/2 right-1 -translate-y-1/2 h-3 w-3 rounded-full border transition-all ${
  isDefault
  ? "bg-emerald-500 border-emerald-600 dark:border-emerald-400 shadow-sm"
  : "bg-transparent border-muted-foreground/30 hover:border-emerald-500 hover:bg-emerald-500/20"
  } ${rolesDisabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
  />
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>{isDefault ? "Rol por defecto (click para quitar)" : "Marcar como rol por defecto"}</p>
+ </TooltipContent>
+ </Tooltip>
  )}
  </div>
  );
@@ -579,7 +588,7 @@ export default function GestionesPage() {
  </button>
  <div>
  <h1 className="app-page-title flex items-center gap-2">
- <FileSpreadsheet className="h-5 w-5 text-[#0095DA]" />
+ <FileSpreadsheet className="h-5 w-5 text-brand" />
  {editingId ? "Editar Gestión" : "Nueva Gestión"}
  </h1>
  <p className="app-page-lead">
@@ -592,14 +601,20 @@ export default function GestionesPage() {
  const feat = features?.find(f => f.id === form.action_features_id);
  if (!feat?.has_template) return null;
  return (
+ <Tooltip>
+ <TooltipTrigger render={
  <button
  type="button"
  onClick={() => setCamposModalOpen(true)}
  className="pg-btn-platinum"
- title="Ver campos disponibles para plantillas Word"
- >
+ />
+ }>
  Campos
- </button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>Ver campos disponibles para plantillas Word</p>
+ </TooltipContent>
+ </Tooltip>
  );
  })()}
  </div>
@@ -706,9 +721,16 @@ export default function GestionesPage() {
  if (!feat?.has_template) return <div />; // celda vacía para mantener el grid de 3
  return (
  <div className="flex flex-col gap-1">
- <Label className="app-body text-muted-foreground" title="Si está activo, solo el perfil Despachador puede convertir el documento a PDF después de completar todas las revisiones">
+ <Tooltip>
+ <TooltipTrigger render={
+ <Label className="app-body text-muted-foreground" />
+ }>
  Solo despachador convierte a PDF
- </Label>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>Si está activo, solo el perfil Despachador puede convertir el documento a PDF después de completar todas las revisiones</p>
+ </TooltipContent>
+ </Tooltip>
  <div className="flex h-7 items-center gap-2">
  <ToggleChip
  active={form.is_dispatch_applicable}
@@ -791,7 +813,7 @@ export default function GestionesPage() {
  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 rounded-lg border border-border p-2 bg-muted/10">
  {screenFields.map((f) => (
  <div key={f.id} className="flex items-center gap-2">
- <span className="app-body shrink-0 w-1/2 truncate" title={f.label}>{f.label || f.id}</span>
+ <span className="app-body shrink-0 w-1/2 truncate" aria-label={f.label}>{f.label || f.id}</span>
  <Select
  value={form.auto_field_mapping[f.id] || "__none"}
  onValueChange={(v) => setForm({ ...form, auto_field_mapping: { ...form.auto_field_mapping, [f.id]: v === "__none" || !v ? "" : v } })}
@@ -1174,7 +1196,7 @@ export default function GestionesPage() {
  <button type="button" className="btn-icon-sm" onClick={() => startEdit(t)}><Pencil className="h-4 w-4" /></button>
  )}
  {canDelete("catalogos") && (
- <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar esta gestión?")) deleteMut.mutate(t.id); }}><Ban className="h-4 w-4" /></button>
+ <button type="button" className="btn-icon-sm btn-danger-hover" onClick={async () => { const ok = await confirm({ title: "Desactivar", description: "¿Desactivar esta gestión?", confirmLabel: "Desactivar", destructive: true }); if (!ok) return; deleteMut.mutate(t.id); }}><Ban className="h-4 w-4" /></button>
  )}
  </div>
  </td>
