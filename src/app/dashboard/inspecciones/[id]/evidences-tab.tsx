@@ -19,6 +19,7 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   Dialog,
   DialogContent,
@@ -303,6 +304,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
 
     xhr.open("POST", "/api/inspection/evidences/upload");
     xhr.send(formData);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- showAlert es estable (context), no necesita estar en deps
   }, [queryClient, sessionId]);
 
   const handleFile = useCallback(
@@ -315,7 +317,7 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
         console.error(err);
       }
     },
-    [uploadFile],
+    [uploadFile, showAlert],
   );
 
   const handleDrop = async (e: React.DragEvent) => {
@@ -386,7 +388,6 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
 
             xhr.upload.addEventListener("progress", (ev) => {
               if (!ev.lengthComputable) return;
-              const pct = Math.round((ev.loaded / ev.total) * 100);
               // Progreso de subida mostrado en la cola de uploads
             });
 
@@ -528,15 +529,21 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
                   <span className="text-[11px] text-muted-foreground">({evidences.length})</span>
                 )}
               </h3>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="btn-icon-sm"
-                title="Subir evidencias"
-                onClick={() => setUploadModal({ visible: true, isDragging: false })}
-              >
-                <Upload className="h-3.5 w-3.5" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger className="inline-flex">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="btn-icon-sm"
+                    onClick={() => setUploadModal({ visible: true, isDragging: false })}
+                  >
+                    <Upload className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Subir evidencias</p>
+                </TooltipContent>
+              </Tooltip>
               {/* Cámara directa: toma foto y sube sin abrir modal */}
               <input
                 ref={cameraInputRef}
@@ -547,13 +554,19 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
                 className="hidden"
                 id="evidence-camera-direct"
               />
-              <label
-                htmlFor="evidence-camera-direct"
-                className="btn-icon-sm flex items-center justify-center cursor-pointer"
-                title="Tomar foto"
-              >
-                <Camera className="h-3.5 w-3.5" />
-              </label>
+              <Tooltip>
+                <TooltipTrigger className="inline-flex">
+                  <label
+                    htmlFor="evidence-camera-direct"
+                    className="btn-icon-sm flex items-center justify-center cursor-pointer"
+                  >
+                    <Camera className="h-3.5 w-3.5" />
+                  </label>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Tomar foto</p>
+                </TooltipContent>
+              </Tooltip>
               {/* Cámara directa: graba video y sube sin abrir modal */}
               <input
                 ref={videoCameraInputRef}
@@ -564,13 +577,19 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
                 className="hidden"
                 id="evidence-video-direct"
               />
-              <label
-                htmlFor="evidence-video-direct"
-                className="btn-icon-sm flex items-center justify-center cursor-pointer"
-                title="Grabar video"
-              >
-                <Video className="h-3.5 w-3.5" />
-              </label>
+              <Tooltip>
+                <TooltipTrigger className="inline-flex">
+                  <label
+                    htmlFor="evidence-video-direct"
+                    className="btn-icon-sm flex items-center justify-center cursor-pointer"
+                  >
+                    <Video className="h-3.5 w-3.5" />
+                  </label>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Grabar video</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
           </div>
         </div>
@@ -808,13 +827,19 @@ export default function EvidencesTab({ sessionId, sessionStatus }: { sessionId: 
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-md"
           onClick={() => setZoomImage(null)}
         >
-          <button
-            onClick={() => setZoomImage(null)}
-            className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
-            title="Cerrar"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          <Tooltip>
+            <TooltipTrigger className="inline-flex">
+              <button
+                onClick={() => setZoomImage(null)}
+                className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p>Cerrar</p>
+            </TooltipContent>
+          </Tooltip>
           {/* eslint-disable-next-line @next/next/no-img-element -- user-uploaded image from R2 */}
           <img
             src={zoomImage}
@@ -996,14 +1021,20 @@ function DocumentTable({
                     <div className="app-row-actions">
                       {/* Re-IA — re-analizar con IA (solo cuando la inspección está cerrada) */}
                       {readOnly && (aiStatus === "done" || aiStatus === "error" || aiStatus === "skipped" || (!aiSummary && aiStatus !== "pending" && aiStatus !== "processing")) && (
-                        <button
-                          type="button"
-                          className="btn-icon-sm"
-                          onClick={() => handleReanalyze(doc)}
-                          title={aiSummary ? "Re-analizar con IA" : "Analizar con IA"}
-                        >
-                          <RefreshCw className="h-3.5 w-3.5" />
-                        </button>
+                        <Tooltip>
+                          <TooltipTrigger className="inline-flex">
+                            <button
+                              type="button"
+                              className="btn-icon-sm"
+                              onClick={() => handleReanalyze(doc)}
+                            >
+                              <RefreshCw className="h-3.5 w-3.5" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            <p>{aiSummary ? "Re-analizar con IA" : "Analizar con IA"}</p>
+                          </TooltipContent>
+                        </Tooltip>
                       )}
                       {/* Ver log del análisis — popover */}
                       {aiSummary && aiStatus === "done" && (
@@ -1088,15 +1119,21 @@ function DocumentTable({
                         </Popover>
                       )}
                       {/* Abrir documento */}
-                      <a
-                        href={doc.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn-icon-sm"
-                        title="Abrir documento"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
+                      <Tooltip>
+                        <TooltipTrigger className="inline-flex">
+                          <a
+                            href={doc.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn-icon-sm"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </a>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          <p>Abrir documento</p>
+                        </TooltipContent>
+                      </Tooltip>
                       {/* Eliminar */}
                       {!readOnly && (
                         <button
@@ -1206,50 +1243,74 @@ function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, sessionId, s
   const hoverActions = !readOnly ? (
     <>
       {isDoc && (
+        <Tooltip>
+          <TooltipTrigger className="inline-flex">
+            <a
+              href={evidence.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm transition-colors hover:bg-black/80"
+            >
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p>Abrir</p>
+          </TooltipContent>
+        </Tooltip>
+      )}
+      <Tooltip>
+        <TooltipTrigger className="inline-flex">
+          <button
+            onClick={async () => {
+              const ok = await confirmDelete({
+                title: "Eliminar evidencia",
+                description: "¿Eliminar esta evidencia? Esta acción no se puede deshacer.",
+                destructive: true,
+                confirmLabel: "Eliminar",
+              });
+              if (ok) onDelete(evidence.id);
+            }}
+            className="flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm transition-colors hover:bg-red-500/80"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          <p>Eliminar</p>
+        </TooltipContent>
+      </Tooltip>
+    </>
+  ) : isDoc ? (
+    <Tooltip>
+      <TooltipTrigger className="inline-flex">
         <a
           href={evidence.url}
           target="_blank"
           rel="noopener noreferrer"
           className="flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm transition-colors hover:bg-black/80"
-          title="Abrir"
         >
           <ExternalLink className="h-3 w-3" />
         </a>
-      )}
-      <button
-        onClick={async () => {
-          const ok = await confirmDelete({
-            title: "Eliminar evidencia",
-            description: "¿Eliminar esta evidencia? Esta acción no se puede deshacer.",
-            destructive: true,
-            confirmLabel: "Eliminar",
-          });
-          if (ok) onDelete(evidence.id);
-        }}
-        className="flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm transition-colors hover:bg-red-500/80"
-        title="Eliminar"
-      >
-        <Trash2 className="h-3 w-3" />
-      </button>
-    </>
-  ) : isDoc ? (
-    <a
-      href={evidence.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm transition-colors hover:bg-black/80"
-      title="Abrir"
-    >
-      <ExternalLink className="h-3 w-3" />
-    </a>
+      </TooltipTrigger>
+      <TooltipContent side="top">
+        <p>Abrir</p>
+      </TooltipContent>
+    </Tooltip>
   ) : isPhoto ? (
-    <button
-      onClick={() => onImageClick?.(evidence.url)}
-      className="flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm transition-colors hover:bg-black/80"
-      title="Ampliar"
-    >
-      <ZoomIn className="h-3 w-3" />
-    </button>
+    <Tooltip>
+      <TooltipTrigger className="inline-flex">
+        <button
+          onClick={() => onImageClick?.(evidence.url)}
+          className="flex h-6 w-6 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm transition-colors hover:bg-black/80"
+        >
+          <ZoomIn className="h-3 w-3" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top">
+        <p>Ampliar</p>
+      </TooltipContent>
+    </Tooltip>
   ) : undefined;
 
   // Fila extra: fecha + uploader + GPS
@@ -1262,16 +1323,22 @@ function EvidenceCard({ evidence, onDelete, readOnly, onImageClick, sessionId, s
       {uploaderName && (
         <>
           <span className="opacity-30">·</span>
-          <span className="truncate" title={uploaderName}>{uploaderName}</span>
+          <span className="truncate" aria-label={uploaderName}>{uploaderName}</span>
         </>
       )}
       {hasGps && (
-        <span
-          className="flex items-center gap-0.5 text-blue-600 dark:text-blue-400 ml-auto"
-          title={`GPS (EXIF): ${evidence.exif_lat?.toFixed(6)}, ${evidence.exif_lng?.toFixed(6)}`}
-        >
-          <MapPin className="h-2.5 w-2.5" />
-        </span>
+        <Tooltip>
+          <TooltipTrigger className="inline-flex">
+            <span
+              className="flex items-center gap-0.5 text-blue-600 dark:text-blue-400 ml-auto"
+            >
+              <MapPin className="h-2.5 w-2.5" />
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p>{`GPS (EXIF): ${evidence.exif_lat?.toFixed(6)}, ${evidence.exif_lng?.toFixed(6)}`}</p>
+          </TooltipContent>
+        </Tooltip>
       )}
     </div>
   );

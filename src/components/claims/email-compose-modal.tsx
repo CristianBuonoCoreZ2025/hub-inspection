@@ -5,6 +5,7 @@ import type { Editor } from "@tiptap/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Mail, Send, Loader2, X, History, FileText, Users, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   Dialog,
   DialogContent,
@@ -146,14 +147,20 @@ function ContactBookButton({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         render={
-          <button
-            type="button"
-            title="Abrir libreta de contactos"
-            className="inline-flex h-6 w-16 items-center justify-center gap-1 px-2 rounded-md border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0 text-[11px] font-medium"
-          >
-            <Users className="h-3.5 w-3.5" />
-            {label}
-          </button>
+          <Tooltip>
+            <TooltipTrigger className="inline-flex">
+              <button
+                type="button"
+                className="inline-flex h-6 w-16 items-center justify-center gap-1 px-2 rounded-md border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0 text-[11px] font-medium"
+              >
+                <Users className="h-3.5 w-3.5" />
+                {label}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p>Abrir libreta de contactos</p>
+            </TooltipContent>
+          </Tooltip>
         }
       />
       <PopoverContent align="start" sideOffset={4} className="w-80 max-h-96 p-0 flex flex-col overflow-hidden">
@@ -223,7 +230,7 @@ function ContactBookButton({
                       className={`flex items-center gap-2 px-3 py-1.5 border-b border-border/15 transition-colors ${
                         alreadyIn ? "bg-primary/5" : "hover:bg-accent/50 cursor-pointer"
                       }`}
-                      title={alreadyIn ? undefined : "Doble clic para agregar"}
+                      aria-label={alreadyIn ? undefined : "Doble clic para agregar"}
                     >
                       <div className="flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-medium text-white shrink-0 email-icon-gradient">
                         {initials}
@@ -609,17 +616,30 @@ export function EmailComposeModal({
           </DialogTitle>
           <div className="flex items-center gap-1.5 shrink-0">
             {/* Historial — derecha */}
-            <button
-              type="button"
-              onClick={() => setShowHistory((v) => !v)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-              title="Historial de envíos"
-            >
-              <History className="h-3.5 w-3.5" />
-            </button>
-            <button type="button" onClick={() => onOpenChange(false)} title="Cerrar" className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
-              <X className="h-3.5 w-3.5" />
-            </button>
+            <Tooltip>
+              <TooltipTrigger className="inline-flex">
+                <button
+                  type="button"
+                  onClick={() => setShowHistory((v) => !v)}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                >
+                  <History className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p>Historial de envíos</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger className="inline-flex">
+                <button type="button" onClick={() => onOpenChange(false)} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p>Cerrar</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
         </div>
 

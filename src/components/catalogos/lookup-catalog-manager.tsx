@@ -8,6 +8,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { getLookupCatalog, createLookupCatalogItem, updateLookupCatalogItem, deleteLookupCatalogItem } from "@/services/catalogs";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useConfirm } from "@/hooks/use-confirm";
 import { toast } from "sonner";
 import { Search, Pencil, Trash2 } from "lucide-react";
 
@@ -31,6 +32,7 @@ interface LookupCatalogManagerProps {
 export function LookupCatalogManager({ category, title, icon: Icon, section = "catalogos_inspeccion" }: LookupCatalogManagerProps) {
  const queryClient = useQueryClient();
  const { canCreate, canEdit, canDelete } = usePermissions();
+ const confirm = useConfirm();
  const [search, setSearch] = useState("");
  const [open, setOpen] = useState(false);
  const [editingId, setEditingId] = useState<string | null>(null);
@@ -118,7 +120,7 @@ export function LookupCatalogManager({ category, title, icon: Icon, section = "c
  placeholder="Buscar..."
  value={search}
  onChange={(e) => setSearch(e.target.value)}
- className="app-input h-8 w-full sm:max-w-[180px]"
+ className="app-input h-8 w-full sm:max-w-45"
  />
  </div>
  {canCreate(section) && (
@@ -140,7 +142,7 @@ export function LookupCatalogManager({ category, title, icon: Icon, section = "c
  <SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh>
  <SortableTh sortKey="code" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Código</SortableTh>
  <th className="text-center">Detalle</th>
- <th className="w-[80px]"></th>
+ <th className="w-20"></th>
  </tr>
  </thead>
  <tbody>
@@ -165,7 +167,7 @@ export function LookupCatalogManager({ category, title, icon: Icon, section = "c
  }}><Pencil className="h-4 w-4" /></button>
  )}
  {canDelete(section) && (
- <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("Desactivar?")) deleteMutation.mutate(item.id); }}>
+ <button type="button" className="btn-icon-sm btn-danger-hover" onClick={async () => { const ok = await confirm({ title: "Desactivar", description: "Desactivar?", confirmLabel: "Desactivar", destructive: true }); if (!ok) return; deleteMutation.mutate(item.id); }}>
  <Trash2 className="h-4 w-4" />
  </button>
  )}
@@ -183,7 +185,7 @@ export function LookupCatalogManager({ category, title, icon: Icon, section = "c
  <DialogContent className="modal-md" showCloseButton={false}>
  <div className="modal-header">
  <DialogTitle className="modal-title flex items-center gap-2.5">
- <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
+ <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-gradient text-white shadow-sm">
  <Icon className="h-4 w-4" />
  </div>
  {editingId ? "Editar" : "Nuevo"} {title}

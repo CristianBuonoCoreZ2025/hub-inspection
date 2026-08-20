@@ -14,11 +14,13 @@ import { toast } from "sonner";
 import { Ban, Search, Loader2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useConfirm } from "@/hooks/use-confirm";
 
 export default function InhabilitarPage() {
  const { user } = useAuth();
  const { canEdit, canDelete } = usePermissions();
  const queryClient = useQueryClient();
+ const confirm = useConfirm();
  const [searchTerm, setSearchTerm] = useState("");
  const [selectedClaimId, setSelectedClaimId] = useState<string | null>(null);
  const [reason, setReason] = useState("");
@@ -261,8 +263,15 @@ export default function InhabilitarPage() {
  size="sm"
  className="pg-btn-platinum h-9 px-3 sm:h-7 sm:px-2 text-xs"
  disabled={enableMutation.isPending}
- onClick={() => {
- if (confirm("¿Reactivar este siniestro?")) enableMutation.mutate(claim.id);
+ onClick={async () => {
+ const ok = await confirm({
+ title: "Reactivar siniestro",
+ description: "¿Reactivar este siniestro?",
+ confirmLabel: "Reactivar",
+ destructive: false,
+ });
+ if (!ok) return;
+ enableMutation.mutate(claim.id);
  }}
  >
  Reactivar

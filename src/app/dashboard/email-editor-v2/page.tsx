@@ -142,7 +142,7 @@ export default function EmailEditorV2Page() {
         </div>
       </div>
 
-      <div className="rounded-xl overflow-hidden border border-border" style={{ height: "calc(100vh - 200px)" }}>
+      <div className="rounded-xl overflow-hidden border border-border email-editor-page">
         <EmailEditor
           mode="compose"
           layout="office365"

@@ -55,7 +55,7 @@ export function GaugeChart({
             fill="url(#gauge-grad)"
             cornerRadius={10}
             background={{ fill: "rgba(128,128,128,0.1)" }}
-            style={{ filter: "drop-shadow(0 2px 12px rgba(0,0,0,0.1))" }}
+            className="gauge-drop-shadow"
             isAnimationActive
             animationDuration={800}
           />

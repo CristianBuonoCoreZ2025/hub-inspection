@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { DOCUMENT_FIELDS, FIELD_GROUPS } from "@/lib/document-fields";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 interface Props {
   open: boolean;
@@ -147,27 +148,32 @@ export function CamposPlantillaModal({ open, onOpenChange }: Props) {
                       {fields.map((field) => {
                         const isCopied = copied === field.key;
                         return (
-                          <button
-                            key={field.key}
-                            type="button"
-                            onClick={() => handleCopy(field.key)}
-                            className="group flex items-center gap-2 rounded-md border border-border/40 px-2.5 py-1.5 hover:border-primary/40 hover:bg-muted/30 transition-colors text-left"
-                            title="Click para copiar"
-                          >
-                            <code className="text-[11px] font-mono text-primary shrink-0">
-                              {"<" + field.key + ">"}
-                            </code>
-                            <span className="text-[11px] text-muted-foreground truncate flex-1">
-                              {field.label}
-                            </span>
-                            <span className="shrink-0 text-muted-foreground/50 group-hover:text-foreground transition-colors">
-                              {isCopied ? (
-                                <Check className="h-3 w-3 text-emerald-500" />
-                              ) : (
-                                <Copy className="h-3 w-3" />
-                              )}
-                            </span>
-                          </button>
+                          <Tooltip key={field.key}>
+                            <TooltipTrigger render={
+                              <button
+                                type="button"
+                                onClick={() => handleCopy(field.key)}
+                                className="group flex items-center gap-2 rounded-md border border-border/40 px-2.5 py-1.5 hover:border-primary/40 hover:bg-muted/30 transition-colors text-left"
+                              />
+                            }>
+                              <code className="text-[11px] font-mono text-primary shrink-0">
+                                {"<" + field.key + ">"}
+                              </code>
+                              <span className="text-[11px] text-muted-foreground truncate flex-1">
+                                {field.label}
+                              </span>
+                              <span className="shrink-0 text-muted-foreground/50 group-hover:text-foreground transition-colors">
+                                {isCopied ? (
+                                  <Check className="h-3 w-3 text-emerald-500" />
+                                ) : (
+                                  <Copy className="h-3 w-3" />
+                                )}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <p>Click para copiar</p>
+                            </TooltipContent>
+                          </Tooltip>
                         );
                       })}
                     </div>

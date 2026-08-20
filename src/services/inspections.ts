@@ -6,7 +6,7 @@ import type {
   InspectionDamage, InspectionEvidence, InspectionSignature,
 } from "@/types";
 
-const SESSION_SELECT = "id, company_id, claim_id, claim_action_id, action_template_id, inspector_id, inspection_number, scheduled_at, started_at, ended_at, magic_link_token, magic_link_expires_at, magic_link_extended, status, substate, inspection_type, inspection_date, inspection_time, interviewed_name, interviewed_email, interviewed_relationship, police_report_number, police_report_name, police_report_rut, firefighters_company, other_insurances, other_insurance_company, inspector_observations, cancellation_reason_id, cancellation_notes, cancelled_at, cancelled_by, active_tab, acta_step, property_risk, property_materiality, security_measures, insured_statement, third_parties, geo_latitude, geo_longitude, geo_captured_at, geo_captured_by, geo_distance_meters, geo_status, geo_map_url, geo_recapture_enabled, signature_waiver_reason, signature_captured_at, started_from_mobile, lock_overridden_by, lock_overridden_at, created_at, updated_at";
+const SESSION_SELECT = "id, company_id, claim_id, claim_action_id, action_template_id, inspector_id, inspection_number, scheduled_at, started_at, ended_at, magic_link_token, magic_link_expires_at, magic_link_extended, status, substate, inspection_type, inspection_date, inspection_time, interviewed_name, interviewed_email, interviewed_relationship, police_report_number, police_report_name, police_report_rut, firefighters_company, other_insurances, other_insurance_company, inspector_observations, cancellation_reason_id, cancellation_notes, cancelled_at, cancelled_by, active_tab, acta_step, property_risk, property_materiality, security_measures, insured_statement, third_parties, geo_latitude, geo_longitude, geo_captured_at, geo_captured_by, geo_distance_meters, geo_status, geo_map_url, geo_recapture_enabled, signature_waiver_reason, signature_captured_at, started_from_mobile, lock_overridden_by, lock_overridden_at, reopened_at, reopened_by, reopened_reason, created_at, updated_at";
 
 // ═══════════════════════════════════════════════════════════════
 // SESSIONS
@@ -51,6 +51,29 @@ export interface SessionClaim {
 }
 
 export type SessionWithRelations = InspectionSession & { created_at: string; claim_action?: { code: string | null } | null; action_template?: { code: string | null } | null; inspector?: { id: string; full_name: string | null; email: string | null } | null; claim?: SessionClaim; inspection_reports?: { report_url: string | null; status: string; generated_at: string }[] | null };
+
+// Los JOINs con claims_participants duplican filas de inspection_sessions.
+// Agrupamos por id y fusionamos los participantes para no perder datos.
+function dedupeSessions(sessions: SessionWithRelations[]): SessionWithRelations[] {
+  const seen = new Map<string, SessionWithRelations>();
+  for (const s of sessions) {
+    const existing = seen.get(s.id);
+    if (!existing) {
+      seen.set(s.id, s);
+      continue;
+    }
+    if (s.claim?.claims_participants?.length) {
+      if (!existing.claim) {
+        (existing as { claim: SessionClaim }).claim = s.claim;
+      } else if (!existing.claim.claims_participants) {
+        existing.claim.claims_participants = s.claim.claims_participants;
+      } else {
+        existing.claim.claims_participants.push(...s.claim.claims_participants);
+      }
+    }
+  }
+  return Array.from(seen.values());
+}
 
 interface LiveSession {
   id: string;
@@ -115,11 +138,13 @@ export interface SessionDetail extends Omit<InspectionSession, 'inspection_evide
 }
 
 export async function getInspectionSessions(claimId?: string) {
-  const sessions = await fetchAll<SessionWithRelations>("inspection_sessions", {
+  let sessions = await fetchAll<SessionWithRelations>("inspection_sessions", {
     select: `${SESSION_SELECT}, claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, client_reference, claim_address, claim_latitude, claim_longitude, liquidation_number, inspector_id, assigned_adjuster_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name), insurance_company:insurance_companies!claims_insurance_company_id_fkey(name))`,
     ...(claimId ? { eq: { claim_id: claimId } } : {}),
     order: { column: "created_at", ascending: false },
   });
+
+  sessions = dedupeSessions(sessions);
 
   // Filtrar claims_participants client-side: solo insured, limit 1
   for (const s of sessions) {
@@ -204,7 +229,7 @@ export async function getInspectionSessionsLight(
   // 2. Query principal: traer datos completos
   let query = supabase
     .from("inspection_sessions")
-    .select(`${SESSION_SELECT}, created_at, claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, liquidation_number, client_reference, claim_address, company_id, inspector_id, assigned_adjuster_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name))`);
+    .select(`${SESSION_SELECT}, created_at, inspector:profiles!inspection_sessions_inspector_id_fkey(id, full_name, email), claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, liquidation_number, client_reference, claim_address, company_id, inspector_id, assigned_adjuster_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name))`);
 
   if (useRpc) {
     // Traer solo los IDs que la RPC retorno, en el mismo orden
@@ -243,6 +268,8 @@ export async function getInspectionSessionsLight(
     const orderMap = new Map(orderedIds.map((id, idx) => [id, idx]));
     sessions = sessions.sort((a, b) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0));
   }
+
+  sessions = dedupeSessions(sessions);
 
   for (const s of sessions) {
     if (s.claim?.claims_participants) {
@@ -333,7 +360,7 @@ export interface SessionForReassign {
 export async function getPendingInspectionSessionsForReassign() {
   const sessions = await fetchAll<SessionForReassign>("inspection_sessions", {
     select: "id, claim_id, company_id, inspector_id, inspection_number, status, inspection_date, inspection_time, scheduled_at, claim:claims!inspection_sessions_claim_id_fkey(claim_number, client_reference, liquidation_number, claim_address, company_id), inspector:profiles!inspection_sessions_inspector_id_fkey(full_name, email), claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code)",
-    eq: { status: "scheduled" },
+    in: { status: ["scheduled", "active"] },
     order: { column: "inspection_date", ascending: true },
   });
 
@@ -1041,6 +1068,216 @@ export async function completeInspection(sessionId: string) {
   }, SESSION_SELECT);
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// Reapertura de inspecciones
+// ═══════════════════════════════════════════════════════════════════
+// Permite reabrir una inspección completada para que el inspector pueda
+// hacer cambios. La gestión (claim_action) deja de estar emitida (el
+// trigger sync_inspection_claim_action la vuelve a 'todo' y limpia
+// issued_on). Al volver a completar, la gestión se emite nuevamente.
+
+interface SessionForReopen {
+  id: string;
+  claim_id: string | null;
+  company_id: string | null;
+  inspector_id: string | null;
+  inspection_number: string;
+  status: string;
+  inspection_date: string | null;
+  inspection_time: string | null;
+  ended_at: string | null;
+  reopened_at: string | null;
+  reopened_reason: string | null;
+  created_at: string;
+  claim?: {
+    claim_number: string | null;
+    client_reference: string | null;
+    liquidation_number: string | null;
+    claim_address: string | null;
+    company_id: string | null;
+  } | null;
+  inspector?: {
+    full_name: string | null;
+    email: string | null;
+  } | null;
+  claim_action?: { code: string | null } | null;
+}
+
+/**
+ * Obtiene las inspecciones completadas que pueden ser reabiertas.
+ * Solo se lista la ÚLTIMA inspección de cada liquidación (claim), y solo si
+ * esa última está completada. Si la última está activa (ya fue reabierta),
+ * ninguna aparece. Las inspecciones anteriores no se pueden reabrir nunca.
+ */
+export async function getCompletedInspectionSessionsForReopen() {
+  // Traer TODAS las inspecciones (no solo completadas) para poder
+  // determinar cuál es la última de cada liquidación.
+  const allSessions = await fetchAll<SessionForReopen>("inspection_sessions", {
+    select: "id, claim_id, company_id, inspector_id, inspection_number, status, inspection_date, inspection_time, ended_at, reopened_at, reopened_reason, created_at, claim:claims!inspection_sessions_claim_id_fkey(claim_number, client_reference, liquidation_number, claim_address, company_id), inspector:profiles!inspection_sessions_inspector_id_fkey(full_name, email), claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code)",
+    order: { column: "created_at", ascending: false },
+  });
+
+  for (const s of allSessions) {
+    if (s.claim_action?.code) {
+      (s as SessionForReopen & { inspection_number: string }).inspection_number = s.claim_action.code;
+    }
+  }
+
+  // Para cada claim_id, encontrar la inspección más reciente (mayor created_at).
+  const latestPerClaim = new Map<string, SessionForReopen>();
+  for (const s of allSessions) {
+    const claimId = s.claim_id || "__no_claim__";
+    const existing = latestPerClaim.get(claimId);
+    if (!existing || s.created_at > existing.created_at) {
+      latestPerClaim.set(claimId, s);
+    }
+  }
+
+  // De las últimas por claim, solo devolver las que están completadas.
+  // Si la última está activa (reabierta) o cancelada, no se puede reabrir.
+  const reopenable = Array.from(latestPerClaim.values()).filter(
+    (s) => s.status === "completed",
+  );
+
+  // Devolver ordenadas por ended_at descendente
+  return reopenable.sort(
+    (a, b) => (b.ended_at || "").localeCompare(a.ended_at || ""),
+  );
+}
+
+/**
+ * Obtiene las inspecciones que fueron reabiertas recientemente.
+ * Se identifican por tener reopened_at no nulo y status distinto de completed
+ * (están activas nuevamente o ya fueron re-completadas).
+ */
+export async function getReopenedInspectionSessions() {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("inspection_sessions")
+    .select("id, claim_id, company_id, inspector_id, inspection_number, status, inspection_date, inspection_time, ended_at, reopened_at, reopened_by, reopened_reason, claim:claims!inspection_sessions_claim_id_fkey(claim_number, client_reference, liquidation_number, claim_address, company_id), inspector:profiles!inspection_sessions_inspector_id_fkey(full_name, email), claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code)")
+    .not("reopened_at", "is", null)
+    .order("reopened_at", { ascending: false })
+    .limit(50);
+
+  if (error) throw new Error(error.message);
+
+  const sessions = (data as SessionForReopen[]) ?? [];
+
+  for (const s of sessions) {
+    if (s.claim_action?.code) {
+      (s as SessionForReopen & { inspection_number: string }).inspection_number = s.claim_action.code;
+    }
+  }
+
+  return sessions;
+}
+
+/**
+ * Reabre una inspección completada: status → 'active', substate → 'normal',
+ * ended_at → null, abre un nuevo work_period y registra la reapertura.
+ * El trigger sync_inspection_claim_action se encarga de volver la gestión
+ * a 'todo' y limpiar issued_on.
+ */
+export async function reopenInspectionSession(
+  sessionId: string,
+  reason: string,
+  userId?: string,
+) {
+  const session = await fetchById<{
+    id: string;
+    status: string;
+    company_id: string | null;
+    claim_id: string | null;
+    claim_action_id: string | null;
+    created_at: string;
+  }>(
+    "inspection_sessions",
+    sessionId,
+    "id, status, company_id, claim_id, claim_action_id, created_at",
+  );
+  if (!session) throw new Error("Inspección no encontrada");
+  if (session.status !== "completed") {
+    throw new Error("Solo se puede reabrir una inspección completada");
+  }
+
+  // Validar que sea la última inspección del claim (liquidación).
+  // Solo la última inspección de una liquidación puede reabrirse.
+  if (session.claim_id) {
+    const newer = await fetchAll<{ id: string; created_at: string }>(
+      "inspection_sessions",
+      {
+        select: "id, created_at",
+        eq: { claim_id: session.claim_id },
+        order: { column: "created_at", ascending: false },
+        limit: 1,
+      },
+    );
+    const latest = newer[0];
+    if (latest && latest.id !== sessionId) {
+      throw new Error(
+        "Solo se puede reabrir la última inspección de la liquidación",
+      );
+    }
+  }
+
+  const now = new Date().toISOString();
+  const companyId = String(session.company_id ?? "");
+
+  // 1. Abrir un nuevo periodo de trabajo (la inspección vuelve a estar activa)
+  if (companyId) {
+    await openWorkPeriod(sessionId, companyId);
+  }
+
+  // 2. Actualizar la sesión: status → active, ended_at → null, registrar reapertura
+  const updated = await updateRow<InspectionSession>(
+    "inspection_sessions",
+    sessionId,
+    {
+      status: "active",
+      substate: "normal",
+      ended_at: null,
+      reopened_at: now,
+      reopened_by: userId || null,
+      reopened_reason: reason,
+    },
+    SESSION_SELECT,
+  );
+
+  // 3. Revertir el reporte "final" a "draft" para que la UI muestre
+  //    la marca de agua "BORRADOR" y el botón "Generar" nuevamente.
+  try {
+    const supabase = getSupabaseClient();
+    await supabase
+      .from("inspection_reports")
+      .update({ status: "draft" })
+      .eq("session_id", sessionId)
+      .eq("status", "final");
+  } catch (e) {
+    console.error("No se pudo revertir el reporte a draft al reabrir:", e);
+  }
+
+  // 4. Registrar en audit_logs
+  try {
+    await insertRow(
+      "audit_logs",
+      {
+        table_name: "inspection_sessions",
+        record_id: sessionId,
+        action: "UPDATE",
+        old_data: { status: "completed" },
+        new_data: { status: "active", reopened_at: now, reopened_reason: reason },
+        performed_by: userId || null,
+        company_id: session.company_id || null,
+      },
+      "id",
+    );
+  } catch (e) {
+    console.error("No se pudo registrar auditoría de reapertura:", e);
+  }
+
+  return updated;
+}
+
 export async function updateInspectionSession(id: string, input: Partial<InspectionSession>) {
   const set: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
@@ -1222,7 +1459,6 @@ export async function rescheduleInspectionViaCIN(params: {
   if (insActionId) {
     const { rejectClaimAction } = await import("@/services/claim-actions");
     await rejectClaimAction(insActionId, "issue", userId, notes || "Reagendamiento desde inspección");
-    console.log("[rescheduleInspectionViaCIN] INS-001 rechazada:", insActionId);
   }
 
   // 3. Crear y emitir CIN-002 (Coordinación de Inspección reagendamiento)
@@ -1268,8 +1504,6 @@ export async function rescheduleInspectionViaCIN(params: {
     if (cinActionData[k] === undefined) delete cinActionData[k];
   }
 
-  console.log("[rescheduleInspectionViaCIN] cinActionData:", JSON.stringify(cinActionData));
-
   const newCin = await createClaimAction({
     claim_id: claimId,
     action_template_id: cinTemplate.action_template_id,
@@ -1281,8 +1515,6 @@ export async function rescheduleInspectionViaCIN(params: {
     created_by: userId,
     origin: "A",
   });
-
-  console.log("[rescheduleInspectionViaCIN] CIN-002 created:", newCin.id, "origin:", newCin.origin);
 
   // issueClaimAction sobrescribe action_data con { ...actionData, inf_fecha_entrega }
   // Por eso pasamos el mismo cinActionData para preservar todos los campos.

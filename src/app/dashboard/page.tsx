@@ -7,6 +7,7 @@ import { getCountries } from "@/services/catalogs";
 import { userTypeLabels } from "@/services/permissions";
 import { useAuth } from "@/hooks/use-auth";
 import { useRealtime } from "@/hooks/use-realtime";
+import { KpiGridSkeleton } from "@/components/ui/skeletons";
 import {
   FileText,
   AlertCircle,
@@ -23,6 +24,7 @@ import {
   MapPin,
 } from "lucide-react";
 import { KpiTodayIcon, KpiActiveIcon, KpiScheduledIcon, KpiCompletedIcon, KpiOverdueIcon, KpiTimeIcon } from "@/components/dashboard/kpi-icons";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
 import { useUiThemeId } from "@/hooks/use-ui-theme-id";
 import type { UserRole } from "@/types";
@@ -170,13 +172,13 @@ export default function DashboardPage() {
   useRealtime("claims", [["dashboard-claims"]]);
   useRealtime("inspection_sessions", [["dashboard-sessions"]]);
 
-  const { data: claims } = useQuery({
+  const { data: claims, isLoading: claimsLoading } = useQuery({
     queryKey: ["dashboard-claims"],
     queryFn: () => getDashboardClaims(),
     enabled: !!profile,
   });
 
-  const { data: sessions } = useQuery({
+  const { data: sessions, isLoading: sessionsLoading } = useQuery({
     queryKey: ["dashboard-sessions"],
     queryFn: () => getDashboardSessions(),
     enabled: !!profile,
@@ -1073,6 +1075,9 @@ export default function DashboardPage() {
       </div>
 
       {/* KPI Cards — resumen rápido */}
+      {(claimsLoading || sessionsLoading) ? (
+        <KpiGridSkeleton count={isGlobalUser ? 6 : 4} />
+      ) : (
       <div className={`grid grid-cols-2 gap-3 sm:grid-cols-3 ${isGlobalUser ? "lg:grid-cols-6" : "lg:grid-cols-4"}`}>
         {kpis.map((kpi) => {
           const Icon = kpi.icon;
@@ -1108,6 +1113,7 @@ export default function DashboardPage() {
           );
         })}
       </div>
+      )}
 
       {/* Empty state para usuarios sin casos */}
       {stats.totalClaims === 0 && !isGlobalUser && (
@@ -1559,7 +1565,12 @@ export default function DashboardPage() {
                         <td className="font-mono whitespace-nowrap">{row.inspectionCode}</td>
                         <td className="font-mono whitespace-nowrap">{row.liquidation}</td>
                         <td className="whitespace-nowrap">{row.insured}</td>
-                        <td className="max-w-xs truncate" title={row.address}>{row.address}</td>
+                        <td className="max-w-xs truncate">
+                          <Tooltip>
+                            <TooltipTrigger render={<span className="truncate block" />}>{row.address}</TooltipTrigger>
+                            <TooltipContent side="top"><p>{row.address}</p></TooltipContent>
+                          </Tooltip>
+                        </td>
                         <td className="whitespace-nowrap">{row.inspector}</td>
                         {kpiModal?.key === "overdue" && (
                           <td className="whitespace-nowrap capitalize">

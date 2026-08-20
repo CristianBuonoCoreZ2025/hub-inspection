@@ -151,6 +151,7 @@ export function useAuth() {
       queryClient.invalidateQueries({ queryKey: ["auth-user"] });
       queryClient.invalidateQueries({ queryKey: ["auth-profile"] });
       queryClient.invalidateQueries({ queryKey: ["auth-data-access"] });
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- signOut requiere full reload para limpiar estado de Supabase
       window.location.href = "/login";
     }
   };

@@ -47,6 +47,8 @@ import {
   Outdent,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePrompt } from "@/components/ui/alert-context";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 // ──────────────────────────────────────────────────────────────
 // Extensión de indentación para TipTap — agrega data-indent a los
@@ -250,21 +252,28 @@ function ToolbarButton({
   children: React.ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      onMouseDown={(e) => e.preventDefault()}
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      className={cn(
-        "inline-flex h-6 min-w-6 items-center justify-center rounded px-0.5 text-foreground/80 transition-all",
-        "hover:bg-accent hover:text-foreground",
-        active && "bg-primary/12 text-primary shadow-[inset_0_0_0_1px_var(--primary)]",
-        disabled && "cursor-not-allowed opacity-35 hover:bg-transparent"
-      )}
-    >
-      {children}
-    </button>
+    <Tooltip>
+      <TooltipTrigger className="inline-flex">
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={onClick}
+          disabled={disabled}
+          aria-label={title}
+          className={cn(
+            "inline-flex h-6 min-w-6 items-center justify-center rounded px-0.5 text-foreground/80 transition-[background-color,color,box-shadow] duration-150",
+            "hover:bg-accent hover:text-foreground",
+            active && "bg-primary/12 text-primary shadow-[inset_0_0_0_1px_var(--primary)]",
+            disabled && "cursor-not-allowed opacity-35 hover:bg-transparent"
+          )}
+        >
+          {children}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom">
+        <p>{title}</p>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -301,24 +310,30 @@ function Dropdown({
   const current = options.find((o) => o.value === value);
   return (
     <div className="relative">
-      <button
-        type="button"
-        title={title}
-        disabled={disabled}
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={() => setOpen((v) => !v)}
-        className={cn(
-          "inline-flex h-6 items-center justify-between gap-1 rounded border border-border bg-background px-1.5 text-[11px] text-foreground transition-colors",
-          "hover:border-primary/50 hover:bg-accent/40",
-          width,
-          disabled && "cursor-not-allowed opacity-40 hover:border-border hover:bg-transparent"
-        )}
-      >
-        <span className="truncate" style={current?.style}>
-          {current ? (renderLabel ? renderLabel(current) : current.label) : title}
-        </span>
-        <ChevronDown className="shrink-0 text-muted-foreground" />
-      </button>
+      <Tooltip>
+        <TooltipTrigger className="inline-flex">
+          <button
+            type="button"
+            disabled={disabled}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => setOpen((v) => !v)}
+            className={cn(
+              "inline-flex h-6 items-center justify-between gap-1 rounded border border-border bg-background px-1.5 text-[11px] text-foreground transition-colors",
+              "hover:border-primary/50 hover:bg-accent/40",
+              width,
+              disabled && "cursor-not-allowed opacity-40 hover:border-border hover:bg-transparent"
+            )}
+          >
+            <span className="truncate" style={current?.style}>
+              {current ? (renderLabel ? renderLabel(current) : current.label) : title}
+            </span>
+            <ChevronDown className="shrink-0 text-muted-foreground" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          <p>{title}</p>
+        </TooltipContent>
+      </Tooltip>
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
@@ -369,49 +384,66 @@ function ColorButton({
   const barColor = currentColor || "#000000";
   return (
     <div className="relative flex flex-col items-center">
-      <button
-        type="button"
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={() => (onToggle ? onToggle() : setOpen((v) => !v))}
-        disabled={disabled}
-        title={title}
-        className={cn(
-          "inline-flex h-5 w-6 items-center justify-center rounded-t text-foreground/80 transition-colors",
-          "hover:bg-accent hover:text-foreground disabled:opacity-40"
-        )}
-      >
-        {icon}
-      </button>
-      <button
-        type="button"
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={() => setOpen((v) => !v)}
-        disabled={disabled}
-        title={`${title} — más colores`}
-        className={cn(
-          "h-1.5 w-6 rounded-b border-x border-b border-border transition-colors hover:brightness-110",
-          disabled && "opacity-40"
-        )}
-        style={{ backgroundColor: barColor }}
-      />
+      <Tooltip>
+        <TooltipTrigger className="inline-flex">
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => (onToggle ? onToggle() : setOpen((v) => !v))}
+            disabled={disabled}
+            className={cn(
+              "inline-flex h-5 w-6 items-center justify-center rounded-t text-foreground/80 transition-colors",
+              "hover:bg-accent hover:text-foreground disabled:opacity-40"
+            )}
+          >
+            {icon}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          <p>{title}</p>
+        </TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger className="inline-flex">
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => setOpen((v) => !v)}
+            disabled={disabled}
+            className={cn(
+              "h-1.5 w-6 rounded-b border-x border-b border-border transition-colors hover:brightness-110",
+              disabled && "opacity-40"
+            )}
+            style={{ backgroundColor: barColor }}
+          />
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          <p>{`${title} — más colores`}</p>
+        </TooltipContent>
+      </Tooltip>
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute top-full left-0 z-50 mt-1 rounded-md border border-border bg-popover p-2 shadow-lg">
             <div className="grid grid-cols-10 gap-1">
               {palette.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => {
-                    onPick(c);
-                    setOpen(false);
-                  }}
-                  className="h-4 w-4 rounded border border-border/60 transition-transform hover:scale-110 hover:border-foreground"
-                  style={{ backgroundColor: c }}
-                  title={c}
-                />
+                <Tooltip key={c}>
+                  <TooltipTrigger className="inline-flex">
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        onPick(c);
+                        setOpen(false);
+                      }}
+                      className="h-4 w-4 rounded border border-border/60 transition-transform hover:scale-110 hover:border-foreground"
+                      style={{ backgroundColor: c }}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    <p>{c}</p>
+                  </TooltipContent>
+                </Tooltip>
               ))}
             </div>
             <div className="mt-2 flex items-center gap-1.5 border-t border-border pt-2">
@@ -420,7 +452,7 @@ function ColorButton({
                 value={barColor}
                 onChange={(e) => onPick(e.target.value)}
                 className="h-6 w-8 cursor-pointer rounded border border-border"
-                title="Color personalizado"
+                aria-label="Color personalizado"
               />
               <input
                 type="text"
@@ -451,6 +483,7 @@ export function HtmlEditor({
 }: HtmlEditorProps) {
   const [mode, setMode] = React.useState<"visual" | "code">("visual");
   const [codeValue, setCodeValue] = React.useState(value);
+  const prompt = usePrompt();
 
   const editor = useEditor({
     extensions: [
@@ -516,10 +549,16 @@ export function HtmlEditor({
     if (editor) editor.setEditable(!disabled);
   }, [editor, disabled]);
 
-  const insertLink = () => {
+  const insertLink = async () => {
     if (!editor) return;
     const prev = editor.getAttributes("link").href as string | undefined;
-    const url = window.prompt("URL del enlace:", prev || "https://");
+    const url = await prompt({
+      title: "Insertar enlace",
+      description: "URL del enlace:",
+      confirmLabel: "Aceptar",
+      placeholder: "https://",
+      defaultValue: prev || "https://",
+    });
     if (url === null) return;
     if (url === "") {
       editor.chain().focus().extendMarkRange("link").unsetLink().run();
@@ -528,9 +567,15 @@ export function HtmlEditor({
     editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
   };
 
-  const insertImage = () => {
+  const insertImage = async () => {
     if (!editor) return;
-    const url = window.prompt("URL de la imagen:", "https://");
+    const url = await prompt({
+      title: "Insertar imagen",
+      description: "URL de la imagen:",
+      confirmLabel: "Aceptar",
+      placeholder: "https://",
+      defaultValue: "https://",
+    });
     if (!url) return;
     editor.chain().focus().setImage({ src: url }).run();
   };

@@ -59,7 +59,7 @@ export function BarChartQuad({
             ];
             const title = `${entry.name} — Total: ${total}`;
             return (
-              <div className="horizontal-bar-row" key={`${entry.name}-${index}`} title={title}>
+              <div className="horizontal-bar-row" key={`${entry.name}-${index}`} data-title={title}>
                 <div className="horizontal-bar-name">
                   {entry.name}
                 </div>
@@ -101,8 +101,8 @@ export function BarChartQuad({
                           return (
                             <div
                               key={i}
-                              style={{ width: `${segPct}%`, background: "transparent" }}
-                              title={`${s.name}: ${s.value}`}
+                              className="horizontal-bar-segment bg-transparent"
+                              style={{ width: `${segPct}%` }}
                             />
                           );
                         })}
@@ -125,7 +125,7 @@ export function BarChartQuad({
                               border: isAurora ? `1px solid ${s.color}80` : undefined,
                               boxShadow: isAurora ? `0 0 10px ${s.color}60` : undefined,
                             }}
-                            title={`${s.name}: ${s.value}`}
+                            aria-label={`${s.name}: ${s.value}`}
                           />
                         );
                       })}

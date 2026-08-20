@@ -28,14 +28,12 @@ import { cn } from "@/lib/utils";
 const GeoCapture = dynamic(() => import("@/components/inspection/geo-capture").then((m) => ({ default: m.GeoCapture })), { ssr: false });
 import { useAuth } from "@/hooks/use-auth";
 import { useRealtime } from "@/hooks/use-realtime";
-import { toast } from "sonner";
 import {
  ArrowLeft,
  ClipboardCheck,
  XCircle,
  FileText,
  MapPin,
- MapPinned,
  Map,
  User,
  Mail,
@@ -62,6 +60,7 @@ import { useConfirm } from "@/hooks/use-confirm";
 import { useAlert } from "@/components/ui/alert-context";
 import { Badge } from "@/components/ui/badge";
 import { MagicLinkSender } from "@/components/ui/magic-link-sender";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { MapContainer, TileLayer, Marker } from "react-leaflet";
 import L from "leaflet";
 // Tabs components no longer used — replaced with flat tab style matching claims page
@@ -318,6 +317,7 @@ export default function InspectionDetailPage() {
 // evidencia), NO se levanta el popup. Solo se levanta si el valor cambia
 // despues del montaje (captura nueva o recaptura).
 const prevGeoCapturedAtRef = useRef<string | null | undefined>(undefined);
+// eslint-disable-next-line react-hooks/preserve-manual-memoization -- dependencias intencionales, el compiler infiere diferente
 const showGeoPopup = useCallback((lat: number, lng: number, distance: number | null, status: string) => {
   setGeoCapturedData({ lat, lng, distance, status });
   setGeoCapturedModalOpen(true);
@@ -340,8 +340,10 @@ useEffect(() => {
   const prev = prevGeoCapturedAtRef.current;
   // Solo disparar si el valor cambio Y no es la inicializacion
   if (prev !== undefined && current !== prev) {
+    // eslint-disable-next-line react-hooks/immutability -- mutación intencional del ref para detectar cambios de geo_captured_at
     prevGeoCapturedAtRef.current = current;
     if (session.geo_latitude != null && session.geo_longitude != null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- showGeoPopup dispara setState intencionalmente para mostrar popup de geo captura
       showGeoPopup(session.geo_latitude, session.geo_longitude, session.geo_distance_meters, session.geo_status);
     }
   }
@@ -960,15 +962,21 @@ enabled: activeTab === "informe",
  <div className="flex items-start justify-between gap-2">
  <p className="font-medium whitespace-pre-wrap flex-1">{coordAclaracionDireccion || "—"}</p>
  {claim?.claim_latitude != null && claim?.claim_longitude != null && (
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <Button
  size="sm"
  variant="outline"
  className="h-7 w-7 p-0 shrink-0"
- title="Ver ubicación del siniestro en el mapa"
  onClick={() => setMapViewOpen(true)}
  >
  <Map className="h-3.5 w-3.5 text-primary" />
  </Button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>Ver ubicación del siniestro en el mapa</p>
+ </TooltipContent>
+ </Tooltip>
  )}
  </div>
  </div>
@@ -1092,15 +1100,12 @@ enabled: activeTab === "informe",
  {isMovable && (
  <div className="flex flex-row items-start gap-1.5 shrink-0">
  {isPlanned && !isPaused && isAssignedInspector && (
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <Button
  size="sm"
  variant="outline"
  className="h-7 w-7 p-0"
- title={
- session.inspection_type === "onsite" && (!session.geo_status || session.geo_status === "pending" || session.geo_status === "failed")
- ? "Primero debes capturar tu geolocalización en el lugar"
- : "Iniciar inspección"
- }
  disabled={
  session.inspection_type === "onsite" &&
  (!session.geo_status || session.geo_status === "pending" || session.geo_status === "failed")
@@ -1111,25 +1116,41 @@ enabled: activeTab === "informe",
  >
  <Play className="h-3.5 w-3.5" />
  </Button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>
+ {session.inspection_type === "onsite" && (!session.geo_status || session.geo_status === "pending" || session.geo_status === "failed")
+ ? "Primero debes capturar tu geolocalización en el lugar"
+ : "Iniciar inspección"}
+ </p>
+ </TooltipContent>
+ </Tooltip>
  )}
  {isPaused && isAssignedInspector && (
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <Button
  size="sm"
  variant="outline"
  className="h-7 w-7 p-0 text-amber-600 dark:text-amber-400 border-amber-400/40"
- title="Reanudar inspección (viene de pausa)"
  disabled={resumeMutation.isPending}
  onClick={() => resumeMutation.mutate(session.id)}
  >
  <FastForward className="h-3.5 w-3.5" />
  </Button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>Reanudar inspección (viene de pausa)</p>
+ </TooltipContent>
+ </Tooltip>
  )}
  {isMovable && isRemote && (
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <Button
  size="sm"
  variant="outline"
  className="h-7 w-7 p-0"
- title="Mover fecha (solo remotas)"
  onClick={() => {
  setMoveSelectedDatetime(sessionStatus === "active" ? "" : (session.scheduled_at || ""));
  setMoveDateModalOpen(true);
@@ -1137,12 +1158,18 @@ enabled: activeTab === "informe",
  >
  <Clock className="h-3.5 w-3.5" />
  </Button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>Mover fecha (solo remotas)</p>
+ </TooltipContent>
+ </Tooltip>
  )}
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <Button
  size="sm"
  variant="outline"
  className="h-7 w-7 p-0"
- title="Reagendar (genera CIN de re-coordinación)"
  onClick={() => {
  // Priorizar el inspector de la sesión, luego el del siniestro
  const sessionInspectorId = session?.inspector_id as string | undefined;
@@ -1157,15 +1184,26 @@ enabled: activeTab === "informe",
  >
  <CalendarClock className="h-3.5 w-3.5" />
  </Button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>Reagendar (genera CIN de re-coordinación)</p>
+ </TooltipContent>
+ </Tooltip>
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <Button
  size="sm"
  variant="outline"
  className="h-7 w-7 p-0"
- title="Cancelar (genera CIN desistida, INS rechazada)"
  onClick={() => setCancelModalOpen(true)}
  >
  <XCircle className="h-3.5 w-3.5" />
  </Button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>Cancelar (genera CIN desistida, INS rechazada)</p>
+ </TooltipContent>
+ </Tooltip>
  </div>
  )}
  </div>
@@ -1242,23 +1280,27 @@ enabled: activeTab === "informe",
  )}
 
 {/* ── TAB: ACTA DE INSPECCION ── */}
- {activeTab === "acta" && (
- <div className="mt-4">
+ {/* El ActaForm se mantiene montado (oculto con CSS) al cambiar de tab
+     para no perder el estado del formulario ni el autosave pendiente. */}
  {session.status === "scheduled" ? (
- <div className="app-panel">
- <h3 className="app-section-title">
- Acta de Inspeccion
- </h3>
- <div className="mt-4 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30">
- <p className="app-body text-amber-950 dark:text-amber-100">
- Inicia la inspeccion para acceder al formulario del Acta.
- </p>
- </div>
- </div>
+   activeTab === "acta" && (
+     <div className="mt-4">
+       <div className="app-panel">
+         <h3 className="app-section-title">
+           Acta de Inspeccion
+         </h3>
+         <div className="mt-4 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30">
+           <p className="app-body text-amber-950 dark:text-amber-100">
+             Inicia la inspeccion para acceder al formulario del Acta.
+           </p>
+         </div>
+       </div>
+     </div>
+   )
  ) : (
- <ActaForm session={session} readOnly={session.status !== "active"} onComplete={() => setActiveTab("danos")} />
- )}
- </div>
+   <div className={activeTab === "acta" ? "mt-4" : "hidden"}>
+     <ActaForm session={session} readOnly={session.status !== "active"} />
+   </div>
  )}
 
  {/* ── TAB: DANOS ── */}
@@ -1414,7 +1456,7 @@ enabled: activeTab === "informe",
  className="gap-2"
  >
  <Video className="h-4 w-4" />
- Conectar videollamada
+ Conectar
  </Button>
  </div>
  )}
@@ -1504,41 +1546,59 @@ enabled: activeTab === "informe",
  </div>
 
  {chatPanelOpen && (
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <button
  type="button"
  onClick={() => setChatPanelOpen(false)}
  className="absolute right-0 top-0 h-full w-4 z-10 flex items-center justify-center bg-primary/80 text-primary-foreground hover:bg-primary transition-colors rounded-r-2xl"
- title="Colapsar chat"
  >
  <ChevronRight className="h-5 w-5" />
  </button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>Colapsar chat</p>
+ </TooltipContent>
+ </Tooltip>
  )}
  </div>
  )}
 
  {/* Botón flotante para reabrir videollamada — solo inspecciones remotas activas */}
  {!videoCallOpen && session.inspection_type === "remote" && session.status === "active" && (
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <button
  onClick={() => {
  setChatPanelOpen(true);
  setVideoCallOpen(true);
  }}
  className="fixed bottom-20 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-violet-600 text-white shadow-lg hover:scale-105 transition-transform"
- title="Reanudar videollamada"
  >
  <Video className="h-5 w-5" />
  </button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>Reanudar videollamada</p>
+ </TooltipContent>
+ </Tooltip>
  )}
 
  {/* Barra lateral colapsada para reabrir chat — solo para inspecciones remotas */}
  {!chatPanelOpen && session.inspection_type === "remote" && (
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <button
  onClick={() => setChatPanelOpen(true)}
  className="fixed top-20 right-0 z-40 flex h-[calc(100vh-180px)] w-4 items-center justify-center rounded-l-lg bg-primary/80 text-primary-foreground shadow-lg hover:bg-primary transition-colors"
- title="Abrir chat"
  >
  <ChevronLeft className="h-5 w-5" />
  </button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>Abrir chat</p>
+ </TooltipContent>
+ </Tooltip>
  )}
 
  </div>
@@ -1598,14 +1658,20 @@ enabled: activeTab === "informe",
          </p>
        </div>
      </div>
-     <button
-       type="button"
-       onClick={() => setGeoCapturedModalOpen(false)}
-       className="p-1 rounded-md hover:bg-muted/40 text-muted-foreground shrink-0"
-       title="Cerrar"
-     >
-       <XCircle className="h-4 w-4" />
-     </button>
+     <Tooltip>
+       <TooltipTrigger className="inline-flex">
+         <button
+           type="button"
+           onClick={() => setGeoCapturedModalOpen(false)}
+           className="p-1 rounded-md hover:bg-muted/40 text-muted-foreground shrink-0"
+         >
+           <XCircle className="h-4 w-4" />
+         </button>
+       </TooltipTrigger>
+       <TooltipContent side="top">
+         <p>Cerrar</p>
+       </TooltipContent>
+     </Tooltip>
    </div>
    {/* Mapa */}
    <div ref={geoMapRef} className="h-48 relative">
@@ -1646,7 +1712,7 @@ enabled: activeTab === "informe",
        {geoSavingEvidence ? (
          <><Loader2 className="h-3 w-3 animate-spin mr-1" /> Guardando...</>
        ) : (
-         <><Camera className="h-3 w-3 mr-1" /> Guardar evidencia</>
+         <><Camera className="h-3 w-3 mr-1" /> Guardar</>
        )}
      </Button>
    </div>

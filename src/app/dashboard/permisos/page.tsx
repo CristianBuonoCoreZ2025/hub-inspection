@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 const userTypes: UserRole[] = ["internal", "adjuster", "inspector", "assistant", "auditor", "dispatcher"];
 
@@ -542,15 +543,21 @@ function SubPagesList({
                   <span className="ml-2 text-[9px] text-muted-foreground/60 italic">(hereda)</span>
                 )}
                 {canExpandFields && (
-                  <button
-                    type="button"
-                    onClick={() => onToggleFieldExpand(fieldKey)}
-                    className="ml-2 inline-flex items-center gap-0.5 text-[9px] text-violet-600 hover:text-violet-700 transition-colors"
-                    title="Configurar campos editables"
-                  >
-                    <Settings2 className="h-3 w-3" />
-                    Campos
-                  </button>
+                  <Tooltip>
+                    <TooltipTrigger render={
+                      <button
+                        type="button"
+                        onClick={() => onToggleFieldExpand(fieldKey)}
+                        className="ml-2 inline-flex items-center gap-0.5 text-[9px] text-violet-600 hover:text-violet-700 transition-colors"
+                      />
+                    }>
+                      <Settings2 className="h-3 w-3" />
+                      Campos
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <p>Configurar campos editables</p>
+                    </TooltipContent>
+                  </Tooltip>
                 )}
               </td>
               {allColumns.map((col) => {
@@ -660,18 +667,24 @@ function FieldPermissionsRows({
                   {/* Espacio para alinear con las columnas de acciones */}
                 </td>
                 <td className="text-center py-1 px-2">
-                  <button
-                    type="button"
-                    onClick={() => onFieldToggle(section, field.name, !canEdit)}
-                    className={`inline-flex h-4 w-4 items-center justify-center rounded transition-colors ${
-                      canEdit
-                        ? "bg-emerald-500 text-white"
-                        : "bg-muted text-muted-foreground hover:bg-muted/70"
-                    }`}
-                    title={canEdit ? "Editable (clic para restringir)" : "Restringido (clic para permitir)"}
-                  >
-                    {canEdit && <Check className="h-2.5 w-2.5" />}
-                  </button>
+                  <Tooltip>
+                    <TooltipTrigger className="inline-flex">
+                      <button
+                        type="button"
+                        onClick={() => onFieldToggle(section, field.name, !canEdit)}
+                        className={`inline-flex h-4 w-4 items-center justify-center rounded transition-colors ${
+                          canEdit
+                            ? "bg-emerald-500 text-white"
+                            : "bg-muted text-muted-foreground hover:bg-muted/70"
+                        }`}
+                      >
+                        {canEdit && <Check className="h-2.5 w-2.5" />}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <p>{canEdit ? "Editable (clic para restringir)" : "Restringido (clic para permitir)"}</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </td>
               </tr>
             );

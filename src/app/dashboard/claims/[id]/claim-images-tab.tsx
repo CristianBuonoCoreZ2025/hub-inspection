@@ -10,6 +10,7 @@ import {
   type ClaimImage,
 } from "@/services/claim-images";
 import { toast } from "sonner";
+import { useConfirm } from "@/hooks/use-confirm";
 import {
   Image as ImageIcon,
   Upload,
@@ -34,6 +35,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
 import { usePagination } from "@/hooks/use-pagination";
 import { Pagination } from "@/components/ui/pagination";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 interface ClaimImagesTabProps {
   claimId: string;
@@ -410,15 +412,21 @@ export default function ClaimImagesTab({ claimId, claimStatusId }: ClaimImagesTa
               )}
             </h3>
             {canCreateImages && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="btn-icon-sm"
-                title="Subir imágenes"
-                onClick={() => setUploadModal((p) => ({ ...p, visible: true, items: [], isDragging: false }))}
-              >
-                <Upload className="h-3.5 w-3.5" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger className="inline-flex">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="btn-icon-sm"
+                    onClick={() => setUploadModal((p) => ({ ...p, visible: true, items: [], isDragging: false }))}
+                  >
+                    <Upload className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Subir imágenes</p>
+                </TooltipContent>
+              </Tooltip>
             )}
           </div>
           {total > 0 && (
@@ -691,6 +699,7 @@ function UnifiedImageCard({
   queryClient: ReturnType<typeof useQueryClient>;
 }) {
   const isPending = image.aiStatus === "pending" || image.aiStatus === "processing";
+  const confirm = useConfirm();
 
   const handleReanalyze = async () => {
     try {
@@ -709,38 +718,68 @@ function UnifiedImageCard({
 
   const hoverActions = (
     <>
-      <button
-        onClick={onZoom}
-        className="flex h-7 w-7 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm hover:bg-black/80"
-        title="Ampliar"
-      >
-        <ZoomIn className="h-3.5 w-3.5" />
-      </button>
-      <a
-        href={image.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex h-7 w-7 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm hover:bg-black/80"
-        title="Abrir"
-      >
-        <ExternalLink className="h-3.5 w-3.5" />
-      </a>
+      <Tooltip>
+        <TooltipTrigger className="inline-flex">
+          <button
+            onClick={onZoom}
+            className="flex h-7 w-7 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm hover:bg-black/80"
+          >
+            <ZoomIn className="h-3.5 w-3.5" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          <p>Ampliar</p>
+        </TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger className="inline-flex">
+          <a
+            href={image.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex h-7 w-7 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm hover:bg-black/80"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          <p>Abrir</p>
+        </TooltipContent>
+      </Tooltip>
       {image.canDelete && (
-        <button
-          onClick={() => {
-            if (isPending) {
-              if (confirm("La IA está procesando esta imagen. ¿Eliminar de todos modos? Se cancelará el análisis.")) {
-                onDelete();
-              }
-            } else {
-              if (confirm("¿Eliminar esta imagen?")) onDelete();
-            }
-          }}
-          className="flex h-7 w-7 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm hover:bg-red-500/80"
-          title="Eliminar"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger className="inline-flex">
+            <button
+              onClick={async () => {
+                if (isPending) {
+                  const ok = await confirm({
+                    title: "Eliminar imagen",
+                    description: "La IA está procesando esta imagen. ¿Eliminar de todos modos? Se cancelará el análisis.",
+                    confirmLabel: "Eliminar",
+                    destructive: true,
+                  });
+                  if (!ok) return;
+                  onDelete();
+                } else {
+                  const ok = await confirm({
+                    title: "Eliminar imagen",
+                    description: "¿Eliminar esta imagen?",
+                    confirmLabel: "Eliminar",
+                    destructive: true,
+                  });
+                  if (!ok) return;
+                  onDelete();
+                }
+              }}
+              className="flex h-7 w-7 items-center justify-center rounded-md bg-black/60 text-white backdrop-blur-sm hover:bg-red-500/80"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p>Eliminar</p>
+          </TooltipContent>
+        </Tooltip>
       )}
     </>
   );

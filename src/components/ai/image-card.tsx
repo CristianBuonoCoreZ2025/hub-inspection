@@ -9,6 +9,7 @@ import {
 import { AiProgressOverlay } from "@/components/ai/ai-progress-overlay";
 import { AiCopyButton } from "@/components/ai/ai-copy-button";
 import { cleanMarkdown } from "@/lib/utils";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 /**
  * ImageCard
@@ -143,20 +144,26 @@ export function ImageCard({
       {/* Thumbnail */}
       <div className="relative aspect-video overflow-hidden bg-muted/30">
         {thumbnailContent ?? (
-          <button
-            type="button"
-            onClick={onImageClick}
-            className="block h-full w-full cursor-zoom-in"
-            title="Click para ampliar"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element -- user-uploaded image from R2 */}
-            <img
-              src={imageUrl}
-              alt={imageAlt}
-              className="h-full w-full object-cover transition-transform group-hover:scale-[1.02]"
-              loading="lazy"
-            />
-          </button>
+          <Tooltip>
+            <TooltipTrigger className="block h-full w-full">
+              <button
+                type="button"
+                onClick={onImageClick}
+                className="block h-full w-full cursor-zoom-in"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element -- user-uploaded image from R2 */}
+                <img
+                  src={imageUrl}
+                  alt={imageAlt}
+                  className="h-full w-full object-cover transition-transform group-hover:scale-[1.02]"
+                  loading="lazy"
+                />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p>Click para ampliar</p>
+            </TooltipContent>
+          </Tooltip>
         )}
 
         {/* Badge (esquina superior izquierda) */}
@@ -241,14 +248,20 @@ export function ImageCard({
               <div className="ai-card-controls-group">
                 <div className="ai-card-controls-row">
                   {onReanalyze && (
-                  <button
-                    onClick={onReanalyze}
-                    className="ai-card-ctrl-btn ai-card-ctrl-reanalyze"
-                    title="Re-analizar con IA"
-                  >
-                    <RefreshCw className="h-3 w-3" />
-                    <span>Re-IA</span>
-                  </button>
+                  <Tooltip>
+                    <TooltipTrigger className="inline-flex">
+                      <button
+                        onClick={onReanalyze}
+                        className="ai-card-ctrl-btn ai-card-ctrl-reanalyze"
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                        <span>Re-IA</span>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <p>Re-analizar con IA</p>
+                    </TooltipContent>
+                  </Tooltip>
                   )}
                 <Popover>
                   <PopoverTrigger
@@ -340,28 +353,40 @@ export function ImageCard({
             {/* error → re-analizar */}
             {aiStatus === "error" && onReanalyze && (
               <div className="ai-card-controls-group">
-                <button
-                  onClick={onReanalyze}
-                  className="ai-card-ctrl-btn ai-card-ctrl-error"
-                  title="Re-analizar con IA"
-                >
-                  <AlertCircle className="h-3 w-3" />
-                  <span>Re-IA</span>
-                </button>
+              <Tooltip>
+                <TooltipTrigger className="inline-flex">
+                  <button
+                    onClick={onReanalyze}
+                    className="ai-card-ctrl-btn ai-card-ctrl-error"
+                  >
+                    <AlertCircle className="h-3 w-3" />
+                    <span>Re-IA</span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Re-analizar con IA</p>
+                </TooltipContent>
+              </Tooltip>
               </div>
             )}
 
             {/* skipped → re-analizar (omitido temporalmente) */}
             {aiStatus === "skipped" && onReanalyze && (
               <div className="ai-card-controls-group">
-                <button
-                  onClick={onReanalyze}
-                  className="ai-card-ctrl-btn ai-card-ctrl-reanalyze"
-                  title="El análisis fue omitido. Volver a analizar con IA."
-                >
-                  <RefreshCw className="h-3 w-3" />
-                  <span>Re-IA</span>
-                </button>
+                <Tooltip>
+                  <TooltipTrigger className="inline-flex">
+                    <button
+                      onClick={onReanalyze}
+                      className="ai-card-ctrl-btn ai-card-ctrl-reanalyze"
+                    >
+                      <RefreshCw className="h-3 w-3" />
+                      <span>Re-IA</span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    <p>El análisis fue omitido. Volver a analizar con IA.</p>
+                  </TooltipContent>
+                </Tooltip>
               </div>
             )}
           </div>

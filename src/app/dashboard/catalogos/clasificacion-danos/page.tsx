@@ -10,6 +10,7 @@ import { getDamageClassifications, createDamageClassification, updateDamageClass
 import { toast } from "sonner";
 import { Search, Pencil, Ban, FileWarning, Wrench } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useConfirm } from "@/hooks/use-confirm";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 export default function DamageClassificationPage() {
  const queryClient = useQueryClient();
  const { canCreate, canEdit, canDelete } = usePermissions();
+ const confirm = useConfirm();
  const [search, setSearch] = useState("");
  const [open, setOpen] = useState(false);
  const [editingId, setEditingId] = useState<string | null>(null);
@@ -150,7 +152,7 @@ export default function DamageClassificationPage() {
  }}><Pencil className="h-4 w-4" /></button>
  )}
  {canDelete("catalogos") && (
- <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("Desactivar?")) deleteMutation.mutate(item.id); }}>
+ <button type="button" className="btn-icon-sm btn-danger-hover" onClick={async () => { const ok = await confirm({ title: "Desactivar", description: "Desactivar?", confirmLabel: "Desactivar", destructive: true }); if (!ok) return; deleteMutation.mutate(item.id); }}>
  <Ban className="h-4 w-4" />
  </button>
  )}

@@ -13,6 +13,7 @@ import { BlockRenderer } from "./block-renderer";
 import { createParagraph } from "../core/document-model";
 import { InsertBlockCommand } from "../core/commands";
 import { Plus } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 export function Canvas() {
   const document = useEditorStore((s) => s.document);
@@ -39,14 +40,20 @@ export function Canvas() {
         {document.blocks.map((block, index) => (
           <BlockRenderer key={block.id} block={block} index={index} />
         ))}
-        <button
-          type="button"
-          className="ee-canvas-add-block"
-          onClick={handleAddBlock}
-          title="Agregar bloque"
-        >
-          <Plus className="ee-canvas-add-icon" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger render={
+            <button
+              type="button"
+              className="ee-canvas-add-block"
+              onClick={handleAddBlock}
+            />
+          }>
+            <Plus className="ee-canvas-add-icon" />
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p>Agregar bloque</p>
+          </TooltipContent>
+        </Tooltip>
       </div>
     </div>
   );

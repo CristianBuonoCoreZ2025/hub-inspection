@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ToggleChip } from "@/components/ui/toggle-chip";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function MonedasPage() {
@@ -160,19 +161,27 @@ function MonedasTab() {
  <td>
  <div className="app-row-actions">
  {/* Ver tipos de cambio */}
+ <Tooltip>
+ <TooltipTrigger render={
  <button type="button" className="btn-icon-sm"
  onClick={() => router.push(`/dashboard/catalogos/tipos-cambio?currency=${c.code}`)}
- title={`Ver tipos de cambio de ${c.code}`}
- >
+ />
+ }>
  <ArrowRightLeft className="h-4 w-4" />
- </button>
+ </TooltipTrigger>
+ <TooltipContent side="top"><p>{`Ver tipos de cambio de ${c.code}`}</p></TooltipContent>
+ </Tooltip>
  {/* Asociar países */}
+ <Tooltip>
+ <TooltipTrigger render={
  <button type="button" className="btn-icon-sm"
  onClick={() => openPaises(c.code, c.name)}
- title={`Asociar países a ${c.code}`}
- >
+ />
+ }>
  <Globe className="h-4 w-4" />
- </button>
+ </TooltipTrigger>
+ <TooltipContent side="top"><p>{`Asociar países a ${c.code}`}</p></TooltipContent>
+ </Tooltip>
  {/* Editar */}
  {canEdit("catalogos") && (
  <button type="button" className="btn-icon-sm" onClick={() => { setEditingId(c.id); setForm({ code: c.code, name: c.name, symbol: c.symbol || "", decimals: String(c.decimals) }); setOpen(true); }}>

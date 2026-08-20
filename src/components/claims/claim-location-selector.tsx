@@ -312,7 +312,7 @@ export function ClaimLocationSelector({
                 disabled={!selected && !manualPin}
                 onClick={handleConfirm}
               >
-                Confirmar ubicación
+                Confirmar
               </Button>
             </div>
           </div>

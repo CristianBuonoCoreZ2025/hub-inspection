@@ -32,6 +32,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 interface HelpSection {
   id: string;
@@ -904,14 +905,20 @@ export function HelpButton() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="topbar-action dock-item"
-        title="Ayuda"
-      >
-        <TopbarIcon lightIcon={HelpIcon} darkIcon={HelpCircle} size={18} />
-      </button>
+      <Tooltip>
+        <TooltipTrigger render={
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="topbar-action dock-item"
+          />
+        }>
+          <TopbarIcon lightIcon={HelpIcon} darkIcon={HelpCircle} size={18} />
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          <p>Ayuda</p>
+        </TooltipContent>
+      </Tooltip>
       <HelpPanel open={open} onOpenChange={setOpen} />
     </>
   );

@@ -532,16 +532,10 @@
 
 .damage-dimension-pair {
   display: grid !important;
-  grid-template-columns: 150px 1fr 1fr !important;
+  grid-template-columns: 1fr 1fr !important;
   gap: 6px !important;
   align-items: stretch !important;
   width: 100% !important;
-}
-
-@media (max-width: 1023px) {
-  .damage-dimension-pair {
-    grid-template-columns: 1fr !important;
-  }
 }
 
 .damage-dimension-unit {
@@ -549,10 +543,10 @@
   flex-direction: column !important;
   justify-content: space-between !important;
   gap: 4px !important;
-  min-width: 0 !important;
-  width: 150px !important;
-  min-width: 150px !important;
-  max-width: 150px !important;
+  grid-column: 1 / -1 !important;
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
   border-radius: 8px !important;
   padding: 6px !important;
   border: 1px solid transparent !important;
@@ -831,7 +825,7 @@
   border: 1px solid transparent !important;
   background: color-mix(in srgb, var(--muted) 60%, transparent) !important;
   color: var(--muted-foreground) !important;
-  transition: all 0.15s ease !important;
+  transition: background-color 0.15s var(--ease-out), color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease !important;
   cursor: pointer !important;
 }
 
@@ -846,6 +840,18 @@
 }
 
 .acta-wizard-step-done {
+  background: color-mix(in srgb, var(--primary) 12%, transparent) !important;
+  color: var(--primary) !important;
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent) !important;
+}
+
+.acta-wizard-step-active:hover {
+  background: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  border-color: var(--primary) !important;
+}
+
+.acta-wizard-step-done:hover {
   background: color-mix(in srgb, var(--primary) 12%, transparent) !important;
   color: var(--primary) !important;
   border-color: color-mix(in srgb, var(--primary) 30%, transparent) !important;

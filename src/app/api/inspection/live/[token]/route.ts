@@ -60,7 +60,6 @@ export async function GET(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const session = sessions?.[0] as any;
     if (!session) {
-      console.log("[inspection/live] token no encontrado:", token);
       return NextResponse.json({ session: null });
     }
 
@@ -81,17 +80,6 @@ export async function GET(
         (p: { type: string }) => p.type === "insured" || p.type === "contact"
       );
     }
-
-    // Log diagnóstico
-    const counts = {
-      id: session.id,
-      status: session.status,
-      notes: session.inspection_notes?.length ?? -1,
-      checklists: session.inspection_checklists?.length ?? -1,
-      damages: session.inspection_damages?.length ?? -1,
-      chat: session.inspection_chat_messages?.length ?? -1,
-    };
-    console.log("[inspection/live] counts:", counts);
 
     // Usar el code del claim_action como inspection_number (estándar de gestiones)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -152,7 +152,7 @@ export default function DamageSpacesPage() {
  <SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Espacio</SortableTh>
  <th>Descripción</th>
  <th>Aplica a</th>
- <th className="w-[80px]"></th>
+ <th className="w-20"></th>
  </tr>
  </thead>
  <tbody>

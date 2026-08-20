@@ -38,6 +38,7 @@ import {
 } from "@/services/coverage-catalog";
 import { getInsuranceCompanies, getBusinessLines, getBrokers, getCountries, getCountryCurrencies } from "@/services/catalogs";
 import { AiAnalysisButton } from "@/components/ai/ai-analysis-button";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 const statusLabels: Record<string, string> = {
  draft: "Borrador",
@@ -706,7 +707,7 @@ export default function PolicyDetailPage() {
  ? "bg-teal-500/10 dark:bg-teal-500/15 text-teal-700 dark:text-teal-300 ring-1 ring-inset ring-teal-500/25"
  : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground ring-1 ring-inset ring-border"
  }`}
- title={selected ? "Click para quitar" : "Click para seleccionar"}
+ aria-label={selected ? "Click para quitar" : "Click para seleccionar"}
  >
  {selected && <Check className="size-3" />}
  {b.name}
@@ -789,6 +790,8 @@ export default function PolicyDetailPage() {
 
  {/* Quitar */}
  {selectedBusinessLines.length > 1 && (
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <button
  type="button"
  onClick={() => {
@@ -797,10 +800,14 @@ export default function PolicyDetailPage() {
  if (isPrimary) setPrimaryBusinessLine(next[0] || "");
  }}
  className="text-muted-foreground/40 hover:text-rose-600 dark:hover:text-rose-400 transition-colors shrink-0"
- title="Quitar"
  >
  <X className="size-3" />
  </button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>Quitar</p>
+ </TooltipContent>
+ </Tooltip>
  )}
  </div>
  );
@@ -877,7 +884,7 @@ export default function PolicyDetailPage() {
  <div className="lg:col-span-6">
  <Label className="app-field-label">Comentarios</Label>
  <Textarea
- className="app-input min-h-[60px]"
+ className="app-input min-h-15"
  value={form.comments}
  onChange={(e) => setForm({ ...form, comments: e.target.value })}
  placeholder="Observaciones..."
@@ -942,10 +949,12 @@ export default function PolicyDetailPage() {
  <Label className="app-field-label text-[10px]">Cobertura (POL)</Label>
  {selectedCoverage ? (
  <div className="flex items-center gap-1 mt-0.5">
- <div className="flex-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] min-h-[32px]">
+ <div className="flex-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] min-h-8">
  <span className="font-mono text-[10px] text-muted-foreground">{selectedCoverage.code}</span>
  <span className="font-medium ml-1">{selectedCoverage.name}</span>
  </div>
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <button
  type="button"
  onClick={() => {
@@ -955,10 +964,14 @@ export default function PolicyDetailPage() {
  setCovSearch("");
  }}
  className="text-muted-foreground hover:text-foreground px-1"
- title="Cambiar"
  >
  <ChevronDown className="h-3.5 w-3.5" />
  </button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>Cambiar</p>
+ </TooltipContent>
+ </Tooltip>
  </div>
  ) : (
  <div className="relative mt-0.5">
@@ -973,7 +986,7 @@ export default function PolicyDetailPage() {
  {covDropdownOpen && (
  <>
  <div className="fixed inset-0 z-40" onClick={() => setCovDropdownOpen(false)} />
- <div className="absolute z-50 mt-1 w-full max-h-[280px] overflow-auto rounded-md border border-border bg-popover shadow-md">
+ <div className="absolute z-50 mt-1 w-full max-h-70 overflow-auto rounded-md border border-border bg-popover shadow-md">
  {filteredCoverages.length === 0 ? (
  <div className="px-3 py-2 text-[11px] text-muted-foreground">Sin resultados</div>
  ) : (
@@ -1071,7 +1084,7 @@ export default function PolicyDetailPage() {
  </div>
 
  {/* Lista con checks */}
- <div className="max-h-[200px] overflow-auto">
+ <div className="max-h-50 overflow-auto">
  {filteredSubcoverages.length === 0 ? (
  <div className="px-3 py-2 text-[11px] text-muted-foreground">Sin resultados</div>
  ) : (
@@ -1309,9 +1322,9 @@ export default function PolicyDetailPage() {
  <thead className="bg-muted/50">
  <tr>
  <th className="px-3 py-2 text-left font-medium w-[min(60vw,560px)]">Documento</th>
- <th className="px-3 py-2 text-left font-medium w-[120px]">Tipo</th>
- <th className="px-3 py-2 text-right font-medium w-[90px]">Tamaño</th>
- <th className="px-3 py-2 text-left font-medium w-[110px]">Fecha</th>
+ <th className="px-3 py-2 text-left font-medium w-30">Tipo</th>
+ <th className="px-3 py-2 text-right font-medium w-22.5">Tamaño</th>
+ <th className="px-3 py-2 text-left font-medium w-27.5">Fecha</th>
  <th className="w-20" />
  </tr>
  </thead>
@@ -1355,14 +1368,20 @@ export default function PolicyDetailPage() {
  hasSummary={!!doc.ai_summary}
  queryKey={["policy-documents", policyId]}
  />
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <button
  type="button"
  onClick={() => removeDocMut.mutate(doc.id)}
  className="btn-icon-sm btn-danger-hover"
- title="Eliminar"
  >
  <Trash2 className="h-3 w-3" />
  </button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>Eliminar</p>
+ </TooltipContent>
+ </Tooltip>
  </div>
  </td>
  </tr>
@@ -1419,7 +1438,7 @@ function PolicyCoverageGroup({
  <td className="px-3 py-2 text-right">
  <Input
  type="number"
- className="app-input h-7 text-[11px] text-right font-mono w-[100px] ml-auto"
+ className="app-input h-7 text-[11px] text-right font-mono w-25 ml-auto"
  value={parent.insured_amount ?? ""}
  onChange={(e) => onUpdate(parent.id, { insured_amount: e.target.value ? Number(e.target.value) : null })}
  placeholder="—"
@@ -1428,7 +1447,7 @@ function PolicyCoverageGroup({
  <td className="px-3 py-2 text-right">
  <Input
  type="number"
- className="app-input h-7 text-[11px] text-right font-mono w-[80px] ml-auto"
+ className="app-input h-7 text-[11px] text-right font-mono w-20 ml-auto"
  value={parent.deductible_amount ?? ""}
  onChange={(e) => onUpdate(parent.id, { deductible_amount: e.target.value ? Number(e.target.value) : null })}
  placeholder="—"
@@ -1436,14 +1455,20 @@ function PolicyCoverageGroup({
  </td>
  <td className="px-3 py-2">{parent.currency || "—"}</td>
  <td className="px-1">
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <button
  type="button"
  onClick={() => onRemove(parent)}
  className="btn-icon-sm btn-danger-hover"
- title={subcoverages.length > 0 ? `Quitar cobertura y ${subcoverages.length} subcoberturas` : "Quitar cobertura"}
  >
  <Trash2 className="h-3 w-3" />
  </button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>{subcoverages.length > 0 ? `Quitar cobertura y ${subcoverages.length} subcoberturas` : "Quitar cobertura"}</p>
+ </TooltipContent>
+ </Tooltip>
  </td>
  </tr>
  {/* Subcoberturas (CAD) */}
@@ -1461,7 +1486,7 @@ function PolicyCoverageGroup({
  <td className="px-3 py-1.5 text-right">
  <Input
  type="number"
- className="app-input h-7 text-[11px] text-right font-mono w-[100px] ml-auto"
+ className="app-input h-7 text-[11px] text-right font-mono w-25 ml-auto"
  value={s.insured_amount ?? ""}
  onChange={(e) => onUpdate(s.id, { insured_amount: e.target.value ? Number(e.target.value) : null })}
  placeholder="—"
@@ -1470,7 +1495,7 @@ function PolicyCoverageGroup({
  <td className="px-3 py-1.5 text-right">
  <Input
  type="number"
- className="app-input h-7 text-[11px] text-right font-mono w-[80px] ml-auto"
+ className="app-input h-7 text-[11px] text-right font-mono w-20 ml-auto"
  value={s.deductible_amount ?? ""}
  onChange={(e) => onUpdate(s.id, { deductible_amount: e.target.value ? Number(e.target.value) : null })}
  placeholder="—"
@@ -1478,14 +1503,20 @@ function PolicyCoverageGroup({
  </td>
  <td className="px-3 py-1.5">{s.currency || "—"}</td>
  <td className="px-1">
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <button
  type="button"
  onClick={() => onRemove(s)}
  className="btn-icon-sm btn-danger-hover"
- title="Quitar subcobertura"
  >
  <Trash2 className="h-3 w-3" />
  </button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>Quitar subcobertura</p>
+ </TooltipContent>
+ </Tooltip>
  </td>
  </tr>
  ))}

@@ -87,6 +87,8 @@ function createBlock(def: EntityDefinition, x: number, y: number, name: string):
     opacity: def.opacity,
     rx: 4,
     ry: 4,
+    originX: "left",
+    originY: "top",
   });
 
   const label = new fabric.Text(name, {
@@ -101,7 +103,7 @@ function createBlock(def: EntityDefinition, x: number, y: number, name: string):
     evented: false,
   });
 
-  const group = new fabric.Group([rect, label], { left: x, top: y });
+  const group = new fabric.Group([rect, label], { left: x, top: y, originX: "left", originY: "top" });
   return group;
 }
 
@@ -111,6 +113,8 @@ function createWall(def: EntityDefinition, x: number, y: number): fabric.Line {
     stroke: def.stroke,
     strokeWidth: def.strokeWidth,
     strokeLineCap: "round",
+    originX: "left",
+    originY: "top",
   });
 }
 
@@ -118,22 +122,22 @@ function createWall(def: EntityDefinition, x: number, y: number): fabric.Line {
 function createDoor(def: EntityDefinition, x: number, y: number): fabric.Group {
   const w = def.defaultWidth;
   const h = def.defaultHeight;
-  const frame = new fabric.Line([0, h / 2, w, h / 2], { stroke: def.stroke, strokeWidth: def.strokeWidth });
-  const leaf = new fabric.Line([0, h / 2, 0, 0], { stroke: def.stroke, strokeWidth: def.strokeWidth });
+  const frame = new fabric.Line([0, h / 2, w, h / 2], { stroke: def.stroke, strokeWidth: def.strokeWidth, originX: "left", originY: "top" });
+  const leaf = new fabric.Line([0, h / 2, 0, 0], { stroke: def.stroke, strokeWidth: def.strokeWidth, originX: "left", originY: "top" });
   const arc = new fabric.Path(`M 0 0 Q ${w / 2} 0 ${w} ${h / 2}`, {
-    stroke: def.stroke, strokeWidth: 1.5, fill: "transparent", strokeDashArray: [4, 3],
+    stroke: def.stroke, strokeWidth: 1.5, fill: "transparent", strokeDashArray: [4, 3], originX: "left", originY: "top",
   });
-  return new fabric.Group([frame, leaf, arc], { left: x, top: y });
+  return new fabric.Group([frame, leaf, arc], { left: x, top: y, originX: "left", originY: "top" });
 }
 
 /** Crea una ventana (dos líneas paralelas + línea central punteada). */
 function createWindow(def: EntityDefinition, x: number, y: number): fabric.Group {
   const w = def.defaultWidth;
   const h = def.defaultHeight;
-  const top = new fabric.Line([0, 0, w, 0], { stroke: def.stroke, strokeWidth: def.strokeWidth });
-  const bottom = new fabric.Line([0, h, w, h], { stroke: def.stroke, strokeWidth: def.strokeWidth });
-  const center = new fabric.Line([0, h / 2, w, h / 2], { stroke: def.stroke, strokeWidth: 1.5, strokeDashArray: [3, 3] });
-  return new fabric.Group([top, bottom, center], { left: x, top: y });
+  const top = new fabric.Line([0, 0, w, 0], { stroke: def.stroke, strokeWidth: def.strokeWidth, originX: "left", originY: "top" });
+  const bottom = new fabric.Line([0, h, w, h], { stroke: def.stroke, strokeWidth: def.strokeWidth, originX: "left", originY: "top" });
+  const center = new fabric.Line([0, h / 2, w, h / 2], { stroke: def.stroke, strokeWidth: 1.5, strokeDashArray: [3, 3], originX: "left", originY: "top" });
+  return new fabric.Group([top, bottom, center], { left: x, top: y, originX: "left", originY: "top" });
 }
 
 /** Crea una escalera (líneas paralelas = peldaños). */
@@ -142,13 +146,13 @@ function createStairs(def: EntityDefinition, x: number, y: number): fabric.Group
   const h = def.defaultHeight;
   const steps = 6;
   const objects: fabric.Object[] = [
-    new fabric.Line([0, 0, w, 0], { stroke: def.stroke, strokeWidth: def.strokeWidth }),
-    new fabric.Line([0, h, w, h], { stroke: def.stroke, strokeWidth: def.strokeWidth }),
+    new fabric.Line([0, 0, w, 0], { stroke: def.stroke, strokeWidth: def.strokeWidth, originX: "left", originY: "top" }),
+    new fabric.Line([0, h, w, h], { stroke: def.stroke, strokeWidth: def.strokeWidth, originX: "left", originY: "top" }),
   ];
   for (let i = 1; i < steps; i++) {
-    objects.push(new fabric.Line([0, (h / steps) * i, w, (h / steps) * i], { stroke: def.stroke, strokeWidth: 1.5 }));
+    objects.push(new fabric.Line([0, (h / steps) * i, w, (h / steps) * i], { stroke: def.stroke, strokeWidth: 1.5, originX: "left", originY: "top" }));
   }
-  return new fabric.Group(objects, { left: x, top: y });
+  return new fabric.Group(objects, { left: x, top: y, originX: "left", originY: "top" });
 }
 
 /** Crea un portón (frame + líneas verticales = hojas). */
@@ -157,12 +161,12 @@ function createGate(def: EntityDefinition, x: number, y: number): fabric.Group {
   const h = def.defaultHeight;
   const slats = 5;
   const objects: fabric.Object[] = [
-    new fabric.Rect({ width: w, height: h, fill: "transparent", stroke: def.stroke, strokeWidth: def.strokeWidth }),
+    new fabric.Rect({ width: w, height: h, fill: "transparent", stroke: def.stroke, strokeWidth: def.strokeWidth, originX: "left", originY: "top" }),
   ];
   for (let i = 1; i < slats; i++) {
-    objects.push(new fabric.Line([(w / slats) * i, 0, (w / slats) * i, h], { stroke: def.stroke, strokeWidth: 1.5 }));
+    objects.push(new fabric.Line([(w / slats) * i, 0, (w / slats) * i, h], { stroke: def.stroke, strokeWidth: 1.5, originX: "left", originY: "top" }));
   }
-  return new fabric.Group(objects, { left: x, top: y });
+  return new fabric.Group(objects, { left: x, top: y, originX: "left", originY: "top" });
 }
 
 /** Crea una reja (grid 2x2). */
@@ -170,22 +174,22 @@ function createReja(def: EntityDefinition, x: number, y: number): fabric.Group {
   const w = def.defaultWidth;
   const h = def.defaultHeight;
   const objects: fabric.Object[] = [
-    new fabric.Rect({ width: w, height: h, fill: "transparent", stroke: def.stroke, strokeWidth: def.strokeWidth }),
-    new fabric.Line([w / 2, 0, w / 2, h], { stroke: def.stroke, strokeWidth: 1.5 }),
-    new fabric.Line([0, h / 2, w, h / 2], { stroke: def.stroke, strokeWidth: 1.5 }),
+    new fabric.Rect({ width: w, height: h, fill: "transparent", stroke: def.stroke, strokeWidth: def.strokeWidth, originX: "left", originY: "top" }),
+    new fabric.Line([w / 2, 0, w / 2, h], { stroke: def.stroke, strokeWidth: 1.5, originX: "left", originY: "top" }),
+    new fabric.Line([0, h / 2, w, h / 2], { stroke: def.stroke, strokeWidth: 1.5, originX: "left", originY: "top" }),
   ];
-  return new fabric.Group(objects, { left: x, top: y });
+  return new fabric.Group(objects, { left: x, top: y, originX: "left", originY: "top" });
 }
 
 /** Crea un ascensor (cuadrado con flecha bidireccional). */
 function createElevator(def: EntityDefinition, x: number, y: number): fabric.Group {
   const w = def.defaultWidth;
   const h = def.defaultHeight;
-  const frame = new fabric.Rect({ width: w, height: h, fill: "transparent", stroke: def.stroke, strokeWidth: def.strokeWidth });
+  const frame = new fabric.Rect({ width: w, height: h, fill: "transparent", stroke: def.stroke, strokeWidth: def.strokeWidth, originX: "left", originY: "top" });
   const arrow = new fabric.Path(`M ${w / 2} 10 L ${w / 2} ${h - 10} M ${w / 2 - 8} 18 L ${w / 2} 10 L ${w / 2 + 8} 18 M ${w / 2 - 8} ${h - 18} L ${w / 2} ${h - 10} L ${w / 2 + 8} ${h - 18}`, {
-    stroke: def.stroke, strokeWidth: 2, fill: "transparent",
+    stroke: def.stroke, strokeWidth: 2, fill: "transparent", originX: "left", originY: "top",
   });
-  return new fabric.Group([frame, arrow], { left: x, top: y });
+  return new fabric.Group([frame, arrow], { left: x, top: y, originX: "left", originY: "top" });
 }
 
 /** Crea un objeto SVG (path con escalamiento proporcional). */
@@ -197,6 +201,8 @@ function createSvgObject(def: EntityDefinition, x: number, y: number): fabric.Pa
     stroke: def.stroke,
     strokeWidth: def.strokeWidth,
     opacity: def.opacity,
+    originX: "left",
+    originY: "top",
   });
 }
 
@@ -237,8 +243,10 @@ function createAnnotationLabel(def: EntityDefinition, x: number, y: number, text
     strokeWidth: def.strokeWidth,
     rx: 6,
     ry: 6,
+    originX: "left",
+    originY: "top",
   });
-  return new fabric.Group([rect, textObj], { left: x, top: y });
+  return new fabric.Group([rect, textObj], { left: x, top: y, originX: "left", originY: "top" });
 }
 
 /** Crea un comentario (rectángulo con marca visual distinta a la etiqueta). */
@@ -252,6 +260,8 @@ function createAnnotationComment(def: EntityDefinition, x: number, y: number, te
     top: 8,
     selectable: false,
     evented: false,
+    originX: "left",
+    originY: "top",
   });
   const rect = new fabric.Rect({
     width: def.defaultWidth,
@@ -261,6 +271,8 @@ function createAnnotationComment(def: EntityDefinition, x: number, y: number, te
     strokeWidth: def.strokeWidth,
     rx: 4,
     ry: 4,
+    originX: "left",
+    originY: "top",
   });
   // Marca visual: barra izquierda más gruesa para distinguir del label.
   const marker = new fabric.Rect({
@@ -271,8 +283,10 @@ function createAnnotationComment(def: EntityDefinition, x: number, y: number, te
     top: 0,
     selectable: false,
     evented: false,
+    originX: "left",
+    originY: "top",
   });
-  return new fabric.Group([rect, marker, textObj], { left: x, top: y });
+  return new fabric.Group([rect, marker, textObj], { left: x, top: y, originX: "left", originY: "top" });
 }
 
 /** Despacha al renderer correcto según la definición del catálogo. */
@@ -412,7 +426,7 @@ export function finalizeTempShape(obj: fabric.Object, mode: ShapeMode): fabric.O
     });
 
     shape.set({ left: 0, top: 0 });
-    const group = new fabric.Group([shape, label], { left: originalLeft, top: originalTop });
+    const group = new fabric.Group([shape, label], { left: originalLeft, top: originalTop, originX: "left", originY: "top" });
 
     const meta: EntityMetadata = {
       catalogId: `custom-${mode}`,

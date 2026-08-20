@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
@@ -39,6 +39,7 @@ import { toast } from "sonner";
 import { Plus, Ban, ChevronDown, ChevronRight, Check, CheckCircle, Circle, Clock, X, XCircle, FileText, Download, Loader2, Play, Upload, History, Lock, LockOpen, AlertTriangle, Star, FileSpreadsheet, Presentation, File as FileIcon, RotateCcw, MapPin, UserCog } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { ClaimAction, Claim, ClaimsParticipant } from "@/types";
 import type { GestionScreenProps } from "./types";
 
@@ -1179,41 +1180,59 @@ function LevelCard({
  {(canAdvance || canReject || (isCurrentUser && isCandidate)) && !showRejectBox && !showReassign && (
  <div className="flex gap-1 pt-0.5">
  {canAdvance && (
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <Button
  type="button"
  onClick={handleAdvance}
- title={advanceLabel}
  className="btn-icon-sm"
  >
  <Check className="h-3.5 w-3.5" />
  </Button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>{advanceLabel}</p>
+ </TooltipContent>
+ </Tooltip>
  )}
  {canReject && (
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <Button
  type="button"
  onClick={() => setShowRejectBox(true)}
- title="Rechazar"
  className="btn-icon-sm"
  >
  <X className="h-3.5 w-3.5" />
  </Button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>Rechazar</p>
+ </TooltipContent>
+ </Tooltip>
  )}
  {/* Botón Reasignar: solo el responsable actual que además está en el combo */}
  {isCurrentUser && isCandidate && allCandidates.length > 1 && (
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <Button
  type="button"
  onClick={() => setShowReassign(true)}
- title="Reasignar"
  className="btn-icon-sm"
  >
  <UserCog className="h-3.5 w-3.5" />
  </Button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>Reasignar</p>
+ </TooltipContent>
+ </Tooltip>
  )}
  </div>
  )}
  {/* Bloqueo de emisión para RTA: mostrar motivo cuando no se puede emitir */}
  {isIssueBlocked && level.active && !level.done && (
- <div className="flex items-center gap-1 pt-0.5" title={issueBlockedReason}>
+ <div className="flex items-center gap-1 pt-0.5" aria-label={issueBlockedReason}>
  <Lock className="h-3 w-3 text-amber-600" />
  <span className="app-body text-amber-600 dark:text-amber-400 italic">{issueBlockedReason}</span>
  </div>
@@ -1726,14 +1745,20 @@ function ClaimCoveragesView({ claimId, actionId, readOnly, action }: { claimId: 
  </td>
  {canEditCoverages && (
  <td className="px-1">
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <button
  type="button"
  onClick={() => removeCoverageMut.mutate(c.id)}
  className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-rose-50 hover:text-rose-600 transition-colors"
- title="Desactivar cobertura"
  >
  <Ban className="h-3 w-3" />
  </button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>Desactivar cobertura</p>
+ </TooltipContent>
+ </Tooltip>
  </td>
  )}
  </tr>
@@ -2323,7 +2348,7 @@ function OwnField({
  disabled={readOnly}
  onClick={() => setCoordUbicacionOpen(true)}
  >
- {claimCoords ? "Ver / corregir ubicación" : "Establecer ubicación"}
+ {claimCoords ? "Ubicación" : "Establecer"}
  </Button>
  <ClaimLocationSelector
  open={coordUbicacionOpen}
@@ -2742,14 +2767,20 @@ function TableField({
  ))}
  {!readOnly && (
  <td className="px-1 py-0.5 text-center">
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <Button
  type="button"
  onClick={() => removeRow(idx)}
  className="btn-icon-sm btn-danger-hover"
- title="Eliminar fila"
  >
  <X className="h-3.5 w-3.5" />
  </Button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>Eliminar fila</p>
+ </TooltipContent>
+ </Tooltip>
  </td>
  )}
  </tr>
@@ -2759,9 +2790,16 @@ function TableField({
  </div>
  )}
  {!readOnly && (
- <Button type="button" className="pg-btn-platinum" onClick={addRow} title="Agregar fila">
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
+ <Button type="button" className="pg-btn-platinum" onClick={addRow}>
  Agregar
  </Button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>Agregar fila</p>
+ </TooltipContent>
+ </Tooltip>
  )}
  </div>
  );
@@ -3128,7 +3166,7 @@ function ReserveEditorForm({
  className={`app-input h-7 text-right font-mono w-25 ml-auto ${rowErrors[idx].claimed ? "border-red-500 focus-visible:ring-red-500" : ""}`}
  value={row.claimed}
  onChange={(e) => updateRow(idx, "claimed", parseNum(e.target.value))}
- title="El reclamado debe ser mayor o igual que 0"
+ aria-label="El reclamado debe ser mayor o igual que 0"
  />
  )}
  </td>
@@ -3142,7 +3180,7 @@ function ReserveEditorForm({
  className={`app-input h-7 text-right font-mono w-25 ml-auto ${rowErrors[idx].reserved ? "border-red-500 focus-visible:ring-red-500" : ""}`}
  value={row.reserved}
  onChange={(e) => updateRow(idx, "reserved", parseNum(e.target.value))}
- title="La reserva no puede ser mayor que el reclamado"
+ aria-label="La reserva no puede ser mayor que el reclamado"
  />
  )}
  </td>
@@ -3156,7 +3194,7 @@ function ReserveEditorForm({
  className={`app-input h-7 text-right font-mono w-22.5 ml-auto ${rowErrors[idx].deductible ? "border-red-500 focus-visible:ring-red-500" : ""}`}
  value={row.deductible}
  onChange={(e) => updateRow(idx, "deductible", parseNum(e.target.value))}
- title="El deducible no puede ser mayor que la reserva"
+ aria-label="El deducible no puede ser mayor que la reserva"
  />
  )}
  </td>
@@ -4268,7 +4306,7 @@ function DocumentReceiptView({ claimId, actionId, readOnly, action, fieldConfig 
  <div className="flex flex-col items-end gap-0.5">
  <Badge className="bg-emerald-100 text-emerald-700">Recibido</Badge>
  {item.received_at && (
- <span className="app-body text-muted-foreground" title={`Recibido por ${getUserName(item.received_by) || "—"}`}>
+ <span className="app-body text-muted-foreground" aria-label={`Recibido por ${getUserName(item.received_by) || "—"}`}>
  por {getUserName(item.received_by) || "—"} · {formatReceivedDate(item.received_at)}
  </span>
  )}
@@ -4278,12 +4316,12 @@ function DocumentReceiptView({ claimId, actionId, readOnly, action, fieldConfig 
  <div className="flex flex-col items-end gap-0.5">
  <Badge className="bg-muted text-muted-foreground">No necesario</Badge>
  {item.not_needed_at && (
- <span className="app-body text-muted-foreground" title={`Marcado por ${getUserName(item.not_needed_by) || "—"}`}>
+ <span className="app-body text-muted-foreground" aria-label={`Marcado por ${getUserName(item.not_needed_by) || "—"}`}>
  por {getUserName(item.not_needed_by) || "—"} · {formatReceivedDate(item.not_needed_at)}
  </span>
  )}
  {item.notes && (
- <span className="app-body text-muted-foreground italic max-w-55 truncate" title={item.notes}>
+ <span className="app-body text-muted-foreground italic max-w-55 truncate" aria-label={item.notes}>
  &ldquo;{item.notes}&rdquo;
  </span>
  )}
@@ -4294,15 +4332,21 @@ function DocumentReceiptView({ claimId, actionId, readOnly, action, fieldConfig 
  <Badge className="bg-amber-100 text-amber-700">Pendiente</Badge>
  {/* Botón "No necesario" — solo emisores del combo, no obligatorios */}
  {canMarkNotNeeded && !isRequired && (
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <button
  type="button"
  className="app-body text-muted-foreground hover:text-rose-600 transition-colors px-1.5 py-0.5 rounded border border-border hover:border-rose-300"
  onClick={() => openNotNeededModal(item.id, item.document_type_code, item.document_name)}
  disabled={updateItemMut.isPending}
- title="Marcar como no necesario"
  >
  No necesario
  </button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>Marcar como no necesario</p>
+ </TooltipContent>
+ </Tooltip>
  )}
  </>
  )}
@@ -4706,8 +4750,9 @@ function CoordScheduler({
  <>
  <div className="flex flex-wrap gap-1.5">
  {slots.map((slot) => (
+ <Tooltip key={slot.time}>
+ <TooltipTrigger className="inline-flex">
  <button
- key={slot.time}
  type="button"
  disabled={readOnly || !slot.available}
  onClick={() => assignSlot(slot.time)}
@@ -4718,11 +4763,15 @@ function CoordScheduler({
  ? "bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 border border-amber-500/20"
  : "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 border border-emerald-500/20"
  } ${currentValue === `${selectedDate}T${slot.time}` ? "ring-2 ring-primary" : ""}`}
- title={slot.bookedInfo || (slot.extra ? "Horario extra (fuera de 09-19)" : "Horario normal")}
  >
  {slot.time}
  {slot.extra && <Star className="ml-1 h-3 w-3 text-amber-500" />}
  </button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>{slot.bookedInfo || (slot.extra ? "Horario extra (fuera de 09-19)" : "Horario normal")}</p>
+ </TooltipContent>
+ </Tooltip>
  ))}
  </div>
  <div className="flex items-center gap-3 mt-2 pt-2 border-t border-border app-body text-muted-foreground">
@@ -4737,14 +4786,20 @@ function CoordScheduler({
  {!readOnly && (
  <div className="mt-2 pt-2 border-t border-border">
  {!showCustomTime ? (
+ <Tooltip>
+ <TooltipTrigger className="inline-flex">
  <Button
  type="button"
  onClick={() => setShowCustomTime(true)}
  className="pg-btn-platinum"
- title="Asignar horario personalizado"
  >
  Personalizado
  </Button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>Asignar horario personalizado</p>
+ </TooltipContent>
+ </Tooltip>
  ) : (
  <div className="flex flex-wrap items-center gap-2">
  <Input
@@ -4837,8 +4892,9 @@ function CoordScheduler({
  {/* Grid de slots — 12 columnas, compactos (24px) */}
  <div className="grid grid-cols-12 gap-1">
  {slots.map((slot) => (
+ <Tooltip key={slot.time}>
+ <TooltipTrigger className="inline-flex">
  <button
- key={slot.time}
  type="button"
  disabled={readOnly || !slot.available}
  onClick={() => assignSlot(slot.time)}
@@ -4849,11 +4905,15 @@ function CoordScheduler({
  ? "bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 border border-amber-500/20"
  : "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 border border-emerald-500/20"
  } ${currentValue === `${selectedDate}T${slot.time}` ? "ring-2 ring-primary bg-primary/5" : ""}`}
- title={slot.bookedInfo || `${slot.label}${slot.extra ? " (extra)" : ""}`}
  >
  {slot.time}
  {slot.extra && <Star className="h-3 w-3 text-amber-500" />}
  </button>
+ </TooltipTrigger>
+ <TooltipContent side="top">
+ <p>{slot.bookedInfo || `${slot.label}${slot.extra ? " (extra)" : ""}`}</p>
+ </TooltipContent>
+ </Tooltip>
  ))}
  </div>
  {/* Barra inferior: tipo + leyenda + horario personalizado */}
@@ -5175,10 +5235,10 @@ function DocumentWorkspace({ action, readOnly }: { action: ActionWithRelations; 
             type="button"
             disabled={readOnly}
             onClick={() => setShowTemplatePicker(true)}
-            className="flex flex-col items-start gap-1.5 rounded-lg border border-border p-3 text-left hover:border-[#0095DA]/50 hover:bg-[#0095DA]/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex flex-col items-start gap-1.5 rounded-lg border border-border p-3 text-left hover:border-brand-50 hover:bg-brand-5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#0095DA]/10">
-              <FileText className="h-4 w-4 text-[#0095DA]" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-brand-10">
+              <FileText className="h-4 w-4 text-brand" />
             </div>
             <div>
               <p className="app-body font-medium">Plantilla del sistema</p>
@@ -5190,7 +5250,7 @@ function DocumentWorkspace({ action, readOnly }: { action: ActionWithRelations; 
             type="button"
             disabled={readOnly}
             onClick={() => setShowUpload(true)}
-            className="flex flex-col items-start gap-1.5 rounded-lg border border-border p-3 text-left hover:border-[#0095DA]/50 hover:bg-[#0095DA]/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex flex-col items-start gap-1.5 rounded-lg border border-border p-3 text-left hover:border-brand-50 hover:bg-brand-5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <div className="flex h-8 w-8 items-center justify-center rounded-md bg-emerald-500/10">
               <Upload className="h-4 w-4 text-emerald-600" />
@@ -5232,14 +5292,14 @@ function DocumentWorkspace({ action, readOnly }: { action: ActionWithRelations; 
   const isLockedByOther = currentDoc.locked_by && currentDoc.locked_by !== action.issued_by;
   const isLockedByMe = currentDoc.locked_by && currentDoc.locked_by === action.issued_by;
   const FileIconCmp = currentDoc.file_type === "xlsx" ? FileSpreadsheet : currentDoc.file_type === "pptx" ? Presentation : currentDoc.file_type === "pdf" ? FileIcon : FileText;
-  const fileColor = currentDoc.file_type === "pdf" ? "text-red-600" : "text-[#0095DA]";
+  const fileColor = currentDoc.file_type === "pdf" ? "text-red-600" : "text-brand";
 
   return (
     <div className="space-y-2">
       {/* Documento actual */}
       <div className="rounded-lg border border-border p-3 space-y-2">
         <div className="flex items-start gap-3">
-          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-${currentDoc.file_type === "pdf" ? "red" : "[#0095DA]"}/10`}>
+          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${currentDoc.file_type === "pdf" ? "bg-red-500/10" : "bg-brand-10"}`}>
             <FileIconCmp className={`h-4 w-4 ${fileColor}`} />
           </div>
           <div className="flex-1 min-w-0">
@@ -5261,14 +5321,20 @@ function DocumentWorkspace({ action, readOnly }: { action: ActionWithRelations; 
               {currentDoc.created_by_user && ` · ${currentDoc.created_by_user.full_name}`}
             </p>
           </div>
-          <Button
-            type="button"
-            onClick={() => setShowHistory(true)}
-            className="btn-icon-sm"
-            title="Historial de versiones"
-          >
-            <History className="h-3.5 w-3.5" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger className="inline-flex">
+              <Button
+                type="button"
+                onClick={() => setShowHistory(true)}
+                className="btn-icon-sm"
+              >
+                <History className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p>Historial de versiones</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
 
         {/* Indicador de lock */}
@@ -5280,26 +5346,38 @@ function DocumentWorkspace({ action, readOnly }: { action: ActionWithRelations; 
               {currentDoc.lock_expires_at && ` · expira ${formatDate(currentDoc.lock_expires_at)}`}
             </span>
             {isLockedByMe && (
-              <Button
-                type="button"
-                onClick={() => unlockMut.mutate()}
-                disabled={unlockMut.isPending}
-                className="btn-icon-sm"
-                title="Desbloquear"
-              >
-                <LockOpen className="h-3.5 w-3.5 text-amber-600" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger className="inline-flex">
+                  <Button
+                    type="button"
+                    onClick={() => unlockMut.mutate()}
+                    disabled={unlockMut.isPending}
+                    className="btn-icon-sm"
+                  >
+                    <LockOpen className="h-3.5 w-3.5 text-amber-600" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Desbloquear</p>
+                </TooltipContent>
+              </Tooltip>
             )}
             {isLockedByOther && (
-              <Button
-                type="button"
-                onClick={() => forceUnlockMut.mutate()}
-                disabled={forceUnlockMut.isPending}
-                className="btn-icon-sm btn-danger-hover"
-                title="Forzar desbloqueo"
-              >
-                <AlertTriangle className="h-3.5 w-3.5 text-red-600" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger className="inline-flex">
+                  <Button
+                    type="button"
+                    onClick={() => forceUnlockMut.mutate()}
+                    disabled={forceUnlockMut.isPending}
+                    className="btn-icon-sm btn-danger-hover"
+                  >
+                    <AlertTriangle className="h-3.5 w-3.5 text-red-600" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Forzar desbloqueo</p>
+                </TooltipContent>
+              </Tooltip>
             )}
           </div>
         )}
@@ -5309,58 +5387,82 @@ function DocumentWorkspace({ action, readOnly }: { action: ActionWithRelations; 
           <div className="flex flex-wrap items-center gap-1.5 pt-1">
             {/* Descargar (con lock) — solo para documentos editables */}
             {hasEditable && !currentDoc.locked_by && (
-              <Button
-                type="button"
-                onClick={() => lockAndDownloadMut.mutate()}
-                disabled={lockAndDownloadMut.isPending}
-                className="pg-btn-platinum"
-                title="Descargar para editar offline (bloquea el documento)"
-              >
-                <Download className="h-3.5 w-3.5" />
-                Descargar
-              </Button>
+              <Tooltip>
+                <TooltipTrigger className="inline-flex">
+                  <Button
+                    type="button"
+                    onClick={() => lockAndDownloadMut.mutate()}
+                    disabled={lockAndDownloadMut.isPending}
+                    className="pg-btn-platinum"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Descargar
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Descargar para editar offline (bloquea el documento)</p>
+                </TooltipContent>
+              </Tooltip>
             )}
 
             {/* Subir nueva versión — solo para documentos editables */}
             {hasEditable && (
-              <Button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadMut.isPending}
-                className="pg-btn-platinum"
-                title="Subir nueva versión del documento"
-              >
-                <Upload className="h-3.5 w-3.5" />
-                Subir
-              </Button>
+              <Tooltip>
+                <TooltipTrigger className="inline-flex">
+                  <Button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadMut.isPending}
+                    className="pg-btn-platinum"
+                  >
+                    <Upload className="h-3.5 w-3.5" />
+                    Subir
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Subir nueva versión del documento</p>
+                </TooltipContent>
+              </Tooltip>
             )}
 
             {/* Convertir a PDF — solo para documentos editables, después del último nivel */}
             {hasEditable && (
-              <Button
-                type="button"
-                onClick={() => convertPdfMut.mutate()}
-                disabled={convertPdfMut.isPending}
-                className="pg-btn-platinum"
-                title="Convertir documento a PDF (cierra la gestión)"
-              >
-                {convertPdfMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileIcon className="h-3.5 w-3.5" />}
-                PDF
-              </Button>
+              <Tooltip>
+                <TooltipTrigger className="inline-flex">
+                  <Button
+                    type="button"
+                    onClick={() => convertPdfMut.mutate()}
+                    disabled={convertPdfMut.isPending}
+                    className="pg-btn-platinum"
+                  >
+                    {convertPdfMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileIcon className="h-3.5 w-3.5" />}
+                    PDF
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Convertir documento a PDF (cierra la gestión)</p>
+                </TooltipContent>
+              </Tooltip>
             )}
 
             {/* Descargar PDF — solo para PDFs */}
             {hasPdf && (
-              <a
-                href={currentDoc.file_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="pg-btn-platinum"
-                title="Descargar PDF final"
-              >
-                <Download className="h-3.5 w-3.5" />
-                Descargar
-              </a>
+              <Tooltip>
+                <TooltipTrigger className="inline-flex">
+                  <a
+                    href={currentDoc.file_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="pg-btn-platinum"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Descargar
+                  </a>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Descargar PDF final</p>
+                </TooltipContent>
+              </Tooltip>
             )}
 
             <input
@@ -5446,10 +5548,9 @@ function DocumentTemplatePicker({
                   type="button"
                   disabled={isGenerating}
                   onClick={() => onPick(tpl.id)}
-                  className="flex items-center gap-3 rounded-lg border border-border p-2.5 text-left hover:border-[#0095DA]/50 hover:bg-[#0095DA]/5 transition-colors w-full disabled:opacity-50"
-                >
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#0095DA]/10">
-                    <Icon className="h-4 w-4 text-[#0095DA]" />
+                  className="flex items-center gap-3 rounded-lg border border-border p-2.5 text-left hover:border-brand-50 hover:bg-brand-5 transition-colors w-full disabled:opacity-50"                >
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-brand-10">
+                    <Icon className="h-4 w-4 text-brand" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="app-body font-medium truncate">{tpl.name}</p>
@@ -5508,7 +5609,7 @@ function DocumentUploadDialog({
         <div className="modal-body space-y-3">
           <div
             onClick={() => inputRef.current?.click()}
-            className="cursor-pointer rounded-lg border-2 border-dashed border-border p-6 text-center hover:border-[#0095DA]/50 hover:bg-[#0095DA]/5 transition-colors"
+            className="cursor-pointer rounded-lg border-2 border-dashed border-border p-6 text-center hover:border-brand-50 hover:bg-brand-5 transition-colors"
           >
             <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
             <p className="app-body text-muted-foreground">
@@ -5600,7 +5701,7 @@ function DocumentVersionHistory({ actionId, onClose }: { actionId: string; onClo
           ) : (
             data.documents.map((doc) => {
               const Icon = doc.file_type === "xlsx" ? FileSpreadsheet : doc.file_type === "pptx" ? Presentation : doc.file_type === "pdf" ? FileIcon : FileText;
-              const color = doc.file_type === "pdf" ? "text-red-600" : "text-[#0095DA]";
+              const color = doc.file_type === "pdf" ? "text-red-600" : "text-brand";
               const sourceLabel = {
                 template: "Plantilla",
                 upload_docx: "Subido",
@@ -5613,7 +5714,7 @@ function DocumentVersionHistory({ actionId, onClose }: { actionId: string; onClo
                   key={doc.id}
                   className="flex items-center gap-3 rounded-lg border border-border p-2.5"
                 >
-                  <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-${doc.file_type === "pdf" ? "red" : "[#0095DA]"}/10`}>
+                  <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${doc.file_type === "pdf" ? "bg-red-500/10" : "bg-brand-10"}`}>
                     <Icon className={`h-3.5 w-3.5 ${color}`} />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -5634,25 +5735,37 @@ function DocumentVersionHistory({ actionId, onClose }: { actionId: string; onClo
                     </p>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <a
-                      href={doc.file_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn-icon-sm"
-                      title="Descargar"
-                    >
-                      <Download className="h-3.5 w-3.5" />
-                    </a>
+                    <Tooltip>
+                      <TooltipTrigger className="inline-flex">
+                        <a
+                          href={doc.file_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn-icon-sm"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                        </a>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        <p>Descargar</p>
+                      </TooltipContent>
+                    </Tooltip>
                     {!doc.is_current && doc.file_type !== "pdf" && (
-                      <Button
-                        type="button"
-                        onClick={() => restoreMut.mutate(doc.id)}
-                        disabled={restoreMut.isPending}
-                        className="btn-icon-sm"
-                        title="Restaurar esta versión"
-                      >
-                        <RotateCcw className="h-3.5 w-3.5" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger className="inline-flex">
+                          <Button
+                            type="button"
+                            onClick={() => restoreMut.mutate(doc.id)}
+                            disabled={restoreMut.isPending}
+                            className="btn-icon-sm"
+                          >
+                            <RotateCcw className="h-3.5 w-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          <p>Restaurar esta versión</p>
+                        </TooltipContent>
+                      </Tooltip>
                     )}
                   </div>
                 </div>

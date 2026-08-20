@@ -48,6 +48,10 @@ export function SketchCanvasStage({ onReady, fixedHeight }: SketchCanvasStagePro
       selection: true,
       preserveObjectStacking: true,
       controlsAboveOverlay: true,
+      // fabric 7: estos defaults cambiaron a true, los restauramos al comportamiento de fabric 6
+      fireRightClick: false,
+      fireMiddleClick: false,
+      stopContextMenu: true,
     });
     // Retina scaling para nitidez (equivalente al ctx.scale(dpr,dpr) del canvas viejo).
     canvas.enableRetinaScaling = true;

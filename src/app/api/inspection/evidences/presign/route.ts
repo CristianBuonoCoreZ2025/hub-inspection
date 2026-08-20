@@ -21,7 +21,7 @@ export const maxDuration = 30;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { sessionId, mimeType, ext, originalName, source } = body;
+    const { sessionId, mimeType, ext } = body;
 
     if (!sessionId || typeof sessionId !== "string") {
       return NextResponse.json({ error: "Falta sessionId" }, { status: 400 });

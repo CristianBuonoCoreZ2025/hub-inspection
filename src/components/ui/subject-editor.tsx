@@ -9,6 +9,7 @@ import { TextStyle } from "@tiptap/extension-text-style";
 import { FontSize } from "@tiptap/extension-text-style/font-size";
 import { Bold, Italic, Underline as UnderlineIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 export interface SubjectEditorProps {
   value: string;
@@ -49,21 +50,28 @@ function ToolbarButton({
   children: React.ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      onMouseDown={(e) => e.preventDefault()}
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      className={cn(
-        "inline-flex h-6 w-6 items-center justify-center rounded text-foreground/70 transition-all",
-        "hover:bg-accent hover:text-foreground",
-        active && "bg-primary/12 text-primary shadow-[inset_0_0_0_1px_var(--primary)]",
-        disabled && "cursor-not-allowed opacity-40"
-      )}
-    >
-      {children}
-    </button>
+    <Tooltip>
+      <TooltipTrigger className="inline-flex">
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={onClick}
+          disabled={disabled}
+          aria-label={title}
+          className={cn(
+            "inline-flex h-6 w-6 items-center justify-center rounded text-foreground/70 transition-[background-color,color,box-shadow] duration-150",
+            "hover:bg-accent hover:text-foreground",
+            active && "bg-primary/12 text-primary shadow-[inset_0_0_0_1px_var(--primary)]",
+            disabled && "cursor-not-allowed opacity-40"
+          )}
+        >
+          {children}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top">
+        <p>{title}</p>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -131,52 +139,69 @@ export function SubjectEditor({ value, onChange, disabled, placeholder, classNam
         </ToolbarButton>
 
         <div className="relative">
-          <button
-            type="button"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => setColorOpen((v) => !v)}
-            disabled={disabled}
-            title="Color de texto"
-            className="ml-1 inline-flex h-5 w-6 flex-col items-center justify-center rounded text-foreground/70 hover:bg-accent disabled:opacity-40"
-          >
-            <span className="text-[13px] font-bold leading-none">A</span>
-            <span className="mt-0.5 h-0.75 w-4 rounded-sm" style={{ backgroundColor: currentColor }} />
-          </button>
+          <Tooltip>
+            <TooltipTrigger className="inline-flex">
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => setColorOpen((v) => !v)}
+                disabled={disabled}
+                className="ml-1 inline-flex h-5 w-6 flex-col items-center justify-center rounded text-foreground/70 hover:bg-accent disabled:opacity-40"
+              >
+                <span className="text-[13px] font-bold leading-none">A</span>
+                <span className="mt-0.5 h-0.75 w-4 rounded-sm" style={{ backgroundColor: currentColor }} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p>Color de texto</p>
+            </TooltipContent>
+          </Tooltip>
           {colorOpen && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setColorOpen(false)} />
               <div className="absolute left-0 top-full z-50 mt-1 grid w-45 grid-cols-10 gap-1 rounded-md border border-border bg-popover p-2 shadow-lg">
                 {TEXT_COLORS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => {
-                      editor?.chain().focus().setColor(c).run();
-                      setColorOpen(false);
-                    }}
-                    className="h-4 w-4 rounded border border-border/60 transition-transform hover:scale-110"
-                    style={{ backgroundColor: c }}
-                    title={c}
-                  />
+                  <Tooltip key={c}>
+                    <TooltipTrigger className="inline-flex">
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          editor?.chain().focus().setColor(c).run();
+                          setColorOpen(false);
+                        }}
+                        className="h-4 w-4 rounded border border-border/60 transition-transform hover:scale-110"
+                        style={{ backgroundColor: c }}
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <p>{c}</p>
+                    </TooltipContent>
+                  </Tooltip>
                 ))}
               </div>
             </>
           )}
         </div>
 
-        <select
-          title="Tamaño"
-          value={editor?.getAttributes("textStyle").fontSize || ""}
-          disabled={disabled}
-          onChange={(e) => editor?.chain().focus().setFontSize(e.target.value).run()}
-          onMouseDown={(e) => e.stopPropagation()}
-          className="ml-1 h-6 rounded border border-border bg-background px-1 text-[11px] outline-none focus:border-primary disabled:opacity-40"
-        >
-          {FONT_SIZES.map((s) => (
-            <option key={s.value} value={s.value}>{s.label}</option>
-          ))}
-        </select>
+        <Tooltip>
+          <TooltipTrigger className="inline-flex">
+            <select
+              value={editor?.getAttributes("textStyle").fontSize || ""}
+              disabled={disabled}
+              onChange={(e) => editor?.chain().focus().setFontSize(e.target.value).run()}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="ml-1 h-6 rounded border border-border bg-background px-1 text-[11px] outline-none focus:border-primary disabled:opacity-40"
+            >
+              {FONT_SIZES.map((s) => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
+            </select>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p>Tamaño</p>
+          </TooltipContent>
+        </Tooltip>
       </div>
       <div className="relative">
         <EditorContent editor={editor} />

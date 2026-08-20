@@ -1,6 +1,29 @@
 # Changelog — Claims Hub Platform
 
-## [Última versión] — 2026-07-17
+## [2026-08-17] — Fixes carga de casos (carga-casos)
+
+### Corregido
+- **Bug RUT: persona jurídica mal clasificada** — `rut.replace(/[^0-9]/g, "")` concatenaba el cuerpo del RUT con el dígito verificador, inflando el número y clasificando personas naturales como jurídicas (ej: `17698103-2` → 176M en vez de 17M). Fix: usar `rutBodyNumber()` de `@/lib/validations/rut` para extraer solo el cuerpo. Aplicado en `src/services/claims.ts` (`personTypeFromRut`) y `src/app/dashboard/operaciones/carga-casos/page.tsx`.
+- **FixedValues no validados contra catálogo** — si un valor fijo de un campo de referencia (Ramo, Línea Negocio, etc.) no existía en el catálogo, el claim se cargaba con el campo en blanco sin error. Fix: validación en `parsedRows` que verifica que el `catalogUuid` exista en el catálogo o que el `value` (texto) se resuelva por nombre. Aplicado en `carga-casos` y `carga-siniestros`.
+- **Póliza no asignada: "Siniestro sin póliza asignada"** — `resolveOrCreatePolicy` retorna `policyId: null` si `insuranceCompanyId` es null. `insuranceCompany` no estaba en `refFields` de `carga-casos` y la resolución no usaba el fixedValue como fallback. Fix: agregado `insuranceCompany` a `refFields`, resolución con fallback `|| fv.insuranceCompany?.catalogUuid`, y validación obligatoria en botón Confirmar.
+- **Contacto sin first_name/last_name** — el participante contacto se creaba solo con `full_name`, a diferencia de contratante y beneficiario. Fix: `createClaimMinimal` ahora pasa `first_name`/`last_name` separados según `person_type` (jurídica → null/null, natural → nombre/apellido).
+- **Contacto no replicaba todos los datos del asegurado** — cuando "Contacto" no venía mapeado en el Excel, el contacto no copiaba el apellido ni el `person_type` del asegurado. Fix: `createClaimFromCaso` ahora copia nombre, apellido, RUT, email, teléfono, dirección, ubicación y `person_type` del asegurado, y se vincula con `linked_to_insured = true`.
+
+### Agregado
+- **Campos `insuranceProduct` (Ramo/Producto) y `adjuster` (Ajustador/Liquidador) en carga-casos**:
+  - Agregados a `CASOS_FIELDS` en `schema-casos.ts` con sinónimos para autodetección
+  - Agregados a `refFields` en `carga-casos/page.tsx` para aparecer en dropdown de valores fijos
+  - Queries de catálogo: `getInsuranceProducts` y `getUsersByRoleForCompany("adjuster")`
+  - Resolvers: `resolveAdjuster` (por nombre, normalizado)
+  - `CasoRowData` extendido con `insuranceProductId` y `adjusterId`
+  - `createClaimFromCaso` pasa ambos a `createClaimMinimal` para guardarlos en el claim
+- **Validación obligatoria de valores fijos** — el botón "Confirmar" de `carga-casos` se deshabilita con tooltip si faltan valores fijos obligatorios:
+  - Compañía Seguros (necesaria para resolver/crear póliza)
+  - Ramo/Producto
+  - Ajustador/Liquidador
+- **`linkContact` independiente de `linkParticipants`** — `createClaimMinimal` acepta un 9º parámetro `linkContact` para controlar la vinculación del contacto independientemente de contratante/beneficiario. Backward compatible: si no se pasa, hereda `linkParticipants`.
+
+## [2026-07-17] — versión anterior
 
 ### Agregado
 - **Migración 161: Matriz espacios × clasificaciones** — columna `applicable_classifications` (TEXT[]) en `damage_spaces`:

@@ -8,6 +8,7 @@ import {
   type PerfSnapshot,
 } from "@/lib/perf-metrics";
 import { ActivityIcon, XIcon, RotateCcwIcon, ChevronDownIcon } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 /**
  * PerfPanel — panel flotante de métricas de rendimiento.
@@ -54,41 +55,12 @@ export function PerfPanel() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-label="Métricas de rendimiento"
-        title="Métricas (Ctrl+Shift+P)"
-        className="pg-btn-platinum"
-        style={{
-          position: "fixed",
-          right: 16,
-          bottom: 16,
-          zIndex: 10000,
-          width: 40,
-          height: 40,
-          padding: 0,
-          borderRadius: 999,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          boxShadow: "var(--shadow-sm)",
-        }}
+        aria-label="Métricas (Ctrl+Shift+P)"
+        className="perf-panel-fab pg-btn-platinum"
       >
         <ActivityIcon className="size-4" />
         {snapshot.totalQueries > 0 && (
-          <span
-            style={{
-              position: "absolute",
-              top: -4,
-              right: -4,
-              background: "var(--primary)",
-              color: "var(--primary-foreground)",
-              fontSize: 9,
-              fontWeight: 600,
-              borderRadius: 999,
-              padding: "1px 5px",
-              minWidth: 14,
-              textAlign: "center",
-            }}
-          >
+          <span className="perf-panel-fab-badge">
             {snapshot.totalQueries}
           </span>
         )}
@@ -134,16 +106,22 @@ export function PerfPanel() {
               </span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <button
-                type="button"
-                onClick={() => resetMetrics()}
-                title="Resetear métricas"
-                className="pg-btn-platinum"
-                style={{ padding: "4px 8px", display: "flex", alignItems: "center", gap: 4 }}
-              >
-                <RotateCcwIcon className="size-3" />
-                <span style={{ textTransform: "capitalize" }}>Reset</span>
-              </button>
+              <Tooltip>
+                <TooltipTrigger render={
+                  <button
+                    type="button"
+                    onClick={() => resetMetrics()}
+                    className="pg-btn-platinum"
+                    style={{ padding: "4px 8px", display: "flex", alignItems: "center", gap: 4 }}
+                  />
+                }>
+                  <RotateCcwIcon className="size-3" />
+                  <span style={{ textTransform: "capitalize" }}>Reset</span>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Resetear métricas</p>
+                </TooltipContent>
+              </Tooltip>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
@@ -386,7 +364,7 @@ function RecentList({ snapshot }: { snapshot: PerfSnapshot }) {
           {r.success ? (
             <span style={{ color: "var(--muted-foreground)", fontSize: 10 }}>ok</span>
           ) : (
-            <span style={{ color: "var(--destructive)", fontSize: 10 }} title={r.errorMessage}>
+            <span style={{ color: "var(--destructive)", fontSize: 10 }} aria-label={r.errorMessage}>
               err
             </span>
           )}
