@@ -147,7 +147,7 @@ function SignatureCanvas({ onSave, label }: { onSave: (dataUrl: string) => Promi
   );
 }
 
-export default function SignaturesTab({ sessionId, sessionStatus, magicLinkToken, inspectionType, signatureWaiverReason, signatureCapturedAt }: { sessionId: string; sessionStatus?: string; magicLinkToken?: string; inspectionType?: "onsite" | "remote"; signatureWaiverReason?: string | null; signatureCapturedAt?: string | null }) {
+export default function SignaturesTab({ sessionId, sessionStatus, magicLinkToken, inspectionType, signatureWaiverReason, signatureCapturedAt, offlineMode = false, onOfflineSaved }: { sessionId: string; sessionStatus?: string; magicLinkToken?: string; inspectionType?: "onsite" | "remote"; signatureWaiverReason?: string | null; signatureCapturedAt?: string | null; offlineMode?: boolean; onOfflineSaved?: () => void }) {
   const queryClient = useQueryClient();
   const readOnly = sessionStatus === "completed" || sessionStatus === "cancelled";
   const [showWaiverInput, setShowWaiverInput] = useState(false);
@@ -199,13 +199,26 @@ export default function SignaturesTab({ sessionId, sessionStatus, magicLinkToken
     captureMutation.mutate(null);
   };
 
-  const { data: signatures, isLoading } = useQuery({
+  const [offlineSignatures, setOfflineSignatures] = useState<Array<{ id: string; role: string; signer_name: string | null; signature_url: string; created_at: string; signed_at: string }>>([]);
+  const { data: serverSignatures, isLoading } = useQuery({
     queryKey: ["signatures", sessionId],
     queryFn: () => getSignatures(sessionId),
+    enabled: !offlineMode,
   });
+  // Cargar firmas offline
+  useEffect(() => {
+    if (!offlineMode) return;
+    import("@/lib/offline/sync-session").then(({ getOfflineSignatures }) => {
+      getOfflineSignatures(sessionId).then((sigs) => {
+        setOfflineSignatures(sigs.map(s => ({ ...s, signed_at: s.created_at })));
+      });
+    });
+  }, [sessionId, offlineMode, onOfflineSaved]);
+  const signatures = offlineMode ? offlineSignatures : serverSignatures;
 
   // Realtime: cuando el asegurado firma, recargar inmediatamente
   useEffect(() => {
+    if (offlineMode) return; // No realtime en modo offline
     const supabase = createClient();
     const channel = supabase
       .channel(`signatures-${sessionId}`)
@@ -233,6 +246,14 @@ export default function SignaturesTab({ sessionId, sessionStatus, magicLinkToken
 
   const handleSave = async (role: "insured" | "adjuster", dataUrl: string) => {
     const blob = await fetch(dataUrl).then((r) => r.blob());
+    if (offlineMode) {
+      const { addPendingSignature } = await import("@/lib/offline/sync-session");
+      const localId = "sig-" + role + "-" + Date.now();
+      await addPendingSignature(sessionId, { localId, blob, role });
+      onOfflineSaved?.();
+      toast.success("Firma guardada offline");
+      return;
+    }
     const file = new File([blob], `signature_${role}_${Date.now()}.png`, { type: "image/png" });
     const formData = new FormData();
     formData.append("file", file);

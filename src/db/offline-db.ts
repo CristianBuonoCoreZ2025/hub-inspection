@@ -95,8 +95,12 @@ export interface PendingChanges {
   damagesDeleted: string[];
   /** Evidencias pendientes de subir */
   evidences: PendingEvidence[];
+  /** IDs de evidencias existentes eliminadas offline */
+  evidencesDeleted: string[];
   /** Firmas pendientes de subir */
   signatures: PendingSignature[];
+  /** IDs de firmas existentes eliminadas offline */
+  signaturesDeleted: string[];
   /** Croquis pendientes de subir */
   sketches: PendingSketch[];
 }
@@ -166,7 +170,9 @@ export function emptyPendingChanges(): PendingChanges {
     damagesUpdated: [],
     damagesDeleted: [],
     evidences: [],
+    evidencesDeleted: [],
     signatures: [],
+    signaturesDeleted: [],
     sketches: [],
   };
 }
@@ -179,7 +185,9 @@ export function hasPendingChanges(pending: PendingChanges): boolean {
     pending.damagesUpdated.length > 0 ||
     pending.damagesDeleted.length > 0 ||
     pending.evidences.length > 0 ||
+    pending.evidencesDeleted.length > 0 ||
     pending.signatures.length > 0 ||
+    pending.signaturesDeleted.length > 0 ||
     pending.sketches.length > 0
   );
 }
@@ -192,7 +200,9 @@ export function countPendingChanges(pending: PendingChanges): number {
     pending.damagesUpdated.length +
     pending.damagesDeleted.length +
     pending.evidences.length +
+    pending.evidencesDeleted.length +
     pending.signatures.length +
+    pending.signaturesDeleted.length +
     pending.sketches.length
   );
 }

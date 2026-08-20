@@ -7,6 +7,8 @@ interface MobileDamagesTabProps {
   propertyClassification?: string | null;
   countryId?: string | null;
   sessionStatus?: string;
+  offlineMode?: boolean;
+  onOfflineSaved?: () => void;
 }
 
 export default function MobileDamagesTab({
@@ -14,6 +16,8 @@ export default function MobileDamagesTab({
   propertyClassification,
   countryId,
   sessionStatus,
+  offlineMode = false,
+  onOfflineSaved,
 }: MobileDamagesTabProps) {
   return (
     <div className="mobile-damage-form">
@@ -22,6 +26,8 @@ export default function MobileDamagesTab({
         propertyClassification={propertyClassification}
         countryId={countryId}
         sessionStatus={sessionStatus}
+        offlineMode={offlineMode}
+        onOfflineSaved={onOfflineSaved}
       />
     </div>
   );

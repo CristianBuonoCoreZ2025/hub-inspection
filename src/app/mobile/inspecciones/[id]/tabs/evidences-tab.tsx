@@ -41,7 +41,6 @@ interface UploadItem {
   loaded: number;
   status: "uploading" | "done" | "error";
   errorMsg?: string;
-  xhr: XMLHttpRequest;
 }
 
 async function fetchEvidences(sessionId: string): Promise<Evidence[]> {
@@ -60,9 +59,11 @@ function formatFileSize(bytes: number): string {
 interface MobileEvidencesTabProps {
   sessionId: string;
   sessionStatus?: string;
+  offlineMode?: boolean;
+  onOfflineSaved?: () => void;
 }
 
-export default function MobileEvidencesTab({ sessionId, sessionStatus }: MobileEvidencesTabProps) {
+export default function MobileEvidencesTab({ sessionId, sessionStatus, offlineMode = false, onOfflineSaved }: MobileEvidencesTabProps) {
   const queryClient = useQueryClient();
   const confirmDelete = useConfirm();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -70,30 +71,111 @@ export default function MobileEvidencesTab({ sessionId, sessionStatus }: MobileE
   const [uploadQueue, setUploadQueue] = useState<UploadItem[]>([]);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   const [useFrontCamera, setUseFrontCamera] = useState(false);
+  const [offlineEvidences, setOfflineEvidences] = useState<Evidence[]>([]);
+  const [offlineLoading, setOfflineLoading] = useState(false);
 
   const readOnly = sessionStatus === "completed" || sessionStatus === "cancelled";
 
-  const { data: evidences, isLoading, isError } = useQuery({
+  // Query online (deshabilitada en offline)
+  const { data: onlineEvidences, isLoading, isError } = useQuery({
     queryKey: ["evidences", sessionId],
     queryFn: () => fetchEvidences(sessionId),
+    enabled: !!sessionId && !offlineMode,
     refetchInterval: (query) => {
+      if (offlineMode) return false;
       const evs = query.state.data;
       if (!evs || !evs.some((e) => e.ai_status === "pending" || e.ai_status === "processing")) return false;
       return 10000;
     },
   });
 
+  // Cargar evidencias offline de IndexedDB
+  const loadOfflineEvidences = useCallback(async () => {
+    if (!offlineMode) return;
+    setOfflineLoading(true);
+    try {
+      const { getOfflineEvidences } = await import("@/lib/offline/sync-session");
+      const evs = await getOfflineEvidences(sessionId);
+      setOfflineEvidences(evs);
+    } catch (e) {
+      console.error("Error loading offline evidences:", e);
+    } finally {
+      setOfflineLoading(false);
+    }
+  }, [sessionId, offlineMode]);
+
+  useEffect(() => {
+    if (offlineMode) loadOfflineEvidences();
+  }, [offlineMode, loadOfflineEvidences]);
+
+  const evidences = offlineMode ? offlineEvidences : onlineEvidences;
+
   const deleteMutation = useMutation({
-    mutationFn: deleteEvidence,
+    mutationFn: async (evidenceId: string) => {
+      if (offlineMode) {
+        const { addPendingEvidenceDeleted } = await import("@/lib/offline/sync-session");
+        await addPendingEvidenceDeleted(sessionId, evidenceId);
+        onOfflineSaved?.();
+        return;
+      }
+      return deleteEvidence(evidenceId);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["evidences", sessionId] });
-      queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
+      if (offlineMode) {
+        loadOfflineEvidences();
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["evidences", sessionId] });
+        queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
+      }
       toast.success("Evidencia eliminada");
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
+  // Upload offline: guardar blob en IndexedDB
+  const uploadFileOffline = useCallback(async (file: File) => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const item: UploadItem = {
+      id,
+      fileName: file.name,
+      fileSize: file.size,
+      loaded: 0,
+      status: "uploading",
+    };
+    setUploadQueue((q) => [...q, item]);
+
+    try {
+      const { addPendingEvidenceCreated } = await import("@/lib/offline/sync-session");
+      // Determinar tipo
+      const isImage = file.type.startsWith("image/");
+      const isVideo = file.type.startsWith("video/");
+      const type = isImage ? "photo" : isVideo ? "video" : "document";
+
+      await addPendingEvidenceCreated(sessionId, {
+        localId: id,
+        blob: file,
+        type,
+        metadata: {
+          originalName: file.name,
+          fileSize: file.size,
+          mimeType: file.type,
+        },
+      });
+
+      setUploadQueue((q) => q.map((it) => (it.id === id ? { ...it, status: "done", loaded: it.fileSize } : it)));
+      onOfflineSaved?.();
+      loadOfflineEvidences();
+      toast.success(`${file.name} guardado offline`);
+    } catch (e) {
+      setUploadQueue((q) => q.map((it) => (it.id === id ? { ...it, status: "error", errorMsg: (e as Error).message } : it)));
+    }
+  }, [sessionId, onOfflineSaved, loadOfflineEvidences]);
+
   const uploadFile = useCallback((file: File) => {
+    if (offlineMode) {
+      uploadFileOffline(file);
+      return;
+    }
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     const xhr = new XMLHttpRequest();
 
@@ -103,7 +185,6 @@ export default function MobileEvidencesTab({ sessionId, sessionStatus }: MobileE
       fileSize: file.size,
       loaded: 0,
       status: "uploading",
-      xhr,
     };
     setUploadQueue((q) => [...q, item]);
 
@@ -145,7 +226,7 @@ export default function MobileEvidencesTab({ sessionId, sessionStatus }: MobileE
 
     xhr.open("POST", "/api/inspection/evidences/upload");
     xhr.send(formData);
-  }, [queryClient, sessionId]);
+  }, [queryClient, sessionId, offlineMode, uploadFileOffline]);
 
   const handleFile = useCallback(async (file: File) => {
     try {
@@ -190,6 +271,8 @@ export default function MobileEvidencesTab({ sessionId, sessionStatus }: MobileE
   const photos = evidences?.filter((e) => isPhoto(e.type)) || [];
   const documents = evidences?.filter((e) => isDoc(e.type)) || [];
   const videos = evidences?.filter((e) => isVideo(e.type)) || [];
+
+  const loading = offlineMode ? offlineLoading : isLoading;
 
   return (
     <div className="space-y-4">
@@ -286,7 +369,7 @@ export default function MobileEvidencesTab({ sessionId, sessionStatus }: MobileE
       )}
 
       {/* Loading */}
-      {isLoading && (
+      {loading && (
         <div className="mobile-empty">
           <Loader2 className="h-6 w-6 animate-spin mobile-empty-icon" />
           <p className="mobile-empty-text">Cargando evidencias...</p>
@@ -294,7 +377,7 @@ export default function MobileEvidencesTab({ sessionId, sessionStatus }: MobileE
       )}
 
       {/* Error */}
-      {isError && (
+      {!offlineMode && isError && (
         <div className="mobile-empty">
           <AlertCircle className="h-6 w-6 mobile-empty-icon" />
           <p className="mobile-empty-text">No se pudieron cargar las evidencias</p>
@@ -311,7 +394,7 @@ export default function MobileEvidencesTab({ sessionId, sessionStatus }: MobileE
           <div className="mobile-photo-grid">
             {photos.map((ev) => (
               <div key={ev.id} className="mobile-photo-item relative group">
-                {/* eslint-disable-next-line @next/next/no-img-element -- user-uploaded image from R2 */}
+                {/* eslint-disable-next-line @next/next/no-img-element -- user-uploaded image from R2 or blob */}
                 <img
                   src={ev.url}
                   alt={ev.description || ev.metadata?.originalName || "Evidencia"}
@@ -357,7 +440,7 @@ export default function MobileEvidencesTab({ sessionId, sessionStatus }: MobileE
           <div className="mobile-photo-grid">
             {videos.map((ev) => (
               <div key={ev.id} className="mobile-photo-item relative">
-                {/* eslint-disable-next-line @next/next/no-img-element -- user-uploaded video thumbnail from R2 */}
+                {/* eslint-disable-next-line @next/next/no-img-element -- user-uploaded video thumbnail from R2 or blob */}
                 <img src={ev.url} alt={ev.description || "video"} loading="lazy" />
                 {!readOnly && (
                   <button
@@ -418,7 +501,7 @@ export default function MobileEvidencesTab({ sessionId, sessionStatus }: MobileE
       )}
 
       {/* Empty state */}
-      {!isLoading && !isError && evidences && evidences.length === 0 && uploadQueue.length === 0 && (
+      {!loading && !isError && evidences && evidences.length === 0 && uploadQueue.length === 0 && (
         <div className="mobile-empty">
           <Camera className="h-10 w-10 mobile-empty-icon" />
           <p className="mobile-empty-text">No hay evidencias todavía</p>
@@ -436,7 +519,7 @@ export default function MobileEvidencesTab({ sessionId, sessionStatus }: MobileE
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
           onClick={() => setZoomImage(null)}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element -- user-uploaded image from R2 */}
+          {/* eslint-disable-next-line @next/next/no-img-element -- user-uploaded image from R2 or blob */}
           <img src={zoomImage} alt="Evidencia" className="max-w-full max-h-full object-contain" />
           <button
             className="mobile-photo-close-btn mobile-photo-delete-btn"

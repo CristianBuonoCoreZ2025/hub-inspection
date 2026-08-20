@@ -173,7 +173,7 @@ function damageToForm(d: InspectionDamage): DamageForm {
  };
 }
 
-export default function DamagesTab({ sessionId, propertyClassification, countryId, sessionStatus }: { sessionId: string; propertyClassification?: string | null; countryId?: string | null; sessionStatus?: string }) {
+export default function DamagesTab({ sessionId, propertyClassification, countryId, sessionStatus, offlineMode = false, onOfflineSaved }: { sessionId: string; propertyClassification?: string | null; countryId?: string | null; sessionStatus?: string; offlineMode?: boolean; onOfflineSaved?: () => void }) {
  const queryClient = useQueryClient();
  const confirmDelete = useConfirm();
  const showAlert = useAlert();
@@ -451,32 +451,70 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  : [];
 
  const createMutation = useMutation({
- mutationFn: createDamage,
+ mutationFn: async (input: Parameters<typeof createDamage>[0]) => {
+   if (offlineMode) {
+     const { addPendingDamageCreated } = await import("@/lib/offline/sync-session");
+     const tempId = "offline-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
+     const damage: InspectionDamage = {
+       ...input,
+       id: tempId,
+       created_at: new Date().toISOString(),
+       updated_at: new Date().toISOString(),
+     } as InspectionDamage;
+     await addPendingDamageCreated(sessionId, damage);
+     onOfflineSaved?.();
+     return damage;
+   }
+   return createDamage(input);
+ },
  onSuccess: () => {
- queryClient.invalidateQueries({ queryKey: ["damages", sessionId] });
- setForm(emptyForm(sessionId, newType));
- setEditing(null);
- toast.success("Daño registrado");
+   if (!offlineMode) {
+     queryClient.invalidateQueries({ queryKey: ["damages", sessionId] });
+   }
+   setForm(emptyForm(sessionId, newType));
+   setEditing(null);
+   toast.success("Daño registrado");
  },
  onError: (err: Error) => toast.error(err.message),
  });
 
  const updateMutation = useMutation({
- mutationFn: ({ id, data }: { id: string; data: Partial<InspectionDamage> }) =>
- updateDamage(id, data),
+ mutationFn: async ({ id, data }: { id: string; data: Partial<InspectionDamage> }) => {
+   if (offlineMode) {
+     const { addPendingDamageUpdated } = await import("@/lib/offline/sync-session");
+     const existing = damages?.find((d) => d.id === id);
+     const merged = { ...(existing || {}), ...data, id, updated_at: new Date().toISOString() } as InspectionDamage;
+     await addPendingDamageUpdated(sessionId, merged);
+     onOfflineSaved?.();
+     return merged;
+   }
+   return updateDamage(id, data);
+ },
  onSuccess: () => {
- queryClient.invalidateQueries({ queryKey: ["damages", sessionId] });
- setEditing(null);
- toast.success("Daño actualizado");
+   if (!offlineMode) {
+     queryClient.invalidateQueries({ queryKey: ["damages", sessionId] });
+   }
+   setEditing(null);
+   toast.success("Daño actualizado");
  },
  onError: (err: Error) => toast.error(err.message),
  });
 
  const deleteMutation = useMutation({
- mutationFn: deleteDamage,
+ mutationFn: async (id: string) => {
+   if (offlineMode) {
+     const { addPendingDamageDeleted } = await import("@/lib/offline/sync-session");
+     await addPendingDamageDeleted(sessionId, id);
+     onOfflineSaved?.();
+     return;
+   }
+   return deleteDamage(id);
+ },
  onSuccess: () => {
- queryClient.invalidateQueries({ queryKey: ["damages", sessionId] });
- toast.success("Daño eliminado");
+   if (!offlineMode) {
+     queryClient.invalidateQueries({ queryKey: ["damages", sessionId] });
+   }
+   toast.success("Daño eliminado");
  },
  onError: (err: Error) => toast.error(err.message),
  });

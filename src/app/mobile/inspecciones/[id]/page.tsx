@@ -393,9 +393,11 @@ export default function MobileInspectionDetailPage() {
             propertyClassification={session.property_risk?.risk_class}
             countryId={session.claim?.country_id}
             sessionStatus={session.status}
+            offlineMode={isOfflineMode}
+            onOfflineSaved={refreshOffline}
           />
         )}
-        {activeTab === "evidencias" && <MobileEvidencesTab sessionId={session.id} sessionStatus={session.status} />}
+        {activeTab === "evidencias" && <MobileEvidencesTab sessionId={session.id} sessionStatus={session.status} offlineMode={isOfflineMode} onOfflineSaved={refreshOffline} />}
         {activeTab === "croquis" && (
           <MobileSketchesTab
             sessionId={session.id}
@@ -412,6 +414,8 @@ export default function MobileInspectionDetailPage() {
             magicLinkToken={session.magic_link_token || undefined}
             inspectionType={session.inspection_type as "onsite" | "remote" | undefined}
             signatureWaiverReason={session.signature_waiver_reason}
+            offlineMode={isOfflineMode}
+            onOfflineSaved={refreshOffline}
           />
         )}
         {activeTab === "informe" && <MobileReportTab sessionId={session.id} />}

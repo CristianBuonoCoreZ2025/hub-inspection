@@ -8,6 +8,8 @@ interface MobileSignaturesTabProps {
   magicLinkToken?: string;
   inspectionType?: "onsite" | "remote";
   signatureWaiverReason?: string | null;
+  offlineMode?: boolean;
+  onOfflineSaved?: () => void;
 }
 
 export default function MobileSignaturesTab({
@@ -16,6 +18,8 @@ export default function MobileSignaturesTab({
   magicLinkToken,
   inspectionType,
   signatureWaiverReason,
+  offlineMode = false,
+  onOfflineSaved,
 }: MobileSignaturesTabProps) {
   return (
     <SignaturesTab
@@ -24,6 +28,8 @@ export default function MobileSignaturesTab({
       magicLinkToken={magicLinkToken}
       inspectionType={inspectionType}
       signatureWaiverReason={signatureWaiverReason}
+      offlineMode={offlineMode}
+      onOfflineSaved={onOfflineSaved}
     />
   );
 }

@@ -2,7 +2,7 @@
 
 import { getOfflineDB, hasPendingChanges, emptyPendingChanges, type OfflineSession, type PendingChanges } from "@/db/offline-db";
 import { updateInspectionSession, createDamage, updateDamage, deleteDamage, type SessionDetail } from "@/services/inspections";
-import type { InspectionSession, InspectionDamage } from "@/types";
+import type { InspectionSession, InspectionDamage, EvidenceSource } from "@/types";
 
 // ─────────────────────────────────────────────────────────────────────
 // Tipos
@@ -350,6 +350,104 @@ export async function addPendingEvidence(
   });
 }
 
+/** Alias para consistencia con daños: addPendingEvidenceCreated */
+export async function addPendingEvidenceCreated(
+  sessionId: string,
+  evidence: { localId: string; blob: Blob; type: "photo" | "video" | "document"; metadata?: { originalName?: string; fileSize?: number; mimeType?: string } | null },
+): Promise<void> {
+  return addPendingEvidence(sessionId, {
+    localId: evidence.localId,
+    blob: evidence.blob,
+    type: evidence.type,
+    source: "mobile-offline",
+    description: evidence.metadata?.originalName ?? null,
+  });
+}
+
+/** Marca una evidencia existente para eliminación al sincronizar */
+export async function addPendingEvidenceDeleted(sessionId: string, evidenceId: string): Promise<void> {
+  const db = getOfflineDB();
+  const offline = await db.sessions.get(sessionId);
+  if (!offline) throw new Error("Sesión offline no encontrada");
+  await db.sessions.update(sessionId, {
+    pending: {
+      ...offline.pending,
+      evidencesDeleted: [...offline.pending.evidencesDeleted, evidenceId],
+    },
+    syncStatus: "pending",
+  });
+}
+
+/** Obtiene las evidencias offline (descargadas + pendientes) con URLs blob */
+export async function getOfflineEvidences(sessionId: string): Promise<Array<{
+  id: string;
+  type: string;
+  url: string;
+  description: string | null;
+  created_at: string;
+  metadata: { originalName?: string; fileSize?: number; mimeType?: string } | null;
+  include_in_report: boolean;
+  lat: number | null;
+  lng: number | null;
+  exif_lat: number | null;
+  exif_lng: number | null;
+  ai_summary: string | null;
+  ai_status: string | null;
+  source: string | null;
+}>> {
+  const db = getOfflineDB();
+  const offline = await db.sessions.get(sessionId);
+  if (!offline) return [];
+
+  // Evidencias descargadas (del snapshot)
+  const downloaded = (offline.session as SessionDetail).inspection_evidences || [];
+
+  // Filtrar las que fueron eliminadas offline
+  const deletedIds = new Set(offline.pending.evidencesDeleted);
+  const activeDownloaded = downloaded.filter((e) => !deletedIds.has(e.id));
+
+  // Mapear a formato unificado
+  const result = activeDownloaded.map((e) => ({
+    id: e.id,
+    type: e.type,
+    url: e.url,
+    description: e.description ?? null,
+    created_at: e.created_at,
+    metadata: e.metadata as { originalName?: string; fileSize?: number; mimeType?: string } | null,
+    include_in_report: e.include_in_report,
+    lat: e.metadata?.lat ?? null,
+    lng: e.metadata?.lng ?? null,
+    exif_lat: null,
+    exif_lng: null,
+    ai_summary: null,
+    ai_status: null,
+    source: e.source,
+  }));
+
+  // Agregar evidencias pendientes (con blob URL)
+  for (const pe of offline.pending.evidences) {
+    const blobUrl = URL.createObjectURL(pe.blob);
+    result.push({
+      id: pe.localId,
+      type: pe.type,
+      url: blobUrl,
+      description: pe.description ?? null,
+      created_at: pe.capturedAt,
+      metadata: null,
+      include_in_report: false,
+      lat: pe.lat,
+      lng: pe.lng,
+      exif_lat: null,
+      exif_lng: null,
+      ai_summary: null,
+      ai_status: null,
+      source: pe.source as EvidenceSource | null,
+    });
+  }
+
+  return result;
+}
+
 /** Agrega una firma pendiente */
 export async function addPendingSignature(
   sessionId: string,
@@ -373,6 +471,58 @@ export async function addPendingSignature(
     },
     syncStatus: "pending",
   });
+}
+
+/** Marca una firma existente para eliminación al sincronizar */
+export async function addPendingSignatureDeleted(sessionId: string, signatureId: string): Promise<void> {
+  const db = getOfflineDB();
+  const offline = await db.sessions.get(sessionId);
+  if (!offline) throw new Error("Sesión offline no encontrada");
+  await db.sessions.update(sessionId, {
+    pending: {
+      ...offline.pending,
+      signaturesDeleted: [...offline.pending.signaturesDeleted, signatureId],
+    },
+    syncStatus: "pending",
+  });
+}
+
+/** Obtiene las firmas offline (descargadas + pendientes) con URLs blob */
+export async function getOfflineSignatures(sessionId: string): Promise<Array<{
+  id: string;
+  role: string;
+  signer_name: string | null;
+  signature_url: string;
+  created_at: string;
+}>> {
+  const db = getOfflineDB();
+  const offline = await db.sessions.get(sessionId);
+  if (!offline) return [];
+
+  const downloaded = (offline.session as SessionDetail).inspection_signatures || [];
+  const deletedIds = new Set(offline.pending.signaturesDeleted);
+  const activeDownloaded = downloaded.filter((s) => !deletedIds.has(s.id));
+
+  const result = activeDownloaded.map((s) => ({
+    id: s.id,
+    role: s.role,
+    signer_name: null,
+    signature_url: s.signature_url,
+    created_at: s.signed_at,
+  }));
+
+  for (const ps of offline.pending.signatures) {
+    const blobUrl = URL.createObjectURL(ps.blob);
+    result.push({
+      id: ps.localId,
+      role: ps.role,
+      signer_name: null,
+      signature_url: blobUrl,
+      created_at: ps.capturedAt,
+    });
+  }
+
+  return result;
 }
 
 /** Agrega un croquis pendiente */
