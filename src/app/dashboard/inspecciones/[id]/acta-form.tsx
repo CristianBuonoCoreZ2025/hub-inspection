@@ -46,9 +46,13 @@ const steps = [
 interface ActaFormProps {
  session: SessionDetail;
  readOnly?: boolean;
+ /** Si está en modo offline, guarda cambios en IndexedDB en vez de Supabase */
+ offlineMode?: boolean;
+ /** Callback al guardar offline (para refrescar estado del padre) */
+ onOfflineSaved?: () => void;
 }
 
-export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
+export default function ActaForm({ session, readOnly = false, offlineMode = false, onOfflineSaved }: ActaFormProps) {
  const queryClient = useQueryClient();
  const flash = useFlash();
  const [step, setStep] = useState(1);
@@ -161,29 +165,56 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  });
 
  const saveMutation = useMutation({
- mutationFn: (data: ActaInput) =>
- updateInspectionSession(session.id, {
- inspection_date: data.inspection_date || null,
- inspection_time: data.inspection_time || null,
- interviewed_name: data.interviewed_name || null,
- interviewed_email: data.interviewed_email || null,
- interviewed_relationship: data.interviewed_relationship || null,
- police_report_number: data.police_report_number || null,
- police_report_name: data.police_report_name || null,
- police_report_rut: data.police_report_rut || null,
- firefighters_company: data.firefighters_company || null,
- other_insurances: data.other_insurances,
- other_insurance_company: data.other_insurance_company || null,
- inspector_observations: data.inspector_observations || null,
- property_risk: data.property_risk,
- property_materiality: data.property_materiality,
- security_measures: data.security_measures,
- insured_statement: data.insured_statement,
- third_parties: data.third_parties,
- } as Partial<InspectionSession>),
+ mutationFn: async (data: ActaInput) => {
+   if (offlineMode) {
+     const { savePendingActa } = await import("@/lib/offline/sync-session");
+     await savePendingActa(session.id, {
+       inspection_date: data.inspection_date || null,
+       inspection_time: data.inspection_time || null,
+       interviewed_name: data.interviewed_name || null,
+       interviewed_email: data.interviewed_email || null,
+       interviewed_relationship: data.interviewed_relationship || null,
+       police_report_number: data.police_report_number || null,
+       police_report_name: data.police_report_name || null,
+       police_report_rut: data.police_report_rut || null,
+       firefighters_company: data.firefighters_company || null,
+       other_insurances: data.other_insurances,
+       other_insurance_company: data.other_insurance_company || null,
+       inspector_observations: data.inspector_observations || null,
+       property_risk: data.property_risk,
+       property_materiality: data.property_materiality,
+       security_measures: data.security_measures,
+       insured_statement: data.insured_statement,
+       third_parties: data.third_parties,
+     } as Partial<InspectionSession>);
+     onOfflineSaved?.();
+     return;
+   }
+   return updateInspectionSession(session.id, {
+     inspection_date: data.inspection_date || null,
+     inspection_time: data.inspection_time || null,
+     interviewed_name: data.interviewed_name || null,
+     interviewed_email: data.interviewed_email || null,
+     interviewed_relationship: data.interviewed_relationship || null,
+     police_report_number: data.police_report_number || null,
+     police_report_name: data.police_report_name || null,
+     police_report_rut: data.police_report_rut || null,
+     firefighters_company: data.firefighters_company || null,
+     other_insurances: data.other_insurances,
+     other_insurance_company: data.other_insurance_company || null,
+     inspector_observations: data.inspector_observations || null,
+     property_risk: data.property_risk,
+     property_materiality: data.property_materiality,
+     security_measures: data.security_measures,
+     insured_statement: data.insured_statement,
+     third_parties: data.third_parties,
+   } as Partial<InspectionSession>);
+ },
  onSuccess: () => {
- queryClient.invalidateQueries({ queryKey: ["inspection-session", session.id] });
- flash({ description: "Acta guardada", type: "success", duration: 800 });
+   if (!offlineMode) {
+     queryClient.invalidateQueries({ queryKey: ["inspection-session", session.id] });
+   }
+   flash({ description: "Acta guardada", type: "success", duration: 800 });
  },
  onError: (err: Error) => flash({ description: err.message, type: "error" }),
  });
@@ -217,8 +248,9 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  // Sincronizar el step del acta con el cliente (piloto automático)
  const currentStepKey = steps.find((s) => s.id === step)?.key || "datos";
  useEffect(() => {
- updateInspectionSession(session.id, { acta_step: currentStepKey }).catch(() => {});
- }, [currentStepKey, session.id]);
+   if (offlineMode) return;
+   updateInspectionSession(session.id, { acta_step: currentStepKey }).catch(() => {});
+ }, [currentStepKey, session.id, offlineMode]);
 
  // ── Reset risk_class si no está en las clasificaciones filtradas por destino ──
  useEffect(() => {

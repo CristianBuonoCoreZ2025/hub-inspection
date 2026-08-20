@@ -19,6 +19,11 @@ import { getLookupCatalog } from "@/services/catalogs";
 import { useAuth } from "@/hooks/use-auth";
 import { useRealtime } from "@/hooks/use-realtime";
 import { toast } from "sonner";
+import { useOnline } from "@/hooks/use-online";
+import { getDownloadedSession } from "@/lib/offline/download-session";
+import { hasPendingChanges, countPendingChanges, type OfflineSession } from "@/db/offline-db";
+import { SyncButton } from "@/components/mobile/sync-button";
+import { useState as useReactState, useEffect as useReactEffect } from "react";
 
 // GeoCapture usa Leaflet (browser-only) — import dinámico
 const GeoCapture = dynamic(() => import("@/components/inspection/geo-capture").then((m) => ({ default: m.GeoCapture })), { ssr: false });
@@ -58,22 +63,34 @@ export default function MobileInspectionDetailPage() {
   const queryClient = useQueryClient();
   const sessionId = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : "";
   const { profile, dataAccess } = useAuth();
+  const online = useOnline();
+  const [offlineSession, setOfflineSession] = useReactState<OfflineSession | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>("resumen");
+
+  // Cargar sesión offline de IndexedDB
+  useReactEffect(() => {
+    if (!sessionId) return;
+    getDownloadedSession(sessionId).then(setOfflineSession);
+  }, [sessionId]);
+
+  const isOfflineMode = !online && !!offlineSession;
+  const refreshOffline = () => getDownloadedSession(sessionId).then(setOfflineSession);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelReasonId, setCancelReasonId] = useState("");
   const [cancelNotes, setCancelNotes] = useState("");
 
   // Realtime: escuchar cambios en evidences, damages, checklists y signatures
-  useRealtime("inspection_evidences", [["inspection-session", sessionId]], !!sessionId);
-  useRealtime("inspection_damages", [["inspection-session", sessionId]], !!sessionId);
-  useRealtime("inspection_checklists", [["inspection-session", sessionId]], !!sessionId);
-  useRealtime("inspection_signatures", [["inspection-session", sessionId], ["signatures", sessionId]], !!sessionId);
+  useRealtime("inspection_evidences", [["inspection-session", sessionId]], !!sessionId && online);
+  useRealtime("inspection_damages", [["inspection-session", sessionId]], !!sessionId && online);
+  useRealtime("inspection_checklists", [["inspection-session", sessionId]], !!sessionId && online);
+  useRealtime("inspection_signatures", [["inspection-session", sessionId], ["signatures", sessionId]], !!sessionId && online);
 
-  const { data: session, isLoading } = useQuery({
+  const { data: serverSession, isLoading } = useQuery({
     queryKey: ["inspection-session", sessionId],
     queryFn: () => getInspectionSessionById(sessionId) as Promise<SessionDetail>,
-    enabled: !!sessionId,
+    enabled: !!sessionId && online,
   });
+  const session = isOfflineMode ? offlineSession?.session ?? null : serverSession ?? null;
 
   const { data: workPeriods } = useQuery({
     queryKey: ["inspection-work-periods", sessionId],
@@ -233,6 +250,16 @@ export default function MobileInspectionDetailPage() {
             </span>
           </div>
         </div>
+        {/* Sync button cuando hay cambios pendientes */}
+        {offlineSession && hasPendingChanges(offlineSession.pending) && online && (
+          <div className="px-4 py-2 flex items-center justify-end border-b">
+            <SyncButton
+              sessionId={session.id}
+              pending={offlineSession.pending}
+              onSynced={refreshOffline}
+            />
+          </div>
+        )}
         {/* Split 70-30: izquierda datos, derecha botones de acción */}
         <div className="mobile-header-split">
           {/* 70% — dirección + asegurado */}
@@ -359,7 +386,7 @@ export default function MobileInspectionDetailPage() {
             })}
           />
         )}
-        {activeTab === "acta" && <MobileActaTab sessionId={session.id} onComplete={() => setActiveTab("danos")} />}
+        {activeTab === "acta" && <MobileActaTab sessionId={session.id} onComplete={() => setActiveTab("danos")} offlineMode={isOfflineMode} onOfflineSaved={refreshOffline} />}
         {activeTab === "danos" && (
           <MobileDamagesTab
             sessionId={session.id}
