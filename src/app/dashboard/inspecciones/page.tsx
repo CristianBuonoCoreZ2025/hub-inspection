@@ -514,6 +514,13 @@ function InspectionsPageContent() {
                           label={session.inspection_type === "remote" ? "Remota" : "Presencial"}
                           size="sm"
                         />
+                        {session.offline_downloaded_at && (
+                          <StatusBadge
+                            tone="amber"
+                            label="Offline"
+                            size="sm"
+                          />
+                        )}
                       </div>
                     </td>
                     <td className="whitespace-nowrap hidden sm:table-cell">

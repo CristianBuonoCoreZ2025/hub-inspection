@@ -401,6 +401,8 @@ export default function MobileInspectionDetailPage() {
             sessionId={session.id}
             sessionStatus={session.status}
             magicLinkToken={session.magic_link_token || undefined}
+            offlineMode={isOfflineMode}
+            onOfflineSaved={refreshOffline}
           />
         )}
         {activeTab === "firmas" && (

@@ -833,3 +833,141 @@
   color: hsl(var(--muted-foreground));
   margin-top: 4px;
 }
+
+/* ── Croquis: canvas simple mobile ── */
+.simple-drawing-canvas {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.simple-drawing-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 8px;
+  background: hsl(var(--muted) / 0.5);
+}
+
+.simple-drawing-colors {
+  display: flex;
+  gap: 4px;
+}
+
+.simple-drawing-color {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.1s ease;
+}
+.simple-drawing-color.active {
+  border-color: hsl(var(--primary));
+  transform: scale(1.15);
+}
+
+.simple-drawing-tools {
+  display: flex;
+  gap: 4px;
+}
+
+.simple-drawing-tool {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--background));
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.simple-drawing-tool.active {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+}
+.simple-drawing-tool:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.simple-drawing-stage {
+  flex: 1;
+  min-height: 300px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  background: #ffffff;
+  overflow: hidden;
+  position: relative;
+}
+
+.simple-drawing-canvas-element {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.simple-drawing-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ── Croquis: cards de sketch ── */
+.mobile-sketch-card {
+  position: relative;
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  overflow: hidden;
+  background: hsl(var(--background));
+}
+
+.mobile-sketch-image {
+  width: 100%;
+  aspect-ratio: 4/3;
+  object-fit: cover;
+  background: #ffffff;
+}
+
+.mobile-sketch-label {
+  padding: 4px 8px;
+  font-size: 11px;
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-sketch-actions {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  gap: 4px;
+}
+
+.mobile-sketch-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: hsl(var(--background) / 0.9);
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: background-color 0.15s ease;
+}
+.mobile-sketch-action-btn.danger {
+  color: hsl(var(--destructive, 0 80% 50%));
+}

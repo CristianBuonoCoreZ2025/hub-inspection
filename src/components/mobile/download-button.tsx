@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Download, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { useFlash } from "@/components/ui/alert-context";
-import { downloadInspection, canDownloadMore, MAX_OFFLINE_SESSIONS } from "@/lib/offline/download-session";
+import { downloadInspection, canDownloadMore } from "@/lib/offline/download-session";
 import { useOnline } from "@/hooks/use-online";
 
 interface DownloadButtonProps {
