@@ -193,11 +193,11 @@ export default function ConnectionLogsTab({ sessionId }: ConnectionLogsTabProps)
                           <Clock className="h-3 w-3" />
                           {formatUserTime(log.connected_at)}
                         </span>
-                        <span className="flex items-center gap-1" aria-label="Cámara">
+                        <span className="flex items-center gap-1" title="Cámara">
                           <Camera className="h-3 w-3" />
                           <span className={camPerm.color}>{camPerm.label}</span>
                         </span>
-                        <span className="flex items-center gap-1" aria-label="Micrófono">
+                        <span className="flex items-center gap-1" title="Micrófono">
                           <Mic className="h-3 w-3" />
                           <span className={micPerm.color}>{micPerm.label}</span>
                         </span>

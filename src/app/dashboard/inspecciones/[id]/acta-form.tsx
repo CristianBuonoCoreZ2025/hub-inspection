@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, Fragment } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import { useForm } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { actaSchema, type ActaInput } from "@/lib/validations";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateInspectionSession, type SessionDetail } from "@/services/inspections";
-import { useFlash } from "@/components/ui/alert-context";
+import { toast } from "sonner";
 import {
  Shield,
  Building,
@@ -19,6 +19,8 @@ import {
  MapPin,
  AlertTriangle,
  XCircle,
+ ChevronLeft,
+ ChevronRight,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -46,11 +48,11 @@ const steps = [
 interface ActaFormProps {
  session: SessionDetail;
  readOnly?: boolean;
+ onComplete?: () => void;
 }
 
-export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
+export default function ActaForm({ session, readOnly = false, onComplete }: ActaFormProps) {
  const queryClient = useQueryClient();
- const flash = useFlash();
  const [step, setStep] = useState(1);
 
  const { catalogs } = useLookupCatalogs([
@@ -183,36 +185,55 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  } as Partial<InspectionSession>),
  onSuccess: () => {
  queryClient.invalidateQueries({ queryKey: ["inspection-session", session.id] });
- flash({ description: "Acta guardada", type: "success", duration: 800 });
  },
- onError: (err: Error) => flash({ description: err.message, type: "error" }),
+ onError: (err: Error) => toast.error(err.message),
  });
 
  const onSubmit = form.handleSubmit((data) => {
  saveMutation.mutate(data);
+ toast.success("Acta guardada");
  });
 
- // ── Guardado manual (botón Guardar) ──
- // Sin auto-save. El usuario guarda explícitamente con el botón Guardar.
- const toSessionPatch = (data: ActaInput): Partial<InspectionSession> => ({
- inspection_date: data.inspection_date || null,
- inspection_time: data.inspection_time || null,
- interviewed_name: data.interviewed_name || null,
- interviewed_email: data.interviewed_email || null,
- interviewed_relationship: data.interviewed_relationship || null,
- police_report_number: data.police_report_number || null,
- police_report_name: data.police_report_name || null,
- police_report_rut: data.police_report_rut || null,
- firefighters_company: data.firefighters_company || null,
- other_insurances: data.other_insurances,
- other_insurance_company: data.other_insurance_company || null,
- inspector_observations: data.inspector_observations || null,
- property_risk: data.property_risk,
- property_materiality: data.property_materiality,
- security_measures: data.security_measures,
- insured_statement: data.insured_statement,
- third_parties: data.third_parties,
+ // ── Auto-guardado debounced (screen sharing) ──
+ // Cuando el inspector escribe, guarda silenciosamente después de 1.5s
+ // para que el cliente vea los cambios en tiempo real vía polling.
+ const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+ const lastSavedDataRef = useRef<string>("");
+
+ useEffect(() => {
+ // eslint-disable-next-line react-hooks/incompatible-library
+ const subscription = form.watch((formData) => {
+ // Solo guardar si hay cambios reales
+ const dataStr = JSON.stringify(formData);
+ if (dataStr === lastSavedDataRef.current) return;
+
+ if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+ autoSaveTimerRef.current = setTimeout(() => {
+ lastSavedDataRef.current = dataStr;
+ const validData = form.getValues();
+ updateInspectionSession(session.id, {
+ inspection_date: validData.inspection_date || null,
+ inspection_time: validData.inspection_time || null,
+ interviewed_name: validData.interviewed_name || null,
+ interviewed_email: validData.interviewed_email || null,
+ interviewed_relationship: validData.interviewed_relationship || null,
+ police_report_number: validData.police_report_number || null,
+ police_report_name: validData.police_report_name || null,
+ police_report_rut: validData.police_report_rut || null,
+ firefighters_company: validData.firefighters_company || null,
+ other_insurances: validData.other_insurances,
+ other_insurance_company: validData.other_insurance_company || null,
+ inspector_observations: validData.inspector_observations || null,
+ property_risk: validData.property_risk,
+ property_materiality: validData.property_materiality,
+ security_measures: validData.security_measures,
+ insured_statement: validData.insured_statement,
+ third_parties: validData.third_parties,
+ } as Partial<InspectionSession>).catch(() => {});
+ }, 1500);
  });
+ return () => subscription.unsubscribe();
+ }, [form, session.id]);
 
  // Sincronizar el step del acta con el cliente (piloto automático)
  const currentStepKey = steps.find((s) => s.id === step)?.key || "datos";
@@ -240,7 +261,7 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  // Helpers sin tipado estricto para evitar conflictos con react-hook-form + paths anidados
  const field = (name: string) => form.register(name as never);
  const watch = (name: string) => form.watch(name as never);
- const set = (name: string, value: unknown) => form.setValue(name as never, value as never, { shouldValidate: false, shouldDirty: true });
+ const set = (name: string, value: unknown) => form.setValue(name as never, value as never);
 
  const catalogSelect = (name: string, category: string, placeholder = "Seleccionar...") => {
  const items = catalogs[category] || [];
@@ -319,27 +340,6 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  <div className="flex items-center gap-2 rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-300">
  <Lock className="h-3.5 w-3.5 shrink-0" />
  Inspección finalizada — el acta es de solo lectura
- </div>
- )}
- {/* Barra superior: Guardar + estado */}
- {!readOnly && (
- <div className="flex items-center justify-between gap-3">
- <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
- {saveMutation.isPending ? (
- <span className="text-amber-600">Guardando...</span>
- ) : saveMutation.isSuccess ? (
- <span className="text-emerald-600">Guardado</span>
- ) : form.formState.isDirty ? (
- <span className="text-amber-600">Cambios sin guardar</span>
- ) : null}
- </div>
- <Button
- type="submit"
- disabled={saveMutation.isPending || readOnly}
- className="pg-btn-platinum"
- >
- {saveMutation.isPending ? "Guardando..." : "Guardar"}
- </Button>
  </div>
  )}
  {/* Stepper horizontal — wizard de pasos */}
@@ -672,8 +672,7 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  </div>
  <div className="flex-1 min-w-0">
  <Input
- name={`security_measures.${item.key}.detail`}
- value={String(watch(`security_measures.${item.key}.detail`) ?? "")}
+ {...field(`security_measures.${item.key}.detail`)}
  placeholder="Detalle..."
  className="app-input h-7 "
  onChange={(e) => {
@@ -863,6 +862,75 @@ export default function ActaForm({ session, readOnly = false }: ActaFormProps) {
  </Button>
  )}
  </div>
+ </div>
+ )}
+
+ {/* Navegacion del wizard: Anterior / Siguiente / Guardar */}
+ {!readOnly && (
+ <div className="acta-wizard-nav">
+ <Button
+ type="button"
+ size="sm"
+ variant="outline"
+ onClick={() => setStep(Math.max(1, step - 1))}
+ disabled={step === 1}
+ className="pg-btn-platinum"
+ >
+ <ChevronLeft className="h-4 w-4" /> Anterior
+ </Button>
+ <div className="flex items-center gap-2">
+ {step < steps.length ? (
+ <Button
+ type="button"
+ size="sm"
+ onClick={() => {
+ form.handleSubmit((data) => saveMutation.mutate(data))();
+ setStep(step + 1);
+ }}
+ disabled={saveMutation.isPending}
+ className="pg-btn-platinum"
+ >
+ {saveMutation.isPending ? "Guardando..." : "Siguiente"} <ChevronRight className="h-4 w-4" />
+ </Button>
+ ) : (
+ <Button
+ type="button"
+ size="sm"
+ onClick={() => {
+ form.handleSubmit((data) => saveMutation.mutate(data))();
+ onComplete?.();
+ }}
+ disabled={saveMutation.isPending}
+ className="pg-btn-platinum"
+ >
+ {saveMutation.isPending ? "Guardando..." : "Siguiente"} <ChevronRight className="h-4 w-4" />
+ </Button>
+ )}
+ </div>
+ </div>
+ )}
+ {readOnly && (
+ <div className="acta-wizard-nav">
+ <Button
+ type="button"
+ size="sm"
+ variant="outline"
+ onClick={() => setStep(Math.max(1, step - 1))}
+ disabled={step === 1}
+ className="pg-btn-platinum"
+ >
+ <ChevronLeft className="h-4 w-4" /> Anterior
+ </Button>
+ <Button
+ type="button"
+ size="sm"
+ variant="outline"
+ onClick={() => setStep(Math.min(steps.length, step + 1))}
+ disabled={step === steps.length}
+ className="pg-btn-platinum"
+ >
+ Siguiente <ChevronRight className="h-4 w-4" />
+ </Button>
  </div>
  )}
  </fieldset>

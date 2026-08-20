@@ -7,7 +7,6 @@ import { getActionTemplates } from "@/services/actions";
 import { toast } from "sonner";
 import { Trash2, Link2, ChevronRight } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
-import { useConfirm } from "@/hooks/use-confirm";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -21,7 +20,6 @@ import {
 export default function DependenciasGestionPage() {
  const queryClient = useQueryClient();
  const { canCreate, canDelete } = usePermissions();
- const confirm = useConfirm();
  const [open, setOpen] = useState(false);
  const [parentCode, setParentCode] = useState("");
  const [childCode, setChildCode] = useState("");
@@ -255,7 +253,7 @@ const colorFor = (code: string) => codeMap.find(c => c.code === code)?.color;
  {style.label}
  </span>
  {isConditional && depForItem && (
- <span className="ml-1 rounded-md px-1.5 py-0.5 text-[8px] font-medium bg-amber-500/20 text-amber-700 border border-amber-500/30" aria-label={`Se crea solo si ${depForItem.condition_field} = ${depForItem.condition_value}`}>
+ <span className="ml-1 rounded-md px-1.5 py-0.5 text-[8px] font-medium bg-amber-500/20 text-amber-700 border border-amber-500/30" title={`Se crea solo si ${depForItem.condition_field} = ${depForItem.condition_value}`}>
  Condicional: {depForItem.condition_field} = {depForItem.condition_value}
  </span>
  )}
@@ -264,9 +262,8 @@ const colorFor = (code: string) => codeMap.find(c => c.code === code)?.color;
  variant="ghost"
  size="icon"
  className="btn-icon-sm btn-danger-hover ml-1 h-6 w-6"
- onClick={async () => {
- const ok = await confirm({ title: "Eliminar", description: `¿Eliminar dependencia ${parentCodeForItem} → ${item.code}?`, confirmLabel: "Eliminar", destructive: true });
- if (!ok) return;
+ onClick={() => {
+ if (confirm(`¿Eliminar dependencia ${parentCodeForItem} → ${item.code}?`))
  deleteMutation.mutate(depId);
  }}
  >

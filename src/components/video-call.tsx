@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Video, VideoOff, PhoneOff, Mic, MicOff, Loader2, AlertCircle } from "lucide-react";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 interface VideoCallProps {
   /** ID único de la sesión de inspección (genera el room name) */
@@ -246,49 +245,31 @@ export default function VideoCall({ sessionId, displayName, compact = false, onH
 
       {/* Controles */}
       <div className="flex items-center justify-center gap-2">
-        <Tooltip>
-          <TooltipTrigger render={
-            <button
-              onClick={toggleMute}
-              className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${
-                muted ? "bg-rose-600 text-white" : "bg-slate-700 text-slate-200 hover:bg-slate-600"
-              }`}
-            />
-          }>
-            {muted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            <p>{muted ? "Activar micrófono" : "Silenciar micrófono"}</p>
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger render={
-            <button
-              onClick={toggleVideo}
-              className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${
-                videoOff ? "bg-rose-600 text-white" : "bg-slate-700 text-slate-200 hover:bg-slate-600"
-              }`}
-            />
-          }>
-            {videoOff ? <VideoOff className="h-4 w-4" /> : <Video className="h-4 w-4" />}
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            <p>{videoOff ? "Activar cámara" : "Apagar cámara"}</p>
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger render={
-            <button
-              onClick={handleHangup}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-rose-600 text-white hover:bg-rose-500 transition-colors"
-            />
-          }>
-            <PhoneOff className="h-4 w-4" />
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            <p>Colgar</p>
-          </TooltipContent>
-        </Tooltip>
+        <button
+          onClick={toggleMute}
+          className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${
+            muted ? "bg-rose-600 text-white" : "bg-slate-700 text-slate-200 hover:bg-slate-600"
+          }`}
+          title={muted ? "Activar micrófono" : "Silenciar micrófono"}
+        >
+          {muted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+        </button>
+        <button
+          onClick={toggleVideo}
+          className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${
+            videoOff ? "bg-rose-600 text-white" : "bg-slate-700 text-slate-200 hover:bg-slate-600"
+          }`}
+          title={videoOff ? "Activar cámara" : "Apagar cámara"}
+        >
+          {videoOff ? <VideoOff className="h-4 w-4" /> : <Video className="h-4 w-4" />}
+        </button>
+        <button
+          onClick={handleHangup}
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-rose-600 text-white hover:bg-rose-500 transition-colors"
+          title="Colgar"
+        >
+          <PhoneOff className="h-4 w-4" />
+        </button>
       </div>
     </div>
   );

@@ -8,7 +8,6 @@ import {
   MicOff,
   PhoneOff,
   Camera,
-  SwitchCamera,
   Loader2,
   Wifi,
   WifiOff,
@@ -23,7 +22,6 @@ import {
 } from "lucide-react";
 import { joinSignalingChannel, ICE_SERVERS, type SignalingRole, type SignalingMessage } from "@/lib/webrtc/signaling";
 import { cn } from "@/lib/utils";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 interface LiveVideoCallProps {
   sessionId: string;
@@ -130,8 +128,6 @@ export function LiveVideoCall({
   const [rejectedReason, setRejectedReason] = React.useState<string | null>(null);
   const [videoOn, setVideoOn] = React.useState(true);
   const [audioOn, setAudioOn] = React.useState(true);
-  const [facingMode, setFacingMode] = React.useState<"user" | "environment">("user");
-  const facingModeRef = React.useRef<"user" | "environment">("user");
   const [peerJoined, setPeerJoined] = React.useState(false);
   const [screenshotting, setScreenshotting] = React.useState(false);
   const [lastScreenshot, setLastScreenshot] = React.useState<SavedEvidence | null>(null);
@@ -168,7 +164,7 @@ export function LiveVideoCall({
 
     try {
       stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: facingModeRef.current },
+        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
         audio: { echoCancellation: true, noiseSuppression: true },
       });
       cameraPerm = "granted";
@@ -600,7 +596,7 @@ export function LiveVideoCall({
       setVideoOn(false);
       // Re-intentar obtener c├ímara
       navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: facingModeRef.current },
+        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
         audio: { echoCancellation: true, noiseSuppression: true },
       }).then((newStream) => {
         localStreamRef.current = newStream;
@@ -630,48 +626,6 @@ export function LiveVideoCall({
       setAudioOn(audioTrack.enabled);
     }
   };
-
-  // ÔöÇÔöÇ Cambiar c├ímara (frontal/trasera) ÔöÇÔöÇ
-  const switchCamera = React.useCallback(async () => {
-    const stream = localStreamRef.current;
-    if (!stream) return;
-    const videoTrack = stream.getVideoTracks()[0];
-    if (!videoTrack) {
-      setError("No hay c├ímara activa para cambiar.");
-      return;
-    }
-
-    const nextFacing: "user" | "environment" = facingModeRef.current === "user" ? "environment" : "user";
-
-    try {
-      const newStream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: nextFacing },
-        audio: false,
-      });
-      const newVideoTrack = newStream.getVideoTracks()[0];
-      if (!newVideoTrack) throw new Error("No se obtuvo video");
-
-      videoTrack.stop();
-      stream.removeTrack(videoTrack);
-      stream.addTrack(newVideoTrack);
-
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = stream;
-      }
-
-      if (pcRef.current) {
-        const videoSender = pcRef.current.getSenders().find((s) => s.track?.kind === "video");
-        if (videoSender) {
-          await videoSender.replaceTrack(newVideoTrack);
-        }
-      }
-
-      facingModeRef.current = nextFacing;
-      setFacingMode(nextFacing);
-    } catch {
-      setError("No se pudo cambiar la c├ímara. El dispositivo puede no tener otra c├ímara disponible.");
-    }
-  }, []);
 
   // ÔöÇÔöÇ Colgar ÔöÇÔöÇ
   const handleHangup = () => {
@@ -779,7 +733,9 @@ export function LiveVideoCall({
     );
     const recorder = new MediaRecorder(combined, { mimeType: mimeType || undefined });
     mediaRecorderRef.current = recorder;
+    console.log("[record] start", recorder.mimeType, recorder.state);
     recorder.ondataavailable = (e) => {
+      console.log("[record] data chunk", e.data.size);
       if (e.data.size > 0) recordedChunksRef.current.push(e.data);
     };
     recorder.onerror = (e) => {
@@ -787,6 +743,7 @@ export function LiveVideoCall({
       setError("Error del grabador: " + (e as ErrorEvent)?.message || "desconocido");
     };
     recorder.onstop = () => {
+      console.log("[record] onstop, chunks:", recordedChunksRef.current.length);
       void uploadRecording();
     };
     recorder.start(1000);
@@ -796,9 +753,11 @@ export function LiveVideoCall({
   };
 
   const stopRecording = () => {
+    console.log("[record] stop clicked, state:", mediaRecorderRef.current?.state);
     try {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
         mediaRecorderRef.current.stop();
+        console.log("[record] stop() called");
       }
     } catch (err) {
       console.error("[record] stop() error", err);
@@ -811,11 +770,13 @@ export function LiveVideoCall({
   const uploadRecording = async () => {
     const chunks = recordedChunksRef.current;
     if (chunks.length === 0) {
+      console.log("[record] no chunks");
       return;
     }
     const blob = new Blob(chunks, { type: chunks[0]?.type || "video/webm" });
     const ext = blob.type.includes("mp4") ? ".mp4" : ".webm";
     const fileName = `grabacion-sesion-${Date.now()}${ext}`;
+    console.log("[record] upload start", blob.size, blob.type);
 
     try {
       const presignRes = await fetch("/api/inspection/evidences/presign", {
@@ -829,15 +790,20 @@ export function LiveVideoCall({
           source: "live_video",
         }),
       });
+      console.log("[record] presign status", presignRes.status);
       if (!presignRes.ok) throw new Error(`HTTP ${presignRes.status} (presign)`);
       const { presignedUrl, url, fileCode, userId, claimId } = await presignRes.json();
+      console.log("[record] presign ok", { presignedUrl: presignedUrl?.slice(0, 40), fileCode });
 
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open("PUT", presignedUrl);
         xhr.setRequestHeader("Content-Type", blob.type);
-        xhr.upload.addEventListener("progress", () => {});
+        xhr.upload.addEventListener("progress", (ev) => {
+          if (ev.lengthComputable) console.log("[record] r2 progress", Math.round((ev.loaded / ev.total) * 100));
+        });
         xhr.addEventListener("load", () => {
+          console.log("[record] r2 load status", xhr.status);
           if (xhr.status >= 200 && xhr.status < 300) resolve();
           else reject(new Error(`HTTP ${xhr.status} (R2)`));
         });
@@ -858,8 +824,10 @@ export function LiveVideoCall({
           userId, claimId,
         }),
       });
+      console.log("[record] register status", regRes.status);
       if (!regRes.ok) throw new Error(`HTTP ${regRes.status} (register)`);
       const data = await regRes.json();
+      console.log("[record] register ok", data);
       if (data.evidence) {
         onRecordingSaved?.({ id: data.evidence.id, url: data.evidence.url, description: data.evidence.description });
       }
@@ -986,21 +954,15 @@ export function LiveVideoCall({
           {/* Panel de peers conectados (solo inspector) */}
           {role === "inspector" && clientPeers.length > 0 && (
             <div className="relative">
-              <Tooltip>
-                <TooltipTrigger className="inline-flex">
-                  <button
-                    type="button"
-                    onClick={() => setShowPeersPanel((v) => !v)}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/10 hover:bg-white/20 text-white/80 transition-colors app-body"
-                  >
-                    <UserCheck className="h-3.5 w-3.5 text-emerald-400" />
-                    {clientPeers.length} {clientPeers.length === 1 ? "conectado" : "conectados"}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  <p>Ver conexiones activas</p>
-                </TooltipContent>
-              </Tooltip>
+              <button
+                type="button"
+                onClick={() => setShowPeersPanel((v) => !v)}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/10 hover:bg-white/20 text-white/80 transition-colors app-body"
+                title="Ver conexiones activas"
+              >
+                <UserCheck className="h-3.5 w-3.5 text-emerald-400" />
+                {clientPeers.length} {clientPeers.length === 1 ? "conectado" : "conectados"}
+              </button>
               {showPeersPanel && (
                 <div className="absolute right-0 top-full mt-1 w-64 bg-zinc-900 border border-white/15 rounded-lg shadow-xl z-50 overflow-hidden">
                   <div className="px-3 py-2 border-b border-white/10 bg-white/5">
@@ -1018,22 +980,16 @@ export function LiveVideoCall({
                             {p.userId === connectedClientId ? "Asegurado en sesi├│n" : "Conexi├│n adicional"}
                           </span>
                         </div>
-                        <Tooltip>
-                          <TooltipTrigger className="inline-flex">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                kickPeer(p.userId, "El inspector ha finalizado tu conexi├│n a la videollamada.");
-                              }}
-                              className="shrink-0 px-2 py-1 rounded bg-rose-600/80 hover:bg-rose-600 text-white app-body text-xs transition-colors"
-                            >
-                              Desconectar
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top">
-                            <p>Desconectar a este usuario</p>
-                          </TooltipContent>
-                        </Tooltip>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            kickPeer(p.userId, "El inspector ha finalizado tu conexi├│n a la videollamada.");
+                          }}
+                          className="shrink-0 px-2 py-1 rounded bg-rose-600/80 hover:bg-rose-600 text-white app-body text-xs transition-colors"
+                          title="Desconectar a este usuario"
+                        >
+                          Desconectar
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -1042,20 +998,14 @@ export function LiveVideoCall({
             </div>
           )}
           {expanded && (
-            <Tooltip>
-              <TooltipTrigger className="inline-flex">
-                <button
-                  type="button"
-                  onClick={() => setExpanded(false)}
-                  className="p-1.5 rounded-md bg-white/10 hover:bg-white/20 text-white/80 transition-colors"
-                >
-                  <Minimize2 className="h-4 w-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top">
-                <p>Volver a ventana peque├▒a</p>
-              </TooltipContent>
-            </Tooltip>
+            <button
+              type="button"
+              onClick={() => setExpanded(false)}
+              className="p-1.5 rounded-md bg-white/10 hover:bg-white/20 text-white/80 transition-colors"
+              title="Volver a ventana peque├▒a"
+            >
+              <Minimize2 className="h-4 w-4" />
+            </button>
           )}
           <span className="app-body text-white/40 hidden sm:inline">
             {role === "inspector" ? "Inspector" : "Cliente"}
@@ -1136,20 +1086,14 @@ export function LiveVideoCall({
 
         {/* Bot├│n ampliar (solo visible cuando NO est├í expandido) */}
         {!minimized && peerJoined && !expanded && (
-          <Tooltip>
-            <TooltipTrigger className="inline-flex">
-              <button
-                type="button"
-                onClick={goFullscreen}
-                className="absolute top-4 right-4 p-2 rounded-lg bg-black/50 hover:bg-black/70 text-white/80 transition-colors"
-              >
-                <Maximize2 className="h-4 w-4" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              <p>Ampliar</p>
-            </TooltipContent>
-          </Tooltip>
+          <button
+            type="button"
+            onClick={goFullscreen}
+            className="absolute top-4 right-4 p-2 rounded-lg bg-black/50 hover:bg-black/70 text-white/80 transition-colors"
+            title="Ampliar"
+          >
+            <Maximize2 className="h-4 w-4" />
+          </button>
         )}
       </div>
 
@@ -1186,115 +1130,68 @@ export function LiveVideoCall({
           <div className={cn("flex items-center justify-center bg-black/40 border-t border-white/10 shrink-0", compact ? "gap-2 px-2 py-2" : "gap-3 px-4 py-4")}>
         {state !== "rejected" && (
         <>
-        <Tooltip>
-          <TooltipTrigger className="inline-flex">
-            <button
-              type="button"
-              onClick={toggleAudio}
-              className={`${ctrlBtn} rounded-full transition-colors ${
-                audioOn ? "bg-white/10 hover:bg-white/20 text-white" : "bg-rose-600 hover:bg-rose-700 text-white"
-              }`}
-            >
-              {audioOn ? <Mic className={ctrlIcon} /> : <MicOff className={ctrlIcon} />}
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            <p>{audioOn ? "Silenciar micr├│fono" : "Activar micr├│fono"}</p>
-          </TooltipContent>
-        </Tooltip>
+        <button
+          type="button"
+          onClick={toggleAudio}
+          className={`${ctrlBtn} rounded-full transition-colors ${
+            audioOn ? "bg-white/10 hover:bg-white/20 text-white" : "bg-rose-600 hover:bg-rose-700 text-white"
+          }`}
+          title={audioOn ? "Silenciar micr├│fono" : "Activar micr├│fono"}
+        >
+          {audioOn ? <Mic className={ctrlIcon} /> : <MicOff className={ctrlIcon} />}
+        </button>
 
-        <Tooltip>
-          <TooltipTrigger className="inline-flex">
-            <button
-              type="button"
-              onClick={toggleVideo}
-              className={`${ctrlBtn} rounded-full transition-colors ${
-                videoOn ? "bg-white/10 hover:bg-white/20 text-white" : "bg-rose-600 hover:bg-rose-700 text-white"
-              }`}
-            >
-              {videoOn ? <Video className={ctrlIcon} /> : <VideoOff className={ctrlIcon} />}
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            <p>{videoOn ? "Apagar c├ímara" : "Encender c├ímara"}</p>
-          </TooltipContent>
-        </Tooltip>
+        <button
+          type="button"
+          onClick={toggleVideo}
+          className={`${ctrlBtn} rounded-full transition-colors ${
+            videoOn ? "bg-white/10 hover:bg-white/20 text-white" : "bg-rose-600 hover:bg-rose-700 text-white"
+          }`}
+          title={videoOn ? "Apagar c├ímara" : "Encender c├ímara"}
+        >
+          {videoOn ? <Video className={ctrlIcon} /> : <VideoOff className={ctrlIcon} />}
+        </button>
 
-        {videoOn && (
-          <Tooltip>
-            <TooltipTrigger className="inline-flex">
-              <button
-                type="button"
-                onClick={switchCamera}
-                className={`${ctrlBtn} rounded-full transition-colors bg-white/10 hover:bg-white/20 text-white`}
-              >
-                <SwitchCamera className={ctrlIcon} />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              <p>{facingMode === "user" ? "Cambiar a c├ímara trasera" : "Cambiar a c├ímara frontal"}</p>
-            </TooltipContent>
-          </Tooltip>
+        {role === "inspector" && (
+          <button
+            type="button"
+            onClick={captureScreenshot}
+            disabled={screenshotting}
+            className={`${ctrlBtn} rounded-full bg-amber-500 hover:bg-amber-600 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
+            title={peerJoined ? "Capturar foto del video en vivo" : "Esperando video del asegurado..."}
+          >
+            {screenshotting ? (
+              <Loader2 className={cn(ctrlIcon, "animate-spin")} />
+            ) : (
+              <Camera className={ctrlIcon} />
+            )}
+          </button>
         )}
 
         {role === "inspector" && (
-          <Tooltip>
-            <TooltipTrigger className="inline-flex">
-              <button
-                type="button"
-                onClick={captureScreenshot}
-                disabled={screenshotting}
-                className={`${ctrlBtn} rounded-full bg-amber-500 hover:bg-amber-600 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
-              >
-                {screenshotting ? (
-                  <Loader2 className={cn(ctrlIcon, "animate-spin")} />
-                ) : (
-                  <Camera className={ctrlIcon} />
-                )}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              <p>{peerJoined ? "Capturar foto del video en vivo" : "Esperando video del asegurado..."}</p>
-            </TooltipContent>
-          </Tooltip>
-        )}
-
-        {role === "inspector" && (
-          <Tooltip>
-            <TooltipTrigger className="inline-flex">
-              <button
-                type="button"
-                onClick={recording ? stopRecording : startRecording}
-                disabled={!peerJoined}
-                className={`${ctrlBtn} rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-                  recording ? "bg-rose-600 hover:bg-rose-700 text-white" : "bg-red-600 hover:bg-red-700 text-white"
-                }`}
-              >
-                {recording ? <Square className={ctrlIcon} /> : <Circle className={cn(ctrlIcon, "fill-white")} />}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              <p>{recording ? "Detener grabaci├│n" : "Grabar sesi├│n"}</p>
-            </TooltipContent>
-          </Tooltip>
+          <button
+            type="button"
+            onClick={recording ? stopRecording : startRecording}
+            disabled={!peerJoined}
+            className={`${ctrlBtn} rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+              recording ? "bg-rose-600 hover:bg-rose-700 text-white" : "bg-red-600 hover:bg-red-700 text-white"
+            }`}
+            title={recording ? "Detener grabaci├│n" : "Grabar sesi├│n"}
+          >
+            {recording ? <Square className={ctrlIcon} /> : <Circle className={cn(ctrlIcon, "fill-white")} />}
+          </button>
         )}
         </>
         )}
 
-        <Tooltip>
-          <TooltipTrigger className="inline-flex">
-            <button
-              type="button"
-              onClick={handleHangup}
-              className={`${ctrlBtn} rounded-full bg-rose-600 hover:bg-rose-700 text-white transition-colors`}
-            >
-              <PhoneOff className={ctrlIcon} />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            <p>Colgar</p>
-          </TooltipContent>
-        </Tooltip>
+        <button
+          type="button"
+          onClick={handleHangup}
+          className={`${ctrlBtn} rounded-full bg-rose-600 hover:bg-rose-700 text-white transition-colors`}
+          title="Colgar"
+        >
+          <PhoneOff className={ctrlIcon} />
+        </button>
       </div>
         </>
       )}

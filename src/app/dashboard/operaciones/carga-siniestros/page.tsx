@@ -23,8 +23,6 @@ import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, X, Loader2, ArrowRig
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePermissions } from "@/hooks/use-permissions";
-import { usePrompt } from "@/components/ui/alert-context";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import * as XLSX from "xlsx";
 import {
   getImportFieldMappings,
@@ -58,7 +56,6 @@ export default function CargaSiniestrosPage() {
   const { canCreate } = usePermissions();
   const { profile } = useAuth();
   const queryClient = useQueryClient();
-  const prompt = usePrompt();
 
   // Clientes del usuario (user_clients + company_id del perfil)
   const { data: userClients } = useQuery({
@@ -555,20 +552,7 @@ export default function CargaSiniestrosPage() {
       // Validación: resolver cada campo de referencia → UUID
       for (const ref of refFields) {
         const value = String(data[ref.dataKey] || "").trim();
-        if (!value) continue;
-        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
-        if (isUuid) {
-          // Si es UUID (ej: inyectado por fixedValue), verificar que exista en el catálogo
-          const exists = ref.options.some((o) => o.id === value);
-          if (!exists) {
-            errors.push({
-              fieldKey: ref.fieldKey,
-              fieldLabel: ref.label,
-              kind: "invalid_value",
-              message: `${ref.label}: valor fijo no existe en el catálogo (UUID inválido o eliminado).`,
-            });
-          }
-        } else {
+        if (value && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
           const resolved = ref.resolver(value);
           if (!resolved) {
             errors.push({
@@ -1386,7 +1370,7 @@ export default function CargaSiniestrosPage() {
                   <span
                     key={h}
                     className="bulk-detected-chip"
-                    aria-label={sample ? `Ej: "${sample}"` : "(columna vacía)"}
+                    title={sample ? `Ej: "${sample}"` : "(columna vacía)"}
                   >
                     {h}
                     {sample && <em className="bulk-detected-chip-sample">· {sample}</em>}
@@ -1430,29 +1414,23 @@ export default function CargaSiniestrosPage() {
                         <span className="bulk-fixed-value-field">{f?.label || fk}</span>
                         <span className="bulk-fixed-value-arrow">=</span>
                         <span className="bulk-fixed-value-val">{displayValue}</span>
-                        <Tooltip>
-                          <TooltipTrigger render={
-                            <button
-                              className="bulk-fixed-value-remove"
-                              onClick={() => {
-                                setFixedValues((prev) => {
-                                  const next = { ...prev };
-                                  delete next[fk];
-                                  return next;
-                                });
-                                if (tenantCompanyId) {
-                                  deleteImportFixedValue(tenantCompanyId, fk).catch(console.error);
-                                  queryClient.invalidateQueries({ queryKey: ["import-fixed-values", tenantCompanyId] });
-                                }
-                              }}
-                            />
-                          }>
-                            <X className="h-3 w-3" />
-                          </TooltipTrigger>
-                          <TooltipContent side="top">
-                            <p>Eliminar valor fijo</p>
-                          </TooltipContent>
-                        </Tooltip>
+                        <button
+                          className="bulk-fixed-value-remove"
+                          title="Eliminar valor fijo"
+                          onClick={() => {
+                            setFixedValues((prev) => {
+                              const next = { ...prev };
+                              delete next[fk];
+                              return next;
+                            });
+                            if (tenantCompanyId) {
+                              deleteImportFixedValue(tenantCompanyId, fk).catch(console.error);
+                              queryClient.invalidateQueries({ queryKey: ["import-fixed-values", tenantCompanyId] });
+                            }
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
                       </div>
                     );
                   })}
@@ -1462,7 +1440,7 @@ export default function CargaSiniestrosPage() {
                 <div className="bulk-fixed-values-add">
                   <Select
                     value=""
-                    onValueChange={async (fk) => {
+                    onValueChange={(fk) => {
                       if (!fk || fk === "__none__") return;
                       const refField = refFields.find((rf) => rf.fieldKey === fk);
                       const field = CLAIM_FIELDS.find((f) => f.key === fk);
@@ -1478,11 +1456,7 @@ export default function CargaSiniestrosPage() {
                         setPendingFixedField(fk);
                       } else {
                         // Texto: prompt
-                        const val = await prompt({
-                          title: "Valor fijo",
-                          description: `Valor fijo para: ${field?.label || fk}`,
-                          confirmLabel: "Aceptar",
-                        });
+                        const val = window.prompt(`Valor fijo para: ${field?.label || fk}`);
                         if (val !== null && val.trim()) {
                           setFixedValues((prev) => ({ ...prev, [fk]: { value: val.trim(), catalogUuid: null } }));
                         }
@@ -1610,7 +1584,7 @@ export default function CargaSiniestrosPage() {
                         <span
                           key={h}
                           className={`bulk-detected-chip ${field ? "bulk-detected-chip-used" : ""}`}
-                          aria-label={field ? `Asignada a: ${field.label}` : "Sin asignar"}
+                          title={field ? `Asignada a: ${field.label}` : "Sin asignar"}
                         >
                           {h}
                           {sample && <em className="bulk-detected-chip-sample">· {sample}</em>}
@@ -1644,29 +1618,23 @@ export default function CargaSiniestrosPage() {
                               <span className="bulk-fixed-value-field">{f?.label || fk}</span>
                               <span className="bulk-fixed-value-arrow">=</span>
                               <span className="bulk-fixed-value-val">{displayValue}</span>
-                              <Tooltip>
-                                <TooltipTrigger render={
-                                  <button
-                                    className="bulk-fixed-value-remove"
-                                    onClick={() => {
-                                      setFixedValues((prev) => {
-                                        const next = { ...prev };
-                                        delete next[fk];
-                                        return next;
-                                      });
-                                      if (tenantCompanyId) {
-                                        deleteImportFixedValue(tenantCompanyId, fk).catch(console.error);
-                                        queryClient.invalidateQueries({ queryKey: ["import-fixed-values", tenantCompanyId] });
-                                      }
-                                    }}
-                                  />
-                                }>
-                                  <X className="h-3 w-3" />
-                                </TooltipTrigger>
-                                <TooltipContent side="top">
-                                  <p>Eliminar valor fijo</p>
-                                </TooltipContent>
-                              </Tooltip>
+                              <button
+                                className="bulk-fixed-value-remove"
+                                title="Eliminar valor fijo"
+                                onClick={() => {
+                                  setFixedValues((prev) => {
+                                    const next = { ...prev };
+                                    delete next[fk];
+                                    return next;
+                                  });
+                                  if (tenantCompanyId) {
+                                    deleteImportFixedValue(tenantCompanyId, fk).catch(console.error);
+                                    queryClient.invalidateQueries({ queryKey: ["import-fixed-values", tenantCompanyId] });
+                                  }
+                                }}
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
                             </div>
                           );
                         })}
@@ -1677,17 +1645,13 @@ export default function CargaSiniestrosPage() {
                       <div className="bulk-fixed-values-add">
                         <Select
                           value=""
-                          onValueChange={async (fk) => {
+                          onValueChange={(fk) => {
                             if (!fk || fk === "__none__") return;
                             const refField = refFields.find((rf) => rf.fieldKey === fk);
                             if (refField) {
                               setPendingFixedField(fk);
                             } else {
-                              const val = await prompt({
-                                title: "Valor fijo",
-                                description: `Valor fijo para: ${CLAIM_FIELDS.find(f => f.key === fk)?.label || fk}`,
-                                confirmLabel: "Aceptar",
-                              });
+                              const val = window.prompt(`Valor fijo para: ${CLAIM_FIELDS.find(f => f.key === fk)?.label || fk}`);
                               if (val !== null && val.trim()) {
                                 setFixedValues((prev) => ({ ...prev, [fk]: { value: val.trim(), catalogUuid: null } }));
                               }
@@ -1854,7 +1818,7 @@ export default function CargaSiniestrosPage() {
                             <td className="bulk-mapper-td-column">
                               <span
                                 className="bulk-mapper-field-label"
-                                aria-label={headerSamples.get(header) ? `Ej: "${headerSamples.get(header)}"` : "(columna vacía)"}
+                                title={headerSamples.get(header) ? `Ej: "${headerSamples.get(header)}"` : "(columna vacía)"}
                               >
                                 {header}
                               </span>
@@ -1974,7 +1938,7 @@ export default function CargaSiniestrosPage() {
                 {isUploading ? (
                   <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Cargando</>
                 ) : (
-                  <><Upload className="mr-2 h-3.5 w-3.5" /> Cargar</>
+                  <><Upload className="mr-2 h-3.5 w-3.5" /> Cargar a staging</>
                 )}
               </Button>
             )}
@@ -2118,7 +2082,7 @@ export default function CargaSiniestrosPage() {
                             <span
                               key={i}
                               className={`bulk-error-badge bulk-error-badge-${err.kind}`}
-                              aria-label={err.message}
+                              title={err.message}
                             >
                               {err.message}
                             </span>
@@ -2261,7 +2225,7 @@ export default function CargaSiniestrosPage() {
                       <td>
                         {sr.error_message ? (
                           <div className="bulk-error-list">
-                            <span className="bulk-error-badge bulk-error-badge-invalid_value" aria-label={sr.error_message}>
+                            <span className="bulk-error-badge bulk-error-badge-invalid_value" title={sr.error_message}>
                               {sr.error_message}
                             </span>
                           </div>

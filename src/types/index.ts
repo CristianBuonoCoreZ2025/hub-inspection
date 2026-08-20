@@ -453,9 +453,6 @@ export interface InspectionSession {
   signature_waiver_reason: string | null;
   signature_captured_at: string | null;
   started_from_mobile: boolean;
-  reopened_at: string | null;
-  reopened_by: string | null;
-  reopened_reason: string | null;
   property_risk?: ActaPropertyRisk | null;
   property_materiality?: ActaPropertyMateriality | null;
   security_measures?: ActaSecurityMeasures | null;

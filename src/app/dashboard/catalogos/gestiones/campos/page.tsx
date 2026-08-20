@@ -6,7 +6,6 @@ import { toast } from "sonner";
 
 import { Input } from "@/components/ui/input";
 import { DOCUMENT_FIELDS, FIELD_GROUPS } from "@/lib/document-fields";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 export default function CamposPlantillaPage() {
   const [search, setSearch] = useState("");
@@ -77,7 +76,7 @@ export default function CamposPlantillaPage() {
     <div className="app-page">
       <header className="app-page-header">
         <h1 className="app-page-title flex items-center gap-2">
-          <Code2 className="h-5 w-5 text-brand" />
+          <Code2 className="h-5 w-5 text-[#0095DA]" />
           Campos de Plantillas
         </h1>
         <p className="app-page-lead">
@@ -158,25 +157,19 @@ export default function CamposPlantillaPage() {
                         className="group flex items-center gap-2 rounded-lg border border-border/60 px-3 py-2 hover:border-primary/40 hover:bg-muted/30 transition-colors"
                       >
                         {/* Placeholder copiable */}
-                        <Tooltip>
-                          <TooltipTrigger render={
-                            <button
-                              type="button"
-                              onClick={() => handleCopy(field.key)}
-                              className="flex items-center gap-2 flex-1 min-w-0 text-left"
-                            />
-                          }>
-                            <code className="text-[11px] font-mono text-primary shrink-0">
-                              {"<" + field.key + ">"}
-                            </code>
-                            <span className="text-[11px] text-muted-foreground truncate">
-                              {field.label}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent side="top">
-                            <p>Click para copiar</p>
-                          </TooltipContent>
-                        </Tooltip>
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(field.key)}
+                          className="flex items-center gap-2 flex-1 min-w-0 text-left"
+                          title="Click para copiar"
+                        >
+                          <code className="text-[11px] font-mono text-primary shrink-0">
+                            {"<" + field.key + ">"}
+                          </code>
+                          <span className="text-[11px] text-muted-foreground truncate">
+                            {field.label}
+                          </span>
+                        </button>
                         {/* Ícono de copiar / check */}
                         <span className="shrink-0 text-muted-foreground/60 group-hover:text-foreground transition-colors">
                           {isCopied ? (

@@ -20,11 +20,11 @@ export function TableRowSkeleton({ columns = 5 }: { columns?: number }) {
 
 export function TableSkeleton({ rows = 8, columns = 5 }: { rows?: number; columns?: number }) {
   return (
-    <>
+    <tbody>
       {Array.from({ length: rows }).map((_, i) => (
         <TableRowSkeleton key={i} columns={columns} />
       ))}
-    </>
+    </tbody>
   );
 }
 

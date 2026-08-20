@@ -1,6 +1,5 @@
 import { fetchAll, fetchById, insertRow, updateRow, deleteRow, deleteWhere } from "@/lib/supabase/db";
 import { getSupabaseClient } from "@/lib/supabase/client";
-import { rutBodyNumber } from "@/lib/validations/rut";
 import type { Claim, ClaimInput, ClaimsParticipant } from "@/types";
 
 const LIGHT_CLAIM_SELECT =
@@ -173,6 +172,7 @@ export async function getClaimsParticipants(claimIds: string[]) {
   for (let i = 0; i < claimIds.length; i += BATCH_SIZE) {
     const batch = claimIds.slice(i, i + BATCH_SIZE);
     let from = 0;
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       const rows = await fetchAll<Participant>("claims_participants", {
         select: "id, claim_id, type, full_name, first_name, last_name, rut, email, phone, cell_phone, address, country, region, city, commune",
@@ -531,7 +531,6 @@ export async function createClaimMinimal(
     insuredRegion?: string | null;
     insuredCity?: string | null;
     insuredCommune?: string | null;
-    insuredPersonType?: string | null;
   },
   claimAddress: {
     claimAddress: string;
@@ -554,7 +553,6 @@ export async function createClaimMinimal(
     contractorRegion?: string | null;
     contractorCity?: string | null;
     contractorCommune?: string | null;
-    contractorPersonType?: string | null;
   } | null,
   beneficiary?: {
     beneficiaryName: string;
@@ -568,24 +566,13 @@ export async function createClaimMinimal(
     beneficiaryRegion?: string | null;
     beneficiaryCity?: string | null;
     beneficiaryCommune?: string | null;
-    beneficiaryPersonType?: string | null;
   } | null,
   contact?: {
     contactName?: string | null;
-    contactLastName?: string | null;
     contactRole?: string | null;
     contactEmail?: string | null;
     contactPhone?: string | null;
-    contactRut?: string | null;
-    contactAddress?: string | null;
-    contactCountry?: string | null;
-    contactRegion?: string | null;
-    contactCity?: string | null;
-    contactCommune?: string | null;
-    contactPersonType?: string | null;
-  } | null,
-  linkParticipants?: boolean,
-  linkContact?: boolean
+  } | null
 ) {
   // 1. Crear claim
   const claim = await insertRow<Claim>("claims", {
@@ -650,16 +637,12 @@ export async function createClaimMinimal(
   // selector manual de ubicación (claimLatitude / claimLongitude).
 
   // 2. Crear participant insured
-  const isInsuredLegal = (insured.insuredPersonType || "natural") === "legal";
-
   await createClaimParticipant({
     claim_id: claim.id,
     type: "insured",
-    full_name: isInsuredLegal
-      ? insured.insuredName
-      : `${insured.insuredName} ${insured.lastName || ""}`.trim(),
-    first_name: isInsuredLegal ? null : insured.insuredName,
-    last_name: isInsuredLegal ? null : (insured.lastName || null),
+    full_name: `${insured.insuredName} ${insured.lastName || ""}`.trim(),
+    first_name: insured.insuredName,
+    last_name: insured.lastName || null,
     rut: insured.rut || null,
     email: insured.insuredEmail || null,
     phone: insured.insuredPhone || null,
@@ -669,20 +652,16 @@ export async function createClaimMinimal(
     region: insured.insuredRegion || claimAddress.claimRegion || null,
     city: insured.insuredCity || claimAddress.claimCity,
     commune: insured.insuredCommune || claimAddress.claimCommune || null,
-    person_type: insured.insuredPersonType || "natural",
   });
 
   // 3. Crear participant contractor (si existe)
   if (contractor && contractor.contractorName) {
-    const isContractorLegal = (contractor.contractorPersonType || "natural") === "legal";
     await createClaimParticipant({
       claim_id: claim.id,
       type: "contractor",
-      full_name: isContractorLegal
-        ? contractor.contractorName
-        : `${contractor.contractorName} ${contractor.contractorLastName || ""}`.trim(),
-      first_name: isContractorLegal ? null : contractor.contractorName,
-      last_name: isContractorLegal ? null : (contractor.contractorLastName || null),
+      full_name: `${contractor.contractorName} ${contractor.contractorLastName || ""}`.trim(),
+      first_name: contractor.contractorName,
+      last_name: contractor.contractorLastName || null,
       rut: contractor.contractorRut || null,
       email: contractor.contractorEmail || null,
       phone: contractor.contractorPhone || null,
@@ -692,22 +671,17 @@ export async function createClaimMinimal(
       region: contractor.contractorRegion || null,
       city: contractor.contractorCity || null,
       commune: contractor.contractorCommune || null,
-      person_type: contractor.contractorPersonType || "natural",
-      linked_to_insured: linkParticipants || false,
     });
   }
 
   // 4. Crear participant beneficiary (si existe)
   if (beneficiary && beneficiary.beneficiaryName) {
-    const isBeneficiaryLegal = (beneficiary.beneficiaryPersonType || "natural") === "legal";
     await createClaimParticipant({
       claim_id: claim.id,
       type: "beneficiary",
-      full_name: isBeneficiaryLegal
-        ? beneficiary.beneficiaryName
-        : `${beneficiary.beneficiaryName} ${beneficiary.beneficiaryLastName || ""}`.trim(),
-      first_name: isBeneficiaryLegal ? null : beneficiary.beneficiaryName,
-      last_name: isBeneficiaryLegal ? null : (beneficiary.beneficiaryLastName || null),
+      full_name: `${beneficiary.beneficiaryName} ${beneficiary.beneficiaryLastName || ""}`.trim(),
+      first_name: beneficiary.beneficiaryName,
+      last_name: beneficiary.beneficiaryLastName || null,
       rut: beneficiary.beneficiaryRut || null,
       email: beneficiary.beneficiaryEmail || null,
       phone: beneficiary.beneficiaryPhone || null,
@@ -717,329 +691,22 @@ export async function createClaimMinimal(
       region: beneficiary.beneficiaryRegion || null,
       city: beneficiary.beneficiaryCity || null,
       commune: beneficiary.beneficiaryCommune || null,
-      person_type: beneficiary.beneficiaryPersonType || "natural",
-      linked_to_insured: linkParticipants || false,
     });
   }
 
   // 5. Crear participant contact (si existe)
   if (contact && (contact.contactName || contact.contactEmail || contact.contactPhone)) {
-    const isContactLegal = (contact.contactPersonType || "natural") === "legal";
-    const contactFullName = isContactLegal
-      ? (contact.contactName || "Contacto")
-      : `${contact.contactName || ""} ${contact.contactLastName || ""}`.trim() || "Contacto";
     await createClaimParticipant({
       claim_id: claim.id,
       type: "contact",
-      full_name: contactFullName,
-      first_name: isContactLegal ? null : (contact.contactName || null),
-      last_name: isContactLegal ? null : (contact.contactLastName || null),
-      rut: contact.contactRut || null,
+      full_name: contact.contactName || "Contacto",
       email: contact.contactEmail || null,
       phone: contact.contactPhone || null,
-      address: contact.contactAddress || null,
-      country: contact.contactCountry || null,
-      region: contact.contactRegion || null,
-      city: contact.contactCity || null,
-      commune: contact.contactCommune || null,
-      person_type: contact.contactPersonType || "natural",
       notes: contact.contactRole || null,
-      // linkContact es independiente de linkParticipants:
-      // si no se pasa, hereda linkParticipants (backward compatible)
-      linked_to_insured: linkContact !== undefined ? linkContact : (linkParticipants || false),
     });
   }
 
   return claim;
-}
-
-// ═══════════════════════════════════════════════════════════════
-// ALOCLAIM — Creación de claim desde carga AloClaim
-// ═══════════════════════════════════════════════════════════════
-
-export interface AloClaimRowData {
-  clientReference: string;
-  claimNumber: string;
-  policyNumber: string;
-  insuranceCompanyId: string | null;
-  brokerId: string | null;
-  insuredName: string;
-  lastName: string;
-  rut: string;
-  insuredAddress: string;
-  insuredCountry: string;
-  insuredRegion: string;
-  insuredCity: string;
-  insuredCommune: string;
-  insuredPhone: string;
-  insuredEmail: string;
-  claimAddress: string;
-  claimCountry: string;
-  claimRegion: string;
-  claimCity: string;
-  claimCommune: string;
-  businessLineId: string | null;
-  insuranceProductId: string | null;
-  claimTypeId: string | null;
-  claimType: string;
-  inspectorId: string | null;
-  adjusterId: string | null;
-  eventId: string | null;
-  summary: string;
-  currencyId: string | null;
-  policyCurrencyId: string | null;
-  claimDate: string;
-  reportDate: string;
-  assignmentDate: string;
-  policyPremium: string;
-  policyStartDate: string;
-  policyEndDate: string;
-  claimCauseId: string | null;
-  companyId: string;
-  destinationHousingId: string | null;
-  constructionTypeId: string | null;
-  isHabitable: boolean | null;
-  ownerSameAsInsured: boolean | null;
-  statusId: string | null;
-  contractorRut: string;
-  contractorName: string;
-  contractorLastName: string;
-  contractorEmail: string;
-  contractorPhone: string;
-  contractorCellPhone: string;
-  contractorAddress: string;
-  contractorCountry: string;
-  contractorRegion: string;
-  contractorCity: string;
-  contractorCommune: string;
-  beneficiaryRut: string;
-  beneficiaryName: string;
-  beneficiaryLastName: string;
-  beneficiaryEmail: string;
-  beneficiaryPhone: string;
-  beneficiaryCellPhone: string;
-  beneficiaryAddress: string;
-  beneficiaryCountry: string;
-  beneficiaryRegion: string;
-  beneficiaryCity: string;
-  beneficiaryCommune: string;
-}
-
-
-
-function normalizeRut(rut: string): string {
-  return rut.replace(/[.\s-]/g, "").toUpperCase();
-}
-
-function sameAsInsured(
-  rut: string,
-  name: string,
-  insuredRut: string,
-  insuredName: string,
-): boolean {
-  const sameRut = normalizeRut(rut) === normalizeRut(insuredRut);
-  const sameName = name.trim().toLowerCase() === insuredName.trim().toLowerCase();
-  return sameRut && sameName;
-}
-
-export async function createClaimFromAloClaim(data: AloClaimRowData): Promise<{ claim: Claim; warnings: string[] }> {
-  const { resolveCommuneHierarchy } = await import("@/services/catalogs");
-
-  const insuredLocation = await resolveCommuneHierarchy(data.insuredCommune);
-  const claimLocation = await resolveCommuneHierarchy(data.claimCommune);
-
-  const personType = personTypeFromRut(data.rut);
-  const isLegal = personType === "legal";
-  const razonSocial = isLegal
-    ? `${data.insuredName} ${data.lastName || ""}`.trim()
-    : "";
-
-  const insuredName = isLegal ? razonSocial : data.insuredName;
-  const insuredLastName = isLegal ? null : (data.lastName || null);
-
-  const policyNumber = data.policyNumber || "SIN NUMERO";
-
-  // País: priorizar el de la jerarquía del siniestro, luego el de la compañía
-  let countryId = claimLocation.countryId;
-  if (!countryId && data.insuranceCompanyId) {
-    countryId = await getCountryIdFromInsuranceCompany(data.insuranceCompanyId);
-  }
-
-  const assignmentDate = data.assignmentDate || data.reportDate || null;
-
-  const policyResolution = await resolveOrCreatePolicy({
-    companyId: data.companyId,
-    policyNumber,
-    policyItem: null,
-    insuranceCompanyId: data.insuranceCompanyId,
-    businessLineId: data.businessLineId,
-    claimDate: data.claimDate,
-    policyStartDate: data.policyStartDate || null,
-    policyEndDate: data.policyEndDate || null,
-    policyAmount: null,
-    policyPremium: data.policyPremium ? Number(data.policyPremium) : null,
-    currencyId: data.policyCurrencyId || data.currencyId,
-    brokerId: data.brokerId,
-  });
-
-  if (!data.companyId) {
-    throw new Error("Falta company_id");
-  }
-  if (!data.claimNumber) {
-    throw new Error("Falta número de siniestro");
-  }
-  if (!data.insuranceCompanyId) {
-    throw new Error("Falta compañía de seguros");
-  }
-  if (!data.insuranceProductId) {
-    throw new Error("Falta ramo/producto");
-  }
-  if (!policyResolution.policyId) {
-    const detail = policyResolution.note || "no se pudo crear ni encontrar";
-    throw new Error(`Póliza no resuelta (${policyNumber}): ${detail}`);
-  }
-
-  const contractorPersonType = data.contractorRut
-    ? personTypeFromRut(data.contractorRut)
-    : personType;
-  const beneficiaryPersonType = data.beneficiaryRut
-    ? personTypeFromRut(data.beneficiaryRut)
-    : personType;
-
-  const contractorIsLegal = contractorPersonType === "legal";
-  const contractorRazon = contractorIsLegal
-    ? `${data.contractorName} ${data.contractorLastName || ""}`.trim()
-    : "";
-
-  const beneficiaryIsLegal = beneficiaryPersonType === "legal";
-  const beneficiaryRazon = beneficiaryIsLegal
-    ? `${data.beneficiaryName} ${data.beneficiaryLastName || ""}`.trim()
-    : "";
-
-  const contractorLinked = sameAsInsured(
-    data.contractorRut || data.rut,
-    data.contractorName || data.insuredName,
-    data.rut,
-    data.insuredName,
-  );
-  const beneficiaryLinked = sameAsInsured(
-    data.beneficiaryRut || data.rut,
-    data.beneficiaryName || data.insuredName,
-    data.rut,
-    data.insuredName,
-  );
-
-  const claim = await createClaimMinimal(
-    {
-      claimNumber: data.claimNumber,
-      policyNumber,
-      claimDate: data.claimDate,
-      clientReference: data.clientReference || null,
-      reportDate: data.reportDate || null,
-      assignmentDate,
-      summary: data.summary || null,
-      statusId: data.statusId || null,
-      inspectorId: data.inspectorId || null,
-      adjusterId: data.adjusterId || null,
-      insuranceCompanyId: data.insuranceCompanyId || null,
-      claimTypeId: data.claimTypeId || null,
-      claimCauseId: data.claimCauseId || null,
-      businessLineId: data.businessLineId || null,
-      insuranceProductId: data.insuranceProductId || null,
-      brokerId: data.brokerId || null,
-      eventId: data.eventId || null,
-      currencyId: data.currencyId || null,
-      policyPremium: data.policyPremium ? Number(data.policyPremium) : null,
-      policyStartDate: data.policyStartDate || null,
-      policyEndDate: data.policyEndDate || null,
-      company_id: data.companyId,
-      countryId: countryId || null,
-      regionId: claimLocation.regionId || null,
-      cityId: claimLocation.cityId || null,
-      communeId: claimLocation.communeId || null,
-      notes: policyResolution.note || null,
-      policyId: policyResolution.policyId,
-      destinationHousingId: data.destinationHousingId || null,
-      constructionTypeId: null,
-      habitabilityId: null,
-      ownerSameAsInsured: data.ownerSameAsInsured,
-    },
-    // insured
-    {
-      insuredName,
-      lastName: insuredLastName,
-      rut: data.rut || null,
-      insuredEmail: data.insuredEmail || null,
-      insuredPhone: data.insuredPhone || null,
-      cellPhone: data.insuredPhone || "",
-      insuredAddress: data.insuredAddress || null,
-      insuredCountry: data.insuredCountry || insuredLocation.countryName || null,
-      insuredRegion: data.insuredRegion || insuredLocation.regionName || null,
-      insuredCity: data.insuredCity || insuredLocation.cityName || null,
-      insuredCommune: data.insuredCommune || insuredLocation.communeName || null,
-      insuredPersonType: personType,
-    },
-    // claimAddress
-    {
-      claimAddress: data.claimAddress || data.insuredAddress || "",
-      claimCountry: data.claimCountry || claimLocation.countryName || null,
-      claimRegion: data.claimRegion || claimLocation.regionName || null,
-      claimCity: data.claimCity || claimLocation.cityName || null,
-      claimCommune: data.claimCommune || claimLocation.communeName || null,
-    },
-    // contractor
-    {
-      contractorName: contractorIsLegal ? contractorRazon : data.contractorName,
-      contractorLastName: contractorIsLegal ? null : (data.contractorLastName || null),
-      contractorRut: data.contractorRut || data.rut || null,
-      contractorEmail: data.contractorEmail || null,
-      contractorCellPhone: data.contractorCellPhone || data.contractorPhone || null,
-      contractorPhone: data.contractorPhone || null,
-      contractorAddress: data.contractorAddress || null,
-      contractorCountry: data.contractorCountry || null,
-      contractorRegion: data.contractorRegion || null,
-      contractorCity: data.contractorCity || null,
-      contractorCommune: data.contractorCommune || null,
-      contractorPersonType: contractorPersonType,
-    },
-    // beneficiary
-    {
-      beneficiaryName: beneficiaryIsLegal ? beneficiaryRazon : data.beneficiaryName,
-      beneficiaryLastName: beneficiaryIsLegal ? null : (data.beneficiaryLastName || null),
-      beneficiaryRut: data.beneficiaryRut || data.rut || null,
-      beneficiaryEmail: data.beneficiaryEmail || null,
-      beneficiaryCellPhone: data.beneficiaryCellPhone || data.beneficiaryPhone || null,
-      beneficiaryPhone: data.beneficiaryPhone || null,
-      beneficiaryAddress: data.beneficiaryAddress || null,
-      beneficiaryCountry: data.beneficiaryCountry || null,
-      beneficiaryRegion: data.beneficiaryRegion || null,
-      beneficiaryCity: data.beneficiaryCity || null,
-      beneficiaryCommune: data.beneficiaryCommune || null,
-      beneficiaryPersonType: beneficiaryPersonType,
-    },
-    // contact — replica del asegurado
-    {
-      contactName: isLegal ? razonSocial : data.insuredName,
-      contactLastName: isLegal ? null : (data.lastName || null),
-      contactRut: data.rut || null,
-      contactEmail: data.insuredEmail || null,
-      contactPhone: data.insuredPhone || null,
-      contactAddress: data.insuredAddress || null,
-      contactCountry: data.insuredCountry || insuredLocation.countryName || null,
-      contactRegion: data.insuredRegion || insuredLocation.regionName || null,
-      contactCity: data.insuredCity || insuredLocation.cityName || null,
-      contactCommune: data.insuredCommune || insuredLocation.communeName || null,
-      contactPersonType: personType,
-    },
-    // linkParticipants: true solo si son el mismo RUT+nombre
-    contractorLinked && beneficiaryLinked,
-    // linkContact: contacto siempre vinculado al asegurado
-    true,
-  );
-
-  const warnings: string[] = [];
-  if (policyResolution.note) warnings.push(policyResolution.note);
-  return { claim, warnings };
 }
 
 export async function updateClaim(id: string, input: Partial<ClaimInput>) {
@@ -1128,136 +795,6 @@ export async function updateClaimParticipant(id: string, input: Partial<{
     if (value !== undefined) set[key] = value;
   }
   return updateRow<{ id: string }>("claims_participants", id, set, "id, claim_id, type, full_name, first_name, last_name, rut, email, phone, cell_phone, address, country, region, city, commune, person_type");
-}
-
-// ═══════════════════════════════════════════════════════════════
-// VALIDACIÓN DE DUPLICADOS (Carga Casos)
-// ═══════════════════════════════════════════════════════════════
-
-export interface DuplicateCheckResult {
-  /** Índice de la fila en el array original (0-based) */
-  rowIndex: number;
-  /** Número de referencia del cliente */
-  clientReference: string;
-  /** Número de siniestro */
-  claimNumber: string;
-  /** Compañía de seguros (nombre) */
-  insuranceCompany: string;
-  /** Razón de duplicado */
-  reason: "reference_exists" | "claim_and_company_exists";
-  /** ID del claim existente si se encontró */
-  existingClaimId: string | null;
-}
-
-/**
- * Verifica duplicados en un conjunto de filas de Casos contra la base de datos.
- * Validación 1: client_reference ya existe en claims
- * Validación 2: claim_number + insurance_company_id ya existen juntos
- *
- * @param companyId ID de la empresa (tenant) para filtrar
- * @param rows Array de datos parseados (con clientReference, claimNumber, insuranceCompany ya resueltos a UUID)
- */
-export async function checkCasosDuplicates(
-  companyId: string,
-  rows: Array<{
-    clientReference: string;
-    claimNumber: string;
-    insuranceCompanyId: string | null;
-  }>,
-): Promise<DuplicateCheckResult[]> {
-  const supabase = (await import("@/lib/supabase/client")).getSupabaseClient();
-  const duplicates: DuplicateCheckResult[] = [];
-
-  // 1. Collectar todos los client_references y claim_numbers a verificar
-  const references = rows
-    .map((r) => r.clientReference)
-    .filter((r) => r && r.trim() !== "");
-  const claimNumbers = rows
-    .map((r) => r.claimNumber)
-    .filter((r) => r && r.trim() !== "");
-
-  if (references.length === 0 && claimNumbers.length === 0) {
-    return duplicates;
-  }
-
-  // 2. Buscar claims existentes por client_reference (en la empresa)
-  const existingByRef: Map<string, string> = new Map();
-  if (references.length > 0) {
-    const { data: refMatches } = await supabase
-      .from("claims")
-      .select("id, client_reference")
-      .eq("company_id", companyId)
-      .in("client_reference", references);
-    if (refMatches) {
-      for (const c of refMatches as Array<{ id: string; client_reference: string }>) {
-        existingByRef.set(c.client_reference, c.id);
-      }
-    }
-  }
-
-  // 3. Buscar claims existentes por claim_number + insurance_company_id
-  // PostgREST no soporta OR con combinaciones, así que buscamos por claim_number
-  // y luego filtramos por insurance_company_id en memoria
-  const existingByClaimCompany: Map<string, string> = new Map(); // key = "claimNumber::insuranceCompanyId"
-  if (claimNumbers.length > 0) {
-    const { data: claimMatches } = await supabase
-      .from("claims")
-      .select("id, claim_number, insurance_company_id")
-      .eq("company_id", companyId)
-      .in("claim_number", claimNumbers);
-    if (claimMatches) {
-      for (const c of claimMatches as Array<{ id: string; claim_number: string; insurance_company_id: string | null }>) {
-        const key = `${c.claim_number}::${c.insurance_company_id || ""}`;
-        existingByClaimCompany.set(key, c.id);
-      }
-    }
-  }
-
-  // 4. Marcar duplicados
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
-
-    // Validación 1: client_reference ya existe
-    if (row.clientReference && existingByRef.has(row.clientReference)) {
-      duplicates.push({
-        rowIndex: i,
-        clientReference: row.clientReference,
-        claimNumber: row.claimNumber,
-        insuranceCompany: row.insuranceCompanyId || "",
-        reason: "reference_exists",
-        existingClaimId: existingByRef.get(row.clientReference) || null,
-      });
-      continue; // No agregar dos veces la misma fila
-    }
-
-    // Validación 2: claim_number + insurance_company_id ya existen
-    if (row.claimNumber && row.insuranceCompanyId) {
-      const key = `${row.claimNumber}::${row.insuranceCompanyId}`;
-      if (existingByClaimCompany.has(key)) {
-        duplicates.push({
-          rowIndex: i,
-          clientReference: row.clientReference,
-          claimNumber: row.claimNumber,
-          insuranceCompany: row.insuranceCompanyId,
-          reason: "claim_and_company_exists",
-          existingClaimId: existingByClaimCompany.get(key) || null,
-        });
-      }
-    }
-  }
-
-  return duplicates;
-}
-
-export async function checkAloClaimDuplicates(
-  companyId: string,
-  rows: Array<{
-    clientReference: string;
-    claimNumber: string;
-    insuranceCompanyId: string | null;
-  }>,
-): Promise<DuplicateCheckResult[]> {
-  return checkCasosDuplicates(companyId, rows);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1422,15 +959,16 @@ export async function resolveOrCreatePolicy(input: {
   if (errFind) throw new Error(`Error buscando póliza: ${errFind.message}`);
 
   if (existing) {
-    // 2. Notar inconsistencia de vigencias vs claim_date sin bloquear la carga.
-    // El siniestro se crea siempre; la inconsistencia se reporta en el note.
-    let note: string | null = null;
+    // 2. Verificar vigencias vs claim_date
     if (claimDate && existing.start_date && existing.end_date) {
       const claimDateOnly = claimDate.split("T")[0];
       const startDate = String(existing.start_date).split("T")[0];
       const endDate = String(existing.end_date).split("T")[0];
       if (claimDateOnly < startDate || claimDateOnly > endDate) {
-        note = `Póliza ${policyNumber} encontrada pero la fecha del siniestro (${claimDateOnly}) está fuera de la vigencia (${startDate} a ${endDate}).`;
+        return {
+          policyId: null,
+          note: `Póliza ${policyNumber} (item ${item}) encontrada para la cia pero vigencias no coinciden (vigencia: ${startDate} a ${endDate}, siniestro: ${claimDateOnly}).`,
+        };
       }
     }
 
@@ -1449,7 +987,7 @@ export async function resolveOrCreatePolicy(input: {
       }
     }
 
-    return { policyId: existing.id, note };
+    return { policyId: existing.id, note: null };
   }
 
   // 4. No existe → crear
@@ -1558,224 +1096,4 @@ export async function getCountryIdFromInsuranceCompany(
     .maybeSingle();
   if (error) throw new Error(error.message);
   return data?.country_id || null;
-}
-
-// ═══════════════════════════════════════════════════════════════
-// CREACIÓN DESDE CARGA DE CASOS (sistema distinto)
-// ═══════════════════════════════════════════════════════════════
-// Lógica inteligente:
-// - Usa ASEG_NOMBRE + ASEG_APELLIDO (no el campo ASEGURADO completo)
-// - Si no hay dirección de asegurado, usa la del siniestro
-// - Resuelve jerarquía completa desde la comuna (ciudad, región, país)
-// - Si no hay póliza, setea "SIN NUMERO"
-// - Replica todos los datos del asegurado a beneficiario, contratante y contacto
-// - NOMBRE CONTACTO del Excel va como nombre del contacto
-
-export interface CasoRowData {
-  clientReference: string;
-  claimNumber: string;
-  policyNumber: string;
-  insuranceCompanyId: string | null;
-  brokerId: string | null;
-  insuredName: string;
-  lastName: string;
-  rut: string;
-  insuredAddress: string;
-  claimAddress: string;
-  commune: string;
-  city: string;
-  insuredPhone: string;
-  insuredEmail: string;
-  businessLineId: string | null;
-  insuranceProductId: string | null;
-  adjusterId: string | null;
-  claimTypeId: string | null;
-  claimType: string;
-  area: string;
-  inspectorId: string | null;
-  eventId: string | null;
-  summary: string;
-  currencyId: string | null;
-  claimDate: string;
-  reportDate: string;
-  assignmentDate: string;
-  policyPremium: string;
-  contactName: string;
-  policyStartDate: string;
-  policyEndDate: string;
-  claimCauseId: string | null;
-  companyId: string;
-  statusId: string | null;
-  destinationHousingId: string | null;
-}
-
-/**
- * Determina person_type desde un RUT chileno:
- * - Menor a 60 millones → "natural"
- * - 60 millones o más → "legal"
- * - Sin RUT o no parseable → "natural" (default)
- *
- * Usa el cuerpo del RUT (sin dígito verificador) para la comparación.
- */
-function personTypeFromRut(rut: string | null | undefined): string {
-  if (!rut) return "natural";
-  const body = rutBodyNumber(rut);
-  if (body === null) return "natural";
-  return body >= 60_000_000 ? "legal" : "natural";
-}
-
-export async function createClaimFromCaso(data: CasoRowData) {
-  // 1. Resolver jerarquía de ubicación desde la comuna
-  const { resolveCommuneHierarchy } = await import("@/services/catalogs");
-  const location = await resolveCommuneHierarchy(data.commune);
-
-  // 2. La dirección del siniestro es la que manda
-  const insuredAddress = data.claimAddress || data.insuredAddress;
-
-  // 2b. Determinar person_type desde el RUT y preparar nombre/razón social
-  const personType = personTypeFromRut(data.rut);
-  const isLegal = personType === "legal";
-  // Si es jurídica: el nombre completo va como razón social (full_name), sin first_name/last_name
-  // Si es natural: first_name = nombre, last_name = apellido
-  const razonSocial = isLegal
-    ? `${data.insuredName} ${data.lastName || ""}`.trim()
-    : "";
-
-  // 3. Póliza: si no hay, "SIN NUMERO"
-  const policyNumber = data.policyNumber || "SIN NUMERO";
-
-  // 4. País: priorizar el de la jerarquía, luego el de la compañía
-  let countryId = location.countryId;
-  if (!countryId && data.insuranceCompanyId) {
-    countryId = await getCountryIdFromInsuranceCompany(data.insuranceCompanyId);
-  }
-
-  // 5. Fecha de asignación: si no viene, usar la fecha de denuncio
-  const assignmentDate = data.assignmentDate || data.reportDate || null;
-
-  // 6. Resolver o crear póliza (vincula policy_id al claim)
-  const policyResolution = await resolveOrCreatePolicy({
-    companyId: data.companyId,
-    policyNumber,
-    policyItem: null,
-    insuranceCompanyId: data.insuranceCompanyId,
-    businessLineId: data.businessLineId,
-    claimDate: data.claimDate,
-    policyStartDate: data.policyStartDate || null,
-    policyEndDate: data.policyEndDate || null,
-    policyAmount: null,
-    policyPremium: data.policyPremium ? Number(data.policyPremium) : null,
-    currencyId: data.currencyId,
-    brokerId: data.brokerId,
-  });
-
-  // 7. Crear el claim usando createClaimMinimal
-  const claim = await createClaimMinimal(
-    {
-      claimNumber: data.claimNumber,
-      policyNumber,
-      claimDate: data.claimDate,
-      clientReference: data.clientReference || null,
-      reportDate: data.reportDate || null,
-      assignmentDate,
-      summary: data.summary || null,
-      statusId: data.statusId || null,
-      inspectorId: data.inspectorId || null,
-      adjusterId: data.adjusterId || null,
-      insuranceCompanyId: data.insuranceCompanyId || null,
-      claimTypeId: data.claimTypeId || null,
-      claimCauseId: data.claimCauseId || null,
-      businessLineId: data.businessLineId || null,
-      insuranceProductId: data.insuranceProductId || null,
-      brokerId: data.brokerId || null,
-      eventId: data.eventId || null,
-      currencyId: data.currencyId || null,
-      policyPremium: data.policyPremium ? Number(data.policyPremium) : null,
-      policyStartDate: data.policyStartDate || null,
-      policyEndDate: data.policyEndDate || null,
-      company_id: data.companyId,
-      countryId: countryId || null,
-      regionId: location.regionId || null,
-      cityId: location.cityId || null,
-      communeId: location.communeId || null,
-      notes: data.area || null,
-      policyId: policyResolution.policyId,
-      destinationHousingId: data.destinationHousingId || null,
-    },
-    // insured
-    {
-      insuredName: isLegal ? razonSocial : data.insuredName,
-      lastName: isLegal ? null : (data.lastName || null),
-      rut: data.rut || null,
-      insuredEmail: data.insuredEmail || null,
-      insuredPhone: data.insuredPhone || null,
-      cellPhone: data.insuredPhone || "",
-      insuredAddress: insuredAddress || null,
-      insuredCountry: location.countryName || null,
-      insuredRegion: location.regionName || null,
-      insuredCity: location.cityName || null,
-      insuredCommune: location.communeName || null,
-      insuredPersonType: personType,
-    },
-    // claimAddress
-    {
-      claimAddress: data.claimAddress || insuredAddress || "",
-      claimCountry: location.countryName || null,
-      claimRegion: location.regionName || null,
-      claimCity: location.cityName || null,
-      claimCommune: location.communeName || null,
-    },
-    // contractor (replicado del asegurado)
-    {
-      contractorName: isLegal ? razonSocial : data.insuredName,
-      contractorLastName: isLegal ? null : (data.lastName || null),
-      contractorRut: data.rut || null,
-      contractorEmail: data.insuredEmail || null,
-      contractorCellPhone: data.insuredPhone || null,
-      contractorAddress: insuredAddress || null,
-      contractorCountry: location.countryName || null,
-      contractorRegion: location.regionName || null,
-      contractorCity: location.cityName || null,
-      contractorCommune: location.communeName || null,
-      contractorPersonType: personType,
-    },
-    // beneficiary (replicado del asegurado)
-    {
-      beneficiaryName: isLegal ? razonSocial : data.insuredName,
-      beneficiaryLastName: isLegal ? null : (data.lastName || null),
-      beneficiaryRut: data.rut || null,
-      beneficiaryEmail: data.insuredEmail || null,
-      beneficiaryCellPhone: data.insuredPhone || null,
-      beneficiaryAddress: insuredAddress || null,
-      beneficiaryCountry: location.countryName || null,
-      beneficiaryRegion: location.regionName || null,
-      beneficiaryCity: location.cityName || null,
-      beneficiaryCommune: location.communeName || null,
-      beneficiaryPersonType: personType,
-    },
-    // contact (siniestrado) — si viene contactName del Excel, se usa ese nombre.
-    // Si NO viene (sin mapear), se replica TODO del asegurado: nombre, apellido, RUT,
-    // person_type, email, teléfono, dirección. Y se vincula al asegurado.
-    {
-      contactName: data.contactName && data.contactName.trim() !== ""
-        ? data.contactName
-        : (isLegal ? razonSocial : data.insuredName),
-      contactLastName: data.contactName && data.contactName.trim() !== ""
-        ? null  // si viene contacto del Excel, no copiamos apellido del asegurado
-        : (isLegal ? null : (data.lastName || null)),
-      contactRut: data.rut || null,
-      contactEmail: data.insuredEmail || null,
-      contactPhone: data.insuredPhone || null,
-      contactAddress: insuredAddress || null,
-      contactCountry: location.countryName || null,
-      contactRegion: location.regionName || null,
-      contactCity: location.cityName || null,
-      contactCommune: location.communeName || null,
-      contactPersonType: personType,
-    },
-    // linkParticipants = true: beneficiary, contractor y contact se marcan como ligados al asegurado
-    true,
-  );
-
-  return claim;
 }

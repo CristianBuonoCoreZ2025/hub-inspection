@@ -11,7 +11,6 @@ import {
 import { toast } from "sonner";
 import { ArrowRightLeft, Plus, Calendar, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
-import { useConfirm } from "@/hooks/use-confirm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -20,7 +19,6 @@ import {
  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 const MONTHS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 const MONTHS_SHORT = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
@@ -40,7 +38,6 @@ function TiposCambioContent() {
  const initialCurrency = searchParams.get("currency") || "";
 
  const queryClient = useQueryClient();
- const confirm = useConfirm();
  const { canCreate, canEdit, canDelete } = usePermissions();
  const [open, setOpen] = useState(false);
  const [editingId, setEditingId] = useState<string | null>(null);
@@ -369,30 +366,18 @@ function TiposCambioContent() {
  {/* Botones */}
  <div className="ml-auto flex gap-2">
  {canCreate("catalogos") && (
- (() => {
- const tooltipMsg = effectiveFilterCurrency
- ? `Descargar ${effectiveFilterCurrency} del período seleccionado desde mindicador.cl`
- : "Selecciona una moneda primero";
- const btn = (
  <Button
  variant="outline"
  onClick={syncChile}
  disabled={syncState.active || !effectiveFilterCurrency}
  className="pg-btn-platinum"
+ title={effectiveFilterCurrency
+ ? `Descargar ${effectiveFilterCurrency} del período seleccionado desde mindicador.cl`
+ : "Selecciona una moneda primero"}
  >
  <ArrowRightLeft className={`mr-1.5 h-4 w-4 ${syncState.active ? "animate-spin" : ""}`} />
  {syncState.active ? "Sincronizando" : "Sincronizar"}
  </Button>
- );
- return (
- <Tooltip>
- <TooltipTrigger className="inline-flex">{btn}</TooltipTrigger>
- <TooltipContent side="top">
- <p>{tooltipMsg}</p>
- </TooltipContent>
- </Tooltip>
- );
- })()
  )}
  {canCreate("catalogos") && (
  <Button
@@ -510,12 +495,10 @@ function TiposCambioContent() {
  <td
  key={monthIdx}
  className="text-center font-mono cursor-pointer hover:bg-primary/10 rounded transition-colors"
+ title={`${day}/${String(monthIdx + 1).padStart(2, "0")}/${filterYear} — ${cell.source || "manual"}`}
  onClick={() => { if (canEdit("catalogos")) { setEditingId(cell.id); setForm({ country_id: filterCountry, currency_code: effectiveFilterCurrency, rate_to_base: String(cell.rate), effective_date: `${filterYear}-${String(monthIdx + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`, source: cell.source || "manual" }); setOpen(true); } }}
  >
- <Tooltip>
- <TooltipTrigger render={<span className="block" />}>{formatRate(cell.rate)}</TooltipTrigger>
- <TooltipContent side="top"><p>{`${day}/${String(monthIdx + 1).padStart(2, "0")}/${filterYear} — ${cell.source || "manual"}`}</p></TooltipContent>
- </Tooltip>
+ {formatRate(cell.rate)}
  </td>
  );
  })}
@@ -707,22 +690,16 @@ function TiposCambioContent() {
  <div className="flex gap-2">
  <Input type="number" step="0.000001" min={0} value={form.rate_to_base} onChange={(e) => setForm({ ...form, rate_to_base: e.target.value })} placeholder="Ej: 950.00" className="app-input font-mono" />
  {canEdit("catalogos") && form.effective_date && form.currency_code && (
- <Tooltip>
- <TooltipTrigger render={
  <Button
  type="button"
  variant="outline"
  onClick={syncSingleDay}
  disabled={syncDayLoading}
  className="pg-btn-platinum shrink-0"
- />
- }>
+ title="Descargar este valor desde mindicador.cl (Banco Central de Chile)"
+ >
  <ArrowRightLeft className={`h-4 w-4 ${syncDayLoading ? "animate-spin" : ""}`} />
- </TooltipTrigger>
- <TooltipContent side="top">
- <p>Descargar este valor desde mindicador.cl (Banco Central de Chile)</p>
- </TooltipContent>
- </Tooltip>
+ </Button>
  )}
  </div>
  </div>
@@ -738,7 +715,7 @@ function TiposCambioContent() {
  </div>
  <div className="modal-footer">
  {editingId && canDelete("catalogos") ? (
- <button type="button" onClick={async () => { const ok = await confirm({ title: "Eliminar", description: "¿Eliminar este tipo de cambio?", confirmLabel: "Eliminar", destructive: true }); if (!ok) return; deleteMut.mutate(editingId); }} className="pg-btn-platinum text-rose-600 dark:text-rose-400">Eliminar</button>
+ <button type="button" onClick={() => { if (confirm("¿Eliminar este tipo de cambio?")) { deleteMut.mutate(editingId); } }} className="pg-btn-platinum text-rose-600 dark:text-rose-400">Eliminar</button>
  ) : <span />}
  <div className="flex gap-2 ml-auto">
  <button type="button" onClick={() => setOpen(false)} className="pg-btn-platinum">Cancelar</button>

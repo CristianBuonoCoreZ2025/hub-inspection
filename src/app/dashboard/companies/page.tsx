@@ -15,7 +15,6 @@ import { companySchema, type CompanyInput } from "@/lib/validations";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useForm, Controller } from "react-hook-form";
 import { usePermissions } from "@/hooks/use-permissions";
-import { useConfirm } from "@/hooks/use-confirm";
 import { toast } from "sonner";
 import { Search, Pencil, Ban, Upload, X, ImageIcon, Building2, Globe, Mail, Phone, Users } from "lucide-react";
 
@@ -54,7 +53,6 @@ function slugify(text: string): string {
 export default function CompaniesPage() {
  const queryClient = useQueryClient();
  const { canCreate, canEdit, canDelete } = usePermissions();
- const confirm = useConfirm();
  const [search, setSearch] = useState("");
  const [open, setOpen] = useState(false);
  const [editingId, setEditingId] = useState<string | null>(null);
@@ -162,7 +160,7 @@ export default function CompaniesPage() {
  <DialogContent className="modal-md" showCloseButton={false}>
  <div className="modal-header">
  <DialogTitle className="modal-title flex items-center gap-2.5">
- <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-gradient text-white shadow-sm">
+ <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
  <Building2 className="h-4 w-4" />
  </div>
  {editingId ? "Editar Empresa" : "Nueva Empresa"}
@@ -386,7 +384,7 @@ export default function CompaniesPage() {
  {company.name.slice(0, 2).toUpperCase()}
  </div>
  )}
- <span className="truncate max-w-[140px]" aria-label={company.name}>{company.name}</span>
+ <span className="truncate max-w-[140px]" title={company.name}>{company.name}</span>
  </div>
  </td>
  <td>
@@ -400,7 +398,7 @@ export default function CompaniesPage() {
  {company.email ? (
  <div className="flex items-center gap-1.5">
  <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
- <span className="truncate max-w-[170px]" aria-label={company.email}>{company.email}</span>
+ <span className="truncate max-w-[170px]" title={company.email}>{company.email}</span>
  </div>
  ) : (
  <span className="text-muted-foreground">—</span>
@@ -440,7 +438,7 @@ export default function CompaniesPage() {
  }}><Pencil className="h-4 w-4" /></button>
  )}
  {canDelete("companies") && (
- <button type="button" className="btn-icon-sm btn-danger-hover" onClick={async () => { const ok = await confirm({ title: "Desactivar empresa", description: "¿Desactivar esta empresa?", confirmLabel: "Desactivar", destructive: true }); if (!ok) return; deleteMutation.mutate(company.id); }}>
+ <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar esta empresa?")) deleteMutation.mutate(company.id); }}>
  <Ban className="h-4 w-4" />
  </button>
  )}
@@ -460,7 +458,7 @@ export default function CompaniesPage() {
  <DialogContent className="modal-lg" showCloseButton={false}>
  <div className="modal-header">
  <DialogTitle className="modal-title flex items-center gap-2.5">
- <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-gradient text-white shadow-sm">
+ <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm">
  <Users className="h-4 w-4" />
  </div>
  Usuarios de {usersModalCompany?.name}

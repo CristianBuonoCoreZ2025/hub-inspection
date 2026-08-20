@@ -3,7 +3,6 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Trash2, Copy, GripVertical } from "lucide-react";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 import type { ScreenField } from "./types";
 import { FieldPreview } from "./FieldPreview";
@@ -60,24 +59,18 @@ export function SortableFieldCard({
       } ${isDragging ? "cursor-grabbing" : "cursor-pointer"}`}
     >
       {/* Drag handle */}
-      <Tooltip>
-        <TooltipTrigger className="inline-flex">
-          <button
-            type="button"
-            {...listeners}
-            {...attributes}
-            onClick={(e) => e.stopPropagation()}
-            className={`absolute left-1 top-1.5 flex h-6 w-5 items-center justify-center rounded text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted transition-opacity ${
-              selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-            } cursor-grab active:cursor-grabbing`}
-          >
-            <GripVertical className="h-3.5 w-3.5" />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="top">
-          <p>Arrastrar para reordenar</p>
-        </TooltipContent>
-      </Tooltip>
+      <button
+        type="button"
+        {...listeners}
+        {...attributes}
+        onClick={(e) => e.stopPropagation()}
+        className={`absolute left-1 top-1.5 flex h-6 w-5 items-center justify-center rounded text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted transition-opacity ${
+          selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+        } cursor-grab active:cursor-grabbing`}
+        title="Arrastrar para reordenar"
+      >
+        <GripVertical className="h-3.5 w-3.5" />
+      </button>
 
       {/* Controles superiores */}
       <div
@@ -85,40 +78,28 @@ export function SortableFieldCard({
           selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
         }`}
       >
-        <Tooltip>
-          <TooltipTrigger className="inline-flex">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDuplicate();
-              }}
-              className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-            >
-              <Copy className="h-3 w-3" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            <p>Duplicar</p>
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger className="inline-flex">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemove();
-              }}
-              className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-rose-50 hover:text-rose-600 transition-colors"
-            >
-              <Trash2 className="h-3 w-3" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            <p>Eliminar</p>
-          </TooltipContent>
-        </Tooltip>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDuplicate();
+          }}
+          className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          title="Duplicar"
+        >
+          <Copy className="h-3 w-3" />
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
+          className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-rose-50 hover:text-rose-600 transition-colors"
+          title="Eliminar"
+        >
+          <Trash2 className="h-3 w-3" />
+        </button>
       </div>
 
       {/* Contenido */}

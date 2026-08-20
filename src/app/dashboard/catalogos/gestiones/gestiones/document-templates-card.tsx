@@ -452,7 +452,7 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
  key={ph}
  className="flex items-center gap-2 rounded-md border border-amber-300/50 dark:border-amber-700/50 px-2 py-1.5 bg-amber-50/50 dark:bg-amber-950/10"
  >
- <code className="text-[11px] font-mono text-amber-700 dark:text-amber-400 shrink-0 min-w-30">
+ <code className="text-[11px] font-mono text-amber-700 dark:text-amber-400 shrink-0 min-w-[120px]">
  {phDisplay}
  </code>
  <span className="text-[10px] text-muted-foreground shrink-0">→</span>
@@ -498,7 +498,7 @@ export function DocumentTemplatesCard({ actionTemplateId, events, clients, insur
  const label = field?.label ?? (mapped ?? "—");
  return (
  <div key={ph} className="flex items-center gap-2 px-2 py-1">
- <code className="text-[11px] font-mono text-primary shrink-0 min-w-30">
+ <code className="text-[11px] font-mono text-primary shrink-0 min-w-[120px]">
  {phDisplay}
  </code>
  <span className="text-[10px] text-muted-foreground shrink-0">→</span>

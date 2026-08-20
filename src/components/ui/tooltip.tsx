@@ -12,7 +12,7 @@ function Tooltip({ children, ...props }: React.ComponentProps<typeof TooltipPrim
 function TooltipTrigger({
   className,
   children,
-  delay = 400,
+  delay = 0,
   closeDelay = 0,
   ...props
 }: TooltipPrimitive.Trigger.Props & { children: React.ReactNode }) {
@@ -54,9 +54,9 @@ function TooltipContent({
             "bg-amber-100 px-2 py-1.5 app-body text-amber-950 backdrop-blur-xl",
             "shadow-[0_8px_24px_rgba(0,0,0,0.18)] dark:shadow-[0_8px_24px_rgba(0,0,0,0.45)]",
             "dark:border-amber-500 dark:bg-amber-900 dark:text-amber-50",
-            "duration-150 data-[side=bottom]:slide-in-from-top-1 data-[side=top]:slide-in-from-bottom-1",
+            "duration-100 data-[side=bottom]:slide-in-from-top-1 data-[side=top]:slide-in-from-bottom-1",
             "data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1",
-            "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-97",
+            "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-100",
             "data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
             className
           )}

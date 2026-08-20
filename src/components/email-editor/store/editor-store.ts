@@ -88,6 +88,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   document: createEmptyDocument(),
 
   setDocument: (doc) => {
+    console.log("[store] setDocument, blocks:", doc.blocks.length, "ids:", doc.blocks.map((b) => b.id).slice(0, 3));
     history.clear();
     set({ document: doc, canUndo: false, canRedo: false });
   },

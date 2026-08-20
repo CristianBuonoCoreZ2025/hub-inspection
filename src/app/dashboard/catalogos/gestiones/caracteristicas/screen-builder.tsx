@@ -19,7 +19,6 @@ import {
  Database,
  Boxes,
 } from "lucide-react";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { GestionScreen } from "@/types";
 import type { ScreenField, FieldCategory, DateValidation } from "@/app/dashboard/claims/[id]/gestion-screens/DynamicScreen";
 import {
@@ -167,11 +166,11 @@ export default function ScreenBuilder({ screen, open, onOpenChange, onSave, isPe
  </p>
  <div className="space-y-1">
  {OWN_FIELD_TYPES.map((t) => (
- <Tooltip key={t.code}>
- <TooltipTrigger className="inline-flex w-full">
  <button
+ key={t.code}
  type="button"
  onClick={() => addField("own", t.code, t.label)}
+ title={t.desc}
  className="w-full flex items-center gap-2 rounded-md border border-border bg-card px-2 py-1.5 app-body text-left hover:bg-muted/50 transition-colors"
  >
  <span className="app-body w-4 text-center shrink-0">{t.icon}</span>
@@ -180,11 +179,6 @@ export default function ScreenBuilder({ screen, open, onOpenChange, onSave, isPe
  <div className="app-body text-muted-foreground truncate">{t.desc}</div>
  </div>
  </button>
- </TooltipTrigger>
- <TooltipContent side="top">
- <p>{t.desc}</p>
- </TooltipContent>
- </Tooltip>
  ))}
  </div>
  </div>
@@ -199,11 +193,11 @@ export default function ScreenBuilder({ screen, open, onOpenChange, onSave, isPe
  </p>
  <div className="space-y-1">
  {CLAIM_ENTITIES.map((t) => (
- <Tooltip key={t.code}>
- <TooltipTrigger className="inline-flex w-full">
  <button
+ key={t.code}
  type="button"
  onClick={() => addField("simple_entity", t.code, t.label)}
+ title={t.desc}
  className="w-full flex items-center gap-2 rounded-md border border-dashed border-border bg-card px-2 py-1.5 app-body text-left hover:bg-muted/50 transition-colors"
  >
  <span className="app-body w-4 text-center shrink-0">{t.icon}</span>
@@ -212,11 +206,6 @@ export default function ScreenBuilder({ screen, open, onOpenChange, onSave, isPe
  <div className="app-body text-muted-foreground truncate">{t.desc}</div>
  </div>
  </button>
- </TooltipTrigger>
- <TooltipContent side="top">
- <p>{t.desc}</p>
- </TooltipContent>
- </Tooltip>
  ))}
  </div>
  </div>
@@ -231,11 +220,11 @@ export default function ScreenBuilder({ screen, open, onOpenChange, onSave, isPe
  </p>
  <div className="space-y-1">
  {ACTION_ENTITIES.map((t) => (
- <Tooltip key={t.code}>
- <TooltipTrigger className="inline-flex w-full">
  <button
+ key={t.code}
  type="button"
  onClick={() => addField("simple_entity", t.code, t.label)}
+ title={t.desc}
  className="w-full flex items-center gap-2 rounded-md border border-dashed border-border bg-card px-2 py-1.5 app-body text-left hover:bg-muted/50 transition-colors"
  >
  <span className="app-body w-4 text-center shrink-0">{t.icon}</span>
@@ -244,11 +233,6 @@ export default function ScreenBuilder({ screen, open, onOpenChange, onSave, isPe
  <div className="app-body text-muted-foreground truncate">{t.desc}</div>
  </div>
  </button>
- </TooltipTrigger>
- <TooltipContent side="top">
- <p>{t.desc}</p>
- </TooltipContent>
- </Tooltip>
  ))}
  </div>
  </div>
@@ -263,11 +247,11 @@ export default function ScreenBuilder({ screen, open, onOpenChange, onSave, isPe
  </p>
  <div className="space-y-1">
  {COMPLEX_ENTITIES.map((t) => (
- <Tooltip key={t.code}>
- <TooltipTrigger className="inline-flex w-full">
  <button
+ key={t.code}
  type="button"
  onClick={() => addField("complex_entity", t.code, t.label)}
+ title={t.desc}
  className="w-full flex items-center gap-2 rounded-md border border-dashed border-violet-300 bg-violet-50/50 dark:bg-violet-900/10 px-2 py-1.5 app-body text-left hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors"
  >
  <span className="app-body w-4 text-center shrink-0">{t.icon}</span>
@@ -276,11 +260,6 @@ export default function ScreenBuilder({ screen, open, onOpenChange, onSave, isPe
  <div className="app-body text-muted-foreground truncate">{t.desc}</div>
  </div>
  </button>
- </TooltipTrigger>
- <TooltipContent side="top">
- <p>{t.desc}</p>
- </TooltipContent>
- </Tooltip>
  ))}
  </div>
  </div>
@@ -689,50 +668,32 @@ function CanvasField({
  >
  {/* Controles */}
  <div className={`absolute right-2 top-2 flex items-center gap-1 ${selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"} transition-opacity`}>
- <Tooltip>
- <TooltipTrigger className="inline-flex">
  <button
  type="button"
  onClick={(e) => { e.stopPropagation(); onMove(index, "up"); }}
  disabled={index === 0}
  className="p-1 rounded hover:bg-muted disabled:opacity-30"
+ title="Mover arriba"
  >
  <ChevronUp className="h-3.5 w-3.5" />
  </button>
- </TooltipTrigger>
- <TooltipContent side="top">
- <p>Mover arriba</p>
- </TooltipContent>
- </Tooltip>
- <Tooltip>
- <TooltipTrigger className="inline-flex">
  <button
  type="button"
  onClick={(e) => { e.stopPropagation(); onMove(index, "down"); }}
  disabled={index === 0}
  className="p-1 rounded hover:bg-muted disabled:opacity-30"
+ title="Mover abajo"
  >
  <ChevronDown className="h-3.5 w-3.5" />
  </button>
- </TooltipTrigger>
- <TooltipContent side="top">
- <p>Mover abajo</p>
- </TooltipContent>
- </Tooltip>
- <Tooltip>
- <TooltipTrigger className="inline-flex">
  <button
  type="button"
  onClick={(e) => { e.stopPropagation(); onRemove(index); }}
  className="p-1 rounded hover:bg-rose-50 text-rose-600"
+ title="Eliminar"
  >
  <Ban className="h-3.5 w-3.5" />
  </button>
- </TooltipTrigger>
- <TooltipContent side="top">
- <p>Eliminar</p>
- </TooltipContent>
- </Tooltip>
  </div>
 
  <CanvasFieldPreview field={field} allFields={allFields} />

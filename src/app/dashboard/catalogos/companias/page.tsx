@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePagination } from "@/hooks/use-pagination";
 import { useTableSort } from "@/hooks/use-table-sort";
-import { useConfirm } from "@/hooks/use-confirm";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { getInsuranceCompanies, createInsuranceCompany, updateInsuranceCompany, deleteInsuranceCompany, getCountries } from "@/services/catalogs";
@@ -32,7 +31,6 @@ import { StatusBadge } from "@/components/ui/status-badge";
 export default function CompaniasPage() {
  const queryClient = useQueryClient();
  const { canCreate, canEdit, canDelete } = usePermissions();
- const confirm = useConfirm();
  const [search, setSearch] = useState("");
  const [open, setOpen] = useState(false);
  const [editingId, setEditingId] = useState<string | null>(null);
@@ -121,7 +119,7 @@ export default function CompaniasPage() {
  </div>
  <div className="app-data-table-wrap">
  <table className="app-data-table">
- <thead><tr><th className="w-10"></th><th>País</th><SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh><SortableTh sortKey="rut" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>RUT</SortableTh><th>Direccion</th><th>Ramo</th><SortableTh sortKey="code" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Codigo</SortableTh><SortableTh sortKey="type" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Tipo</SortableTh><th className="w-20"></th></tr></thead>
+ <thead><tr><th className="w-10"></th><th>País</th><SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh><SortableTh sortKey="rut" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>RUT</SortableTh><th>Direccion</th><th>Ramo</th><SortableTh sortKey="code" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Codigo</SortableTh><SortableTh sortKey="type" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Tipo</SortableTh><th className="w-[80px]"></th></tr></thead>
  <tbody>
  {isLoading ? <tr><td colSpan={9} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
  : filtered?.length === 0 ? <tr><td colSpan={9} className="text-center text-muted-foreground py-4">No se encontraron registros.</td></tr>
@@ -131,7 +129,7 @@ export default function CompaniasPage() {
  <td>{countries?.find((co) => co.id === c.country_id)?.name || "—"}</td>
  <td className="font-medium">{c.name}</td>
  <td>{c.rut || "—"}</td>
- <td className="max-w-50 truncate text-muted-foreground">{c.address || "—"}</td>
+ <td className="max-w-[200px] truncate text-muted-foreground">{c.address || "—"}</td>
  <td>{c.line_of_business || "—"}</td>
  <td>{c.code || "—"}</td>
  <td>{c.type || "—"}</td>
@@ -141,7 +139,7 @@ export default function CompaniasPage() {
  <button type="button" className="btn-icon-sm" onClick={(e) => { e.stopPropagation(); setEditingId(c.id); setFormData({ country_id: c.country_id || "", name: c.name, rut: c.rut || "", address: c.address || "", line_of_business: c.line_of_business || "", code: c.code || "", type: c.type || "Generales" }); setOpen(true); }}><Pencil className="h-4 w-4" /></button>
  )}
  {canDelete("catalogos") && (
- <button type="button" className="btn-icon-sm btn-danger-hover" onClick={async () => { const ok = await confirm({ title: "Desactivar", description: "¿Desactivar esta compañia?", confirmLabel: "Desactivar", destructive: true }); if (!ok) return; deleteMutation.mutate(c.id); }}><Ban className="h-4 w-4" /></button>
+ <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar esta compañia?")) deleteMutation.mutate(c.id); }}><Ban className="h-4 w-4" /></button>
  )}
  </div>
  </td>
@@ -157,7 +155,7 @@ export default function CompaniasPage() {
  <DialogContent className="modal-md" showCloseButton={false}>
  <div className="modal-header">
  <DialogTitle className="modal-title flex items-center gap-2.5">
- <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-gradient text-white shadow-sm"><Landmark className="h-4 w-4" /></div>
+ <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-[#0095DA] to-[#005BBB] text-white shadow-sm"><Landmark className="h-4 w-4" /></div>
  {editingId ? "Editar" : "Nuevo"}
  </DialogTitle>
  </div>

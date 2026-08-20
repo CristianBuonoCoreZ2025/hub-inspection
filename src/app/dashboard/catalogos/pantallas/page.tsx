@@ -10,11 +10,9 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Pencil, Ban, LayoutTemplate, Monitor, Trash2, RotateCcw, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { usePermissions } from "@/hooks/use-permissions";
-import { useConfirm } from "@/hooks/use-confirm";
 import { useTableSort } from "@/hooks/use-table-sort";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { ToggleChip } from "@/components/ui/toggle-chip";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
  getGestionScreens,
  createGestionScreen,
@@ -32,7 +30,6 @@ export default function PantallasPage() {
  const router = useRouter();
  const queryClient = useQueryClient();
  const { canCreate, canEdit, canDelete } = usePermissions();
- const confirm = useConfirm();
  const [open, setOpen] = useState(false);
  const [showInactive, setShowInactive] = useState(false);
  const [editingId, setEditingId] = useState<string | null>(null);
@@ -217,7 +214,7 @@ export default function PantallasPage() {
  {usage.length > 0 ? (
  <div className="flex flex-col gap-0.5">
  <span className="font-mono text-primary font-semibold">{usage.length} {usage.length === 1 ? "característica" : "características"}</span>
- <span className="block truncate max-w-[240px]" aria-label={usage.map((f) => f.name).join(", ")}>
+ <span className="block truncate max-w-[240px]" title={usage.map((f) => f.name).join(", ")}>
  {usage.map((f) => f.name).join(", ")}
  </span>
  </div>
@@ -244,64 +241,29 @@ export default function PantallasPage() {
  </button>
  )}
  {s.is_dynamic && !isInactive && canEdit("catalogos") && (
- <Tooltip>
- <TooltipTrigger className="inline-flex">
- <button type="button" className="btn-icon-sm" onClick={() => router.push(`/dashboard/catalogos/pantallas/${s.id}`)}>
+ <button type="button" className="btn-icon-sm" onClick={() => router.push(`/dashboard/catalogos/pantallas/${s.id}`)} title="Diseñar pantalla">
  <LayoutTemplate className="h-4 w-4" />
  </button>
- </TooltipTrigger>
- <TooltipContent side="top">
- <p>Diseñar pantalla</p>
- </TooltipContent>
- </Tooltip>
  )}
  {isInactive && canEdit("catalogos") && (
- <Tooltip>
- <TooltipTrigger className="inline-flex">
- <button type="button" className="btn-icon-sm" onClick={() => reactivateMut.mutate(s.id)}>
+ <button type="button" className="btn-icon-sm" onClick={() => reactivateMut.mutate(s.id)} title="Reactivar">
  <RotateCcw className="h-4 w-4" />
  </button>
- </TooltipTrigger>
- <TooltipContent side="top">
- <p>Reactivar</p>
- </TooltipContent>
- </Tooltip>
  )}
  {!isInactive && s.is_dynamic && canDelete("catalogos") && inUse && (
- <Tooltip>
- <TooltipTrigger className="inline-flex">
- <button type="button" className="btn-icon-sm btn-danger-hover" onClick={async () => { const ok = await confirm({ title: "Desactivar", description: "¿Desactivar esta pantalla? Está en uso por características.", confirmLabel: "Desactivar", destructive: true }); if (!ok) return; deactivateMut.mutate(s.id); }}>
+ <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar esta pantalla? Está en uso por características.")) deactivateMut.mutate(s.id); }} title="Desactivar">
  <Ban className="h-4 w-4" />
  </button>
- </TooltipTrigger>
- <TooltipContent side="top">
- <p>Desactivar</p>
- </TooltipContent>
- </Tooltip>
  )}
  {!isInactive && s.is_dynamic && canDelete("catalogos") && !inUse && (
- <Tooltip>
- <TooltipTrigger className="inline-flex">
- <button type="button" className="btn-icon-sm btn-danger-hover" onClick={async () => { const ok = await confirm({ title: "Eliminar", description: "¿Eliminar definitivamente esta pantalla? No está asociada a ninguna característica.", confirmLabel: "Eliminar", destructive: true }); if (!ok) return; deleteMut.mutate(s.id); }}>
+ <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Eliminar definitivamente esta pantalla? No está asociada a ninguna característica.")) deleteMut.mutate(s.id); }} title="Eliminar">
  <Trash2 className="h-4 w-4" />
  </button>
- </TooltipTrigger>
- <TooltipContent side="top">
- <p>Eliminar</p>
- </TooltipContent>
- </Tooltip>
  )}
  {isInactive && s.is_dynamic && canDelete("catalogos") && !inUse && (
- <Tooltip>
- <TooltipTrigger className="inline-flex">
- <button type="button" className="btn-icon-sm btn-danger-hover" onClick={async () => { const ok = await confirm({ title: "Eliminar", description: "¿Eliminar definitivamente esta pantalla? No está asociada a ninguna característica.", confirmLabel: "Eliminar", destructive: true }); if (!ok) return; deleteMut.mutate(s.id); }}>
+ <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Eliminar definitivamente esta pantalla? No está asociada a ninguna característica.")) deleteMut.mutate(s.id); }} title="Eliminar">
  <Trash2 className="h-4 w-4" />
  </button>
- </TooltipTrigger>
- <TooltipContent side="top">
- <p>Eliminar</p>
- </TooltipContent>
- </Tooltip>
  )}
  </div>
  </td>

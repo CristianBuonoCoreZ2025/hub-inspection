@@ -6,7 +6,6 @@ import { Star, CheckCircle } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { getInspectorSchedule } from "@/services/inspections";
 import { toUserISO, formatUserDateTime } from "@/lib/timezone";
 
@@ -213,28 +212,23 @@ export function CoordScheduler({
                   {slots.map((slot) => {
                     const isSelected = currentValue === `${selectedDate}T${slot.time}`;
                     return (
-                      <Tooltip key={slot.time}>
-                        <TooltipTrigger render={
-                          <button
-                            type="button"
-                            disabled={readOnly || !slot.available}
-                            onClick={() => assignSlot(slot.time)}
-                            className={`h-5 rounded app-body font-medium text-xs transition-colors flex items-center justify-center gap-0.5 whitespace-nowrap ${
-                              !slot.available
-                                ? "bg-muted/40 text-muted-foreground/40 cursor-not-allowed line-through border border-border/30"
-                                : slot.extra
-                                ? "bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 border border-amber-500/20"
-                                : "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 border border-emerald-500/20"
-                            } ${isSelected ? "ring-2 ring-primary bg-primary/5" : ""}`}
-                          />
-                        }>
-                          {slot.time}
-                          {slot.extra && <Star className="h-3 w-3 text-amber-500" />}
-                        </TooltipTrigger>
-                        <TooltipContent side="top">
-                          <p>{slot.bookedInfo || `${slot.label}${slot.extra ? " (extra)" : ""}`}</p>
-                        </TooltipContent>
-                      </Tooltip>
+                      <button
+                        key={slot.time}
+                        type="button"
+                        disabled={readOnly || !slot.available}
+                        onClick={() => assignSlot(slot.time)}
+                        className={`h-5 rounded app-body font-medium text-xs transition-colors flex items-center justify-center gap-0.5 whitespace-nowrap ${
+                          !slot.available
+                            ? "bg-muted/40 text-muted-foreground/40 cursor-not-allowed line-through border border-border/30"
+                            : slot.extra
+                            ? "bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 border border-amber-500/20"
+                            : "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 border border-emerald-500/20"
+                        } ${isSelected ? "ring-2 ring-primary bg-primary/5" : ""}`}
+                        title={slot.bookedInfo || `${slot.label}${slot.extra ? " (extra)" : ""}`}
+                      >
+                        {slot.time}
+                        {slot.extra && <Star className="h-3 w-3 text-amber-500" />}
+                      </button>
                     );
                   })}
                 </div>

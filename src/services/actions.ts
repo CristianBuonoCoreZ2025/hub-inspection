@@ -135,7 +135,10 @@ export async function getActionFeatures(): Promise<ActionFeature[]> {
     select: "id, name, code, has_specific_screen, has_template, max_review_levels, has_control, has_issue, has_review, has_approve, is_active, sort_order, screen_id, color, local_name, document_template, email_template, document_type, screen:gestion_screens!action_features_screen_id_fkey(id, code, name, is_dynamic, form_schema)",
     eq: { is_active: true },
     order: { column: "name", ascending: true },
-  }).then((rows) => rows);
+  }).then((rows) => {
+    console.log("[getActionFeatures] rows:", rows.length, "ILI:", rows.find(r => r.code === "ILI")?.has_template, "withTemplate:", rows.filter(r => r.has_template).map(r => r.code));
+    return rows;
+  });
 }
 
 export async function createActionFeature(input: {

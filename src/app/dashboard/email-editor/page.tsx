@@ -29,7 +29,7 @@ export default function EmailEditorPage() {
     <div className="p-6 max-w-7xl mx-auto">
       <h1 className="text-lg font-semibold mb-4">Editor de Email — Estilo Outlook 365</h1>
 
-      <div className="rounded-xl overflow-hidden border border-border email-editor-page">
+      <div className="rounded-xl overflow-hidden border border-border" style={{ height: "calc(100vh - 200px)" }}>
         <EmailEditor
           mode="compose"
           variables={SAMPLE_VARIABLES}

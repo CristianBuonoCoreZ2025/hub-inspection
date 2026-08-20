@@ -11,7 +11,6 @@ import { getClaims } from "@/services/claims";
 import { getClaimActions, rejectClaimAction, hardDeleteClaimAction } from "@/services/claim-actions";
 import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/use-permissions";
-import { useConfirm } from "@/hooks/use-confirm";
 import { toast } from "sonner";
 import { Search, Loader2, AlertTriangle, Ban, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,7 +19,6 @@ import { Input } from "@/components/ui/input";
 export default function GestionesPage() {
   const { user } = useAuth();
   const { canEdit, canDelete } = usePermissions();
-  const confirm = useConfirm();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedClaimId, setSelectedClaimId] = useState<string | null>(null);
@@ -230,15 +228,10 @@ export default function GestionesPage() {
                                 size="sm"
                                 className="h-9 px-3 sm:h-7 sm:px-2 text-xs text-rose-600 hover:text-rose-700"
                                 disabled={deleteMutation.isPending && deleteMutation.variables === action.id}
-                                onClick={async () => {
-                                  const ok = await confirm({
-                                    title: "Eliminar",
-                                    description: `¿Eliminar permanentemente la gestión ${action.code}?`,
-                                    confirmLabel: "Eliminar",
-                                    destructive: true,
-                                  });
-                                  if (!ok) return;
-                                  deleteMutation.mutate(action.id);
+                                onClick={() => {
+                                  if (confirm(`¿Eliminar permanentemente la gestión ${action.code}?`)) {
+                                    deleteMutation.mutate(action.id);
+                                  }
                                 }}
                               >
                                 <Trash2 className="h-3 w-3 mr-1" />

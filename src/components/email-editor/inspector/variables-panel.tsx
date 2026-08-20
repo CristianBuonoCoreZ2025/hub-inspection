@@ -13,7 +13,6 @@ import { GenericCommand, InsertBlockCommand } from "../core/commands";
 import { createParagraph, createVariableNode } from "../core/document-model";
 import type { InlineContent, Block } from "../core/types";
 import { ChevronRight, Search, Star } from "lucide-react";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useState, useMemo } from "react";
 
 export function VariablesPanel() {
@@ -188,37 +187,25 @@ function VariableItem({
 }) {
   return (
     <div className="ee-variables-item">
-      <Tooltip>
-        <TooltipTrigger render={
-          <button
-            type="button"
-            className="ee-variables-item-btn"
-            onClick={onInsert}
-          />
-        }>
-          <span className="ee-variables-item-label">{normalizeLabel(variable.label)}</span>
-          {variable.value && (
-            <span className="ee-variables-item-value">{variable.value}</span>
-          )}
-        </TooltipTrigger>
-        <TooltipContent side="top">
-          <p>{`Insertar «${normalizeLabel(variable.label)}»`}</p>
-        </TooltipContent>
-      </Tooltip>
-      <Tooltip>
-        <TooltipTrigger render={
-          <button
-            type="button"
-            className={`ee-variables-item-fav ${isFavorite ? "ee-variables-item-fav-active" : ""}`}
-            onClick={onToggleFav}
-          />
-        }>
-          <Star className="ee-variables-fav-star" />
-        </TooltipTrigger>
-        <TooltipContent side="top">
-          <p>{isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}</p>
-        </TooltipContent>
-      </Tooltip>
+      <button
+        type="button"
+        className="ee-variables-item-btn"
+        onClick={onInsert}
+        title={`Insertar «${normalizeLabel(variable.label)}»`}
+      >
+        <span className="ee-variables-item-label">{normalizeLabel(variable.label)}</span>
+        {variable.value && (
+          <span className="ee-variables-item-value">{variable.value}</span>
+        )}
+      </button>
+      <button
+        type="button"
+        className={`ee-variables-item-fav ${isFavorite ? "ee-variables-item-fav-active" : ""}`}
+        onClick={onToggleFav}
+        title={isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
+      >
+        <Star className="ee-variables-fav-star" />
+      </button>
     </div>
   );
 }

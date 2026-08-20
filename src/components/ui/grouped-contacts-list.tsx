@@ -100,7 +100,7 @@ export function GroupedContactsList<T>({
             onClick={() => scrollToSection(idx)}
             role="button"
             tabIndex={0}
-            aria-label={`Ir a ${group.title}`}
+            title={`Ir a ${group.title}`}
           >
             <span className="grouped-contacts-header-label">
               {group.title} ({group.items.length})

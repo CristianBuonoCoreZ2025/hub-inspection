@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { Loader2, Check, X, ImageIcon, FileText, Ban, Cpu } from "lucide-react";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 /**
  * Panel lateral ahumado tipo "widget de CPU" que se sobrepone al
@@ -127,20 +126,14 @@ export function AiProgressOverlay({
             <Loader2 className="h-3 w-3 animate-spin text-slate-400" />
             <span>En cola</span>
             {onCancel && (
-              <Tooltip>
-                <TooltipTrigger render={
-                  <button
-                    onClick={handleCancel}
-                    className="ai-progress-panel-cancel"
-                    disabled={canceling}
-                  />
-                }>
-                  <Ban className="h-3 w-3" />
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  <p>Omitir</p>
-                </TooltipContent>
-              </Tooltip>
+              <button
+                onClick={handleCancel}
+                className="ai-progress-panel-cancel"
+                title="Omitir"
+                disabled={canceling}
+              >
+                <Ban className="h-3 w-3" />
+              </button>
             )}
           </div>
         </div>
@@ -161,20 +154,14 @@ export function AiProgressOverlay({
             <span className="ai-progress-panel-timer">{elapsed}s</span>
           </div>
           {onCancel && (
-            <Tooltip>
-              <TooltipTrigger render={
-                <button
-                  onClick={handleCancel}
-                  className="ai-progress-panel-cancel"
-                  disabled={canceling}
-                />
-              }>
-                <Ban className="h-3 w-3" />
-              </TooltipTrigger>
-              <TooltipContent side="top">
-                <p>Detener</p>
-              </TooltipContent>
-            </Tooltip>
+            <button
+              onClick={handleCancel}
+              className="ai-progress-panel-cancel"
+              title="Detener"
+              disabled={canceling}
+            >
+              <Ban className="h-3 w-3" />
+            </button>
           )}
         </div>
 

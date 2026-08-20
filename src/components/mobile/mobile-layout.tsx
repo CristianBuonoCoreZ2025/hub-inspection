@@ -5,8 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { Button } from "@/components/ui/button";
-import { ClipboardCheck, LogOut, ArrowLeft, RefreshCw } from "lucide-react";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { ClipboardCheck, Monitor, LogOut, ArrowLeft, RefreshCw } from "lucide-react";
 
 /**
  * Layout del módulo mobile.
@@ -51,9 +50,17 @@ export function MobileLayout({ children }: { children: React.ReactNode }) {
     }
   }, [isLoading, profile, isMobile, isInspector, isInternal, router]);
 
+  // Al estar en /mobile, el usuario eligio el sistema mobile — limpiar
+  // la preferencia de "no redirigir" para que el sistema mobile funcione.
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("no-mobile-redirect");
+    }
+  }, []);
+
   if (isLoading || (user && !profile)) {
     return (
-      <div className="flex h-dvh items-center justify-center bg-background">
+      <div className="flex h-screen items-center justify-center bg-background">
         <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
@@ -65,10 +72,20 @@ export function MobileLayout({ children }: { children: React.ReactNode }) {
     await signOut();
   };
 
+  const handleBackToDashboard = () => {
+    // Cambiar a sistema tradicional: persistir la eleccion en localStorage
+    // para que no redirija de vuelta al mobile mientras el usuario navegue.
+    if (typeof window !== "undefined") {
+      localStorage.setItem("no-mobile-redirect", "1");
+      localStorage.removeItem("mobile-mode");
+    }
+    router.push("/dashboard");
+  };
+
   const isInspectionList = pathname === "/mobile/inspecciones";
 
   return (
-    <div className="mobile-skin flex h-dvh flex-col bg-background">
+    <div className="flex h-screen flex-col bg-background">
       {/* Header minimal */}
       <header className="flex items-center justify-between border-b bg-background/95 backdrop-blur px-4 py-3 shrink-0">
         <div className="flex items-center gap-2">
@@ -89,27 +106,31 @@ export function MobileLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <Tooltip>
-            <TooltipTrigger render={
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9"
-                onClick={handleSignOut}
-                aria-label="Cerrar sesión"
-              />
-            }>
-              <LogOut className="h-5 w-5" />
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              <p>Cerrar sesión</p>
-            </TooltipContent>
-          </Tooltip>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9"
+            onClick={handleBackToDashboard}
+            title="Sistema tradicional"
+            aria-label="Cambiar a sistema tradicional"
+          >
+            <Monitor className="h-5 w-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9"
+            onClick={handleSignOut}
+            title="Cerrar sesión"
+            aria-label="Cerrar sesión"
+          >
+            <LogOut className="h-5 w-5" />
+          </Button>
         </div>
       </header>
 
       {/* Contenido */}
-      <main className="flex-1 overflow-y-auto overscroll-contain mobile-safe-bottom">
+      <main className="flex-1 overflow-y-auto overscroll-contain">
         {children}
       </main>
     </div>

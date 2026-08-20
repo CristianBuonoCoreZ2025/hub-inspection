@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePagination } from "@/hooks/use-pagination";
 import { useTableSort } from "@/hooks/use-table-sort";
-import { useConfirm } from "@/hooks/use-confirm";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { getEvents, createEvent, updateEvent, deleteEvent, getCountries } from "@/services/catalogs";
@@ -32,7 +31,6 @@ import { StatusBadge } from "@/components/ui/status-badge";
 export default function EventosPage() {
  const queryClient = useQueryClient();
  const { canCreate, canEdit, canDelete } = usePermissions();
- const confirm = useConfirm();
  const [search, setSearch] = useState("");
  const [open, setOpen] = useState(false);
  const [editingId, setEditingId] = useState<string | null>(null);
@@ -150,7 +148,7 @@ export default function EventosPage() {
  <button type="button" className="btn-icon-sm" onClick={(e2) => { e2.stopPropagation(); setEditingId(e.id); setFormData({ country_id: e.country_id || "", code: e.code || "", name: e.name, description: e.description || "" }); setOpen(true); }}><Pencil className="h-4 w-4" /></button>
  )}
  {canDelete("catalogos") && (
- <button type="button" className="btn-icon-sm btn-danger-hover" onClick={async () => { const ok = await confirm({ title: "Desactivar", description: "¿Desactivar este evento?", confirmLabel: "Desactivar", destructive: true }); if (!ok) return; deleteMutation.mutate(e.id); }}><Ban className="h-4 w-4" /></button>
+ <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("¿Desactivar este evento?")) deleteMutation.mutate(e.id); }}><Ban className="h-4 w-4" /></button>
  )}
  </div>
  </td>

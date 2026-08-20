@@ -25,8 +25,6 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { useConfirm } from "@/hooks/use-confirm";
 import { getGestionScreens, updateGestionScreen, refreshPristineSnapshots } from "@/services/gestion-screens";
 
 import {
@@ -59,7 +57,6 @@ export default function ScreenBuilderPage() {
   const params = useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const confirm = useConfirm();
   const screenId = params.screenId as string;
 
   const [fields, setFields] = useState<ScreenField[]>([]);
@@ -273,11 +270,8 @@ export default function ScreenBuilderPage() {
     saveMut.mutate({ id: screen.id, schema: { fields } });
   };
 
-  const handleBack = async () => {
-    if (dirty) {
-      const ok = await confirm({ title: "Salir", description: "Hay cambios sin guardar. ¿Salir de todas formas?", confirmLabel: "Salir", destructive: true });
-      if (!ok) return;
-    }
+  const handleBack = () => {
+    if (dirty && !confirm("Hay cambios sin guardar. ¿Salir de todas formas?")) return;
     router.push("/dashboard/catalogos/pantallas");
   };
 
@@ -313,19 +307,13 @@ export default function ScreenBuilderPage() {
                          bg-card/60 backdrop-blur-2xl saturate-150 px-4
                          shadow-[0_4px_30px_rgba(0,0,0,0.06)]">
         <div className="flex items-center gap-3">
-          <Tooltip>
-            <TooltipTrigger className="inline-flex">
-              <button
-                onClick={handleBack}
-                className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-white/10 dark:hover:bg-white/5 transition-colors"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              <p>Volver</p>
-            </TooltipContent>
-          </Tooltip>
+          <button
+            onClick={handleBack}
+            className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-white/10 dark:hover:bg-white/5 transition-colors"
+            title="Volver"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
           <div className="flex items-center gap-2">
             <div className="flex h-7 w-7 items-center justify-center rounded-md icn-sky text-white shadow-sm">
               <LayoutTemplate className="h-4 w-4" />
@@ -366,29 +354,23 @@ export default function ScreenBuilderPage() {
           </div>
 
           {dirty && (
-            <Tooltip>
-              <TooltipTrigger className="inline-flex">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    if (screen) {
-                      const loaded = Array.isArray(screen.form_schema?.fields)
-                        ? (screen.form_schema.fields as ScreenField[])
-                        : [];
-                      setFields(loaded);
-                      setDirty(false);
-                    }
-                  }}
-                  className="pg-btn-platinum"
-                >
-                  Revertir
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top">
-                <p>Deshacer cambios</p>
-              </TooltipContent>
-            </Tooltip>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                if (screen) {
+                  const loaded = Array.isArray(screen.form_schema?.fields)
+                    ? (screen.form_schema.fields as ScreenField[])
+                    : [];
+                  setFields(loaded);
+                  setDirty(false);
+                }
+              }}
+              className="pg-btn-platinum"
+              title="Deshacer cambios"
+            >
+              Revertir
+            </Button>
           )}
           <Button
             size="sm"

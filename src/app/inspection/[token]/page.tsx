@@ -15,7 +15,6 @@ import { useClaimsAppPresence } from "@/hooks/use-claims-app-presence";
 import { convertHeicToJpeg } from "@/lib/heic-convert";
 import { logConnectionEvent, type ConnectionLogEntry } from "@/services/connection-logs";
 import { logInspectionEvent } from "@/services/inspection-events";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 
 const GeoCapture = dynamic(() => import("@/components/inspection/geo-capture").then((m) => ({ default: m.GeoCapture })), { ssr: false });
@@ -601,27 +600,21 @@ export default function MagicLinkPage() {
         {/* Panel lateral de Comunicación */}
         {chatPanelOpen && (
           <div className="w-full lg:w-105 lg:shrink-0 flex flex-col py-6">
-            <div className="rounded-xl border border-slate-800 bg-slate-900 p-3 flex flex-col flex-1 sticky top-20 insp-token-sidebar">
+            <div className="rounded-xl border border-slate-800 bg-slate-900 p-3 flex flex-col flex-1 sticky top-20" style={{ maxHeight: "calc(100vh - 100px)" }}>
               <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
                 <span className="app-body font-semibold text-slate-400 flex items-center gap-1.5">
                   <MessageSquare className="h-3.5 w-3.5" />
                   Comunicación
                 </span>
                 {videoCallOpen && (
-                  <Tooltip>
-                    <TooltipTrigger className="inline-flex">
-                      <button
-                        onClick={() => setVideoCallKey((k) => k + 1)}
-                        className="text-xs flex items-center gap-1 text-sky-400 hover:text-sky-300"
-                      >
-                        <RefreshCw className="h-3.5 w-3.5" />
-                        Reconectar
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      <p>Reconectar videollamada</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  <button
+                    onClick={() => setVideoCallKey((k) => k + 1)}
+                    className="text-xs flex items-center gap-1 text-sky-400 hover:text-sky-300"
+                    title="Reconectar videollamada"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Reconectar
+                  </button>
                 )}
               </div>
 
@@ -703,39 +696,27 @@ export default function MagicLinkPage() {
 
       {/* Botón flotante para reabrir videollamada */}
       {!videoCallOpen && session && session.status === "active" && session.inspection_type === "remote" && (
-        <Tooltip>
-          <TooltipTrigger className="inline-flex">
-            <button
-              onClick={() => {
-                setChatPanelOpen(true);
-                setVideoCallOpen(true);
-              }}
-              className="fixed bottom-20 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-violet-600 text-white shadow-lg hover:scale-105 transition-transform"
-            >
-              <Video className="h-5 w-5" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            <p>Reanudar videollamada</p>
-          </TooltipContent>
-        </Tooltip>
+        <button
+          onClick={() => {
+            setChatPanelOpen(true);
+            setVideoCallOpen(true);
+          }}
+          className="fixed bottom-20 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-violet-600 text-white shadow-lg hover:scale-105 transition-transform"
+          title="Reanudar videollamada"
+        >
+          <Video className="h-5 w-5" />
+        </button>
       )}
 
       {/* Botón flotante para reabrir chat */}
       {!chatPanelOpen && (
-        <Tooltip>
-          <TooltipTrigger className="inline-flex">
-            <button
-              onClick={() => setChatPanelOpen(true)}
-              className="fixed bottom-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-sky-600 text-white shadow-lg hover:scale-105 transition-transform"
-            >
-              <MessageSquare className="h-5 w-5" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            <p>Abrir chat</p>
-          </TooltipContent>
-        </Tooltip>
+        <button
+          onClick={() => setChatPanelOpen(true)}
+          className="fixed bottom-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-sky-600 text-white shadow-lg hover:scale-105 transition-transform"
+          title="Abrir chat"
+        >
+          <MessageSquare className="h-5 w-5" />
+        </button>
       )}
 
       <div className="text-center pb-6 pt-4">

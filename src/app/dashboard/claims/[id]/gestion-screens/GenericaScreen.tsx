@@ -40,7 +40,7 @@ export default function GenericaScreen({ action, onChange, readOnly }: GestionSc
           }
         }}
       >
-        Validar
+        Validar JSON
       </button>
     </div>
   );

@@ -4,7 +4,6 @@ import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-r
 import { cn } from "@/lib/utils";
 import { APP_CONFIG } from "@/lib/config";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 interface PaginationProps {
   page: number;
@@ -51,38 +50,26 @@ export function Pagination({ page, totalPages, total, pageSize, onPageChange, on
   // + números de página redondos en el medio
   const controls = (
     <div className="flex items-center gap-1">
-      <Tooltip>
-        <TooltipTrigger className="inline-flex">
-          <button
-            type="button"
-            disabled={!canPrev}
-            onClick={() => onPageChange(1)}
-            className="flex size-6 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
-            aria-label="Primera página"
-          >
-            <ChevronsLeft className="size-3.5" />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="top">
-          <p>Primera página</p>
-        </TooltipContent>
-      </Tooltip>
-      <Tooltip>
-        <TooltipTrigger className="inline-flex">
-          <button
-            type="button"
-            disabled={!canPrev}
-            onClick={() => onPageChange(page - 1)}
-            className="flex size-6 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
-            aria-label="Página anterior"
-          >
-            <ChevronLeft className="size-3.5" />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="top">
-          <p>Página anterior</p>
-        </TooltipContent>
-      </Tooltip>
+      <button
+        type="button"
+        disabled={!canPrev}
+        onClick={() => onPageChange(1)}
+        className="flex size-6 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+        title="Primera página"
+        aria-label="Primera página"
+      >
+        <ChevronsLeft className="size-3.5" />
+      </button>
+      <button
+        type="button"
+        disabled={!canPrev}
+        onClick={() => onPageChange(page - 1)}
+        className="flex size-6 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+        title="Página anterior"
+        aria-label="Página anterior"
+      >
+        <ChevronLeft className="size-3.5" />
+      </button>
 
       {pages.map((p, i) =>
         p === "..." ? (
@@ -104,38 +91,26 @@ export function Pagination({ page, totalPages, total, pageSize, onPageChange, on
         )
       )}
 
-      <Tooltip>
-        <TooltipTrigger className="inline-flex">
-          <button
-            type="button"
-            disabled={!canNext}
-            onClick={() => onPageChange(page + 1)}
-            className="flex size-6 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
-            aria-label="Página siguiente"
-          >
-            <ChevronRight className="size-3.5" />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="top">
-          <p>Página siguiente</p>
-        </TooltipContent>
-      </Tooltip>
-      <Tooltip>
-        <TooltipTrigger className="inline-flex">
-          <button
-            type="button"
-            disabled={!canNext}
-            onClick={() => onPageChange(totalPages)}
-            className="flex size-6 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
-            aria-label="Última página"
-          >
-            <ChevronsRight className="size-3.5" />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="top">
-          <p>Última página</p>
-        </TooltipContent>
-      </Tooltip>
+      <button
+        type="button"
+        disabled={!canNext}
+        onClick={() => onPageChange(page + 1)}
+        className="flex size-6 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+        title="Página siguiente"
+        aria-label="Página siguiente"
+      >
+        <ChevronRight className="size-3.5" />
+      </button>
+      <button
+        type="button"
+        disabled={!canNext}
+        onClick={() => onPageChange(totalPages)}
+        className="flex size-6 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+        title="Última página"
+        aria-label="Última página"
+      >
+        <ChevronsRight className="size-3.5" />
+      </button>
     </div>
   );
 
@@ -148,36 +123,24 @@ export function Pagination({ page, totalPages, total, pageSize, onPageChange, on
     // el resto ([1 2 3] ▶ ⏭) va a la derecha.
     const prevButtons = (
       <>
-        <Tooltip>
-          <TooltipTrigger className="inline-flex">
-            <button
-              type="button"
-              disabled={!canPrev}
-              onClick={() => onPageChange(1)}
-              className="flex size-6 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
-            >
-              <ChevronsLeft className="size-3.5" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            <p>Primera página</p>
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger className="inline-flex">
-            <button
-              type="button"
-              disabled={!canPrev}
-              onClick={() => onPageChange(page - 1)}
-              className="flex size-6 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
-            >
-              <ChevronLeft className="size-3.5" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            <p>Página anterior</p>
-          </TooltipContent>
-        </Tooltip>
+        <button
+          type="button"
+          disabled={!canPrev}
+          onClick={() => onPageChange(1)}
+          className="flex size-6 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+          title="Primera página"
+        >
+          <ChevronsLeft className="size-3.5" />
+        </button>
+        <button
+          type="button"
+          disabled={!canPrev}
+          onClick={() => onPageChange(page - 1)}
+          className="flex size-6 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+          title="Página anterior"
+        >
+          <ChevronLeft className="size-3.5" />
+        </button>
       </>
     );
     const nextButtons = (
@@ -201,36 +164,24 @@ export function Pagination({ page, totalPages, total, pageSize, onPageChange, on
             </button>
           )
         )}
-        <Tooltip>
-          <TooltipTrigger className="inline-flex">
-            <button
-              type="button"
-              disabled={!canNext}
-              onClick={() => onPageChange(page + 1)}
-              className="flex size-6 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
-            >
-              <ChevronRight className="size-3.5" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            <p>Página siguiente</p>
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger className="inline-flex">
-            <button
-              type="button"
-              disabled={!canNext}
-              onClick={() => onPageChange(totalPages)}
-              className="flex size-6 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
-            >
-              <ChevronsRight className="size-3.5" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            <p>Última página</p>
-          </TooltipContent>
-        </Tooltip>
+        <button
+          type="button"
+          disabled={!canNext}
+          onClick={() => onPageChange(page + 1)}
+          className="flex size-6 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+          title="Página siguiente"
+        >
+          <ChevronRight className="size-3.5" />
+        </button>
+        <button
+          type="button"
+          disabled={!canNext}
+          onClick={() => onPageChange(totalPages)}
+          className="flex size-6 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+          title="Última página"
+        >
+          <ChevronsRight className="size-3.5" />
+        </button>
       </>
     );
     return (
@@ -254,16 +205,9 @@ export function Pagination({ page, totalPages, total, pageSize, onPageChange, on
             value={String(pageSize)}
             onValueChange={(v) => onPageSizeChange(Number(v))}
           >
-            <Tooltip>
-              <TooltipTrigger className="inline-flex">
-                <SelectTrigger className="selector_pages">
-                  <SelectValue />
-                </SelectTrigger>
-              </TooltipTrigger>
-              <TooltipContent side="top">
-                <p>Registros por página</p>
-              </TooltipContent>
-            </Tooltip>
+            <SelectTrigger className="selector_pages" title="Registros por página">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent className="selector_pages">
               {APP_CONFIG.pagination.pageSizeOptions.map((opt) => (
                 <SelectItem key={opt} value={String(opt)} className="selector_pages">{opt} / pág</SelectItem>
@@ -289,16 +233,9 @@ export function Pagination({ page, totalPages, total, pageSize, onPageChange, on
             value={String(pageSize)}
             onValueChange={(v) => onPageSizeChange(Number(v))}
           >
-            <Tooltip>
-              <TooltipTrigger className="inline-flex">
-                <SelectTrigger className="selector_pages">
-                  <SelectValue />
-                </SelectTrigger>
-              </TooltipTrigger>
-              <TooltipContent side="top">
-                <p>Registros por página</p>
-              </TooltipContent>
-            </Tooltip>
+            <SelectTrigger className="selector_pages" title="Registros por página">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent className="selector_pages">
               {APP_CONFIG.pagination.pageSizeOptions.map((opt) => (
                 <SelectItem key={opt} value={String(opt)} className="selector_pages">{opt} / pág</SelectItem>

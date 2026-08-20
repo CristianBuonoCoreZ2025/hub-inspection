@@ -15,14 +15,12 @@ import {
 } from "@/components/ui/select";
 import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/use-permissions";
-import { useConfirm } from "@/hooks/use-confirm";
 import {
   getEmailTemplates,
   deleteEmailTemplate,
 } from "@/services/email-templates";
 import { getBusinessLines } from "@/services/catalogs";
 import { toast } from "sonner";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 export default function EmailTemplatesPage() {
   const router = useRouter();
@@ -30,7 +28,6 @@ export default function EmailTemplatesPage() {
   const companyId = profile?.company_id;
   const queryClient = useQueryClient();
   const { canCreate, canEdit, canDelete } = usePermissions();
-  const confirm = useConfirm();
 
   const [search, setSearch] = useState("");
   const [businessLineFilter, setBusinessLineFilter] = useState<string>("all");
@@ -244,7 +241,7 @@ export default function EmailTemplatesPage() {
                                     ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 font-semibold"
                                     : "bg-muted text-muted-foreground"
                                 }`}
-                                aria-label={a.action_template?.name || ""}
+                                title={a.action_template?.name || ""}
                               >
                                 {a.action_template?.code || a.action_template?.name || "—"}
                                 {a.is_default && " · default"}
@@ -267,48 +264,36 @@ export default function EmailTemplatesPage() {
                       <td>
                         <div className="app-row-actions">
                           {canEdit("catalogos") && (
-                            <Tooltip>
-                              <TooltipTrigger render={
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="btn-icon-sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    router.push(
-                                      `/dashboard/catalogos/gestiones/email-templates/${t.id}`
-                                    );
-                                  }}
-                                />
-                              }>
-                                <Pencil className="h-3.5 w-3.5" />
-                              </TooltipTrigger>
-                              <TooltipContent side="top">
-                                <p>Editar</p>
-                              </TooltipContent>
-                            </Tooltip>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="btn-icon-sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(
+                                  `/dashboard/catalogos/gestiones/email-templates/${t.id}`
+                                );
+                              }}
+                              title="Editar"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
                           )}
                           {canDelete("catalogos") && t.is_active && (
-                            <Tooltip>
-                              <TooltipTrigger render={
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="btn-icon-sm btn-danger-hover"
-                                  onClick={async (e) => {
-                                    e.stopPropagation();
-                                    const ok = await confirm({ title: "Desactivar", description: "¿Desactivar esta plantilla?", confirmLabel: "Desactivar", destructive: true });
-                                    if (!ok) return;
-                                    deleteMutation.mutate(t.id);
-                                  }}
-                                />
-                              }>
-                                <Ban className="h-3.5 w-3.5" />
-                              </TooltipTrigger>
-                              <TooltipContent side="top">
-                                <p>Desactivar</p>
-                              </TooltipContent>
-                            </Tooltip>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="btn-icon-sm btn-danger-hover"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm("¿Desactivar esta plantilla?")) {
+                                  deleteMutation.mutate(t.id);
+                                }
+                              }}
+                              title="Desactivar"
+                            >
+                              <Ban className="h-3.5 w-3.5" />
+                            </Button>
                           )}
                         </div>
                       </td>

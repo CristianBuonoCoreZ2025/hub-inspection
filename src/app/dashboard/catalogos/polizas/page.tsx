@@ -26,7 +26,6 @@ import {
  SelectTrigger,
  SelectValue,
 } from "@/components/ui/select";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 const statusLabels: Record<string, string> = {
  draft: "Borrador",
@@ -282,22 +281,12 @@ export default function PolizasPage() {
  </td>
  <td>
  <div className="app-row-actions">
- <Tooltip>
- <TooltipTrigger render={<button type="button" className="btn-icon-sm" onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/catalogos/polizas/${p.id}`); }} />}>
+ <button type="button" className="btn-icon-sm" onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/catalogos/polizas/${p.id}`); }} title="Ver">
  <Eye className="h-4 w-4" />
- </TooltipTrigger>
- <TooltipContent side="top">
- <p>Ver</p>
- </TooltipContent>
- </Tooltip>
- <Tooltip>
- <TooltipTrigger render={<button type="button" className="btn-icon-sm" onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/catalogos/polizas/${p.id}`); }} />}>
+ </button>
+ <button type="button" className="btn-icon-sm" onClick={(e) => { e.stopPropagation(); router.push(`/dashboard/catalogos/polizas/${p.id}`); }} title="Editar">
  <Pencil className="h-4 w-4" />
- </TooltipTrigger>
- <TooltipContent side="top">
- <p>Editar</p>
- </TooltipContent>
- </Tooltip>
+ </button>
  </div>
  </td>
  </tr>

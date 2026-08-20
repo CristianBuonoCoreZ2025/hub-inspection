@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePagination } from "@/hooks/use-pagination";
 import { useTableSort } from "@/hooks/use-table-sort";
-import { useConfirm } from "@/hooks/use-confirm";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import {
@@ -31,7 +30,6 @@ import {
 } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { FieldConfigEditor, type FieldConfig } from "@/components/ui/field-config-editor";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 interface FormData {
   name: string;
@@ -41,7 +39,6 @@ interface FormData {
 export default function PropertyClassificationPage() {
   const queryClient = useQueryClient();
   const { canCreate, canEdit, canDelete } = usePermissions();
-  const confirm = useConfirm();
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -328,14 +325,9 @@ export default function PropertyClassificationPage() {
                           }}><Pencil className="h-4 w-4" /></button>
                         )}
                         {canEdit("catalogos") && (
-                          <Tooltip>
-                            <TooltipTrigger render={<button type="button" className="btn-icon-sm" onClick={() => openRelations(item)} />}>
-                              <Home className="h-4 w-4" />
-                            </TooltipTrigger>
-                            <TooltipContent side="top">
-                              <p>Destinos relacionados</p>
-                            </TooltipContent>
-                          </Tooltip>
+                          <button type="button" className="btn-icon-sm" onClick={() => openRelations(item)} title="Destinos relacionados">
+                            <Home className="h-4 w-4" />
+                          </button>
                         )}
                         {canEdit("catalogos") && (
                           <button type="button" className="btn-icon-sm" onClick={() => {
@@ -344,7 +336,7 @@ export default function PropertyClassificationPage() {
                           }}><Settings2 className="h-4 w-4" /></button>
                         )}
                         {canDelete("catalogos") && (
-                          <button type="button" className="btn-icon-sm btn-danger-hover" onClick={async () => { const ok = await confirm({ title: "Desactivar", description: "¿Desactivar este registro?", confirmLabel: "Desactivar", destructive: true }); if (!ok) return; deleteMutation.mutate(item.id); }}>
+                          <button type="button" className="btn-icon-sm btn-danger-hover" onClick={() => { if (confirm("Desactivar?")) deleteMutation.mutate(item.id); }}>
                             <Ban className="h-4 w-4" />
                           </button>
                         )}

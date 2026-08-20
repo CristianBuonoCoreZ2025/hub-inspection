@@ -22,7 +22,6 @@ import {
 } from "@/services/tempario";
 import { getRegions, getCountryCurrencies } from "@/services/catalogs";
 import { usePermissions } from "@/hooks/use-permissions";
-import { useConfirm } from "@/hooks/use-confirm";
 import { toast } from "sonner";
 import { HardHat, Pencil, Plus, Trash2, Search, Coins, MapPin } from "lucide-react";
 
@@ -43,7 +42,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ToggleChip } from "@/components/ui/toggle-chip";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
   TEMPARIO_COMPLEXITY_LABELS,
@@ -111,7 +109,6 @@ const EMPTY_PRICE: PriceForm = {
 export function TemparioManager() {
   const queryClient = useQueryClient();
   const { canCreate, canEdit, canDelete } = usePermissions();
-  const confirm = useConfirm();
 
   // ── Filtros ──
   const [search, setSearch] = useState("");
@@ -586,7 +583,7 @@ export function TemparioManager() {
                         <td className="tabular-nums font-medium">
                           <span
                             className={isEstimated(tp.price_source, tp.factor_zonal) ? "text-amber-600 dark:text-amber-500" : ""}
-                            aria-label={tp.price_source ?? undefined}
+                            title={tp.price_source ?? undefined}
                           >
                             {formatPrice(tp.price ?? null, tp.currency_code ?? null)}
                             {isEstimated(tp.price_source, tp.factor_zonal) && <span className="text-amber-500"> *</span>}
@@ -604,30 +601,17 @@ export function TemparioManager() {
                       <td onClick={(e) => e.stopPropagation()}>
                         <div className="app-row-actions">
                           {canEdit(SECTION) && (
-                            <Tooltip>
-                              <TooltipTrigger className="inline-flex">
-                                <button type="button" className="btn-icon-sm" onClick={() => openEdit(t)}>
-                                  <Pencil className="h-4 w-4" />
-                                </button>
-                              </TooltipTrigger>
-                              <TooltipContent side="top">
-                                <p>Editar</p>
-                              </TooltipContent>
-                            </Tooltip>
+                            <button type="button" className="btn-icon-sm" onClick={() => openEdit(t)} title="Editar">
+                              <Pencil className="h-4 w-4" />
+                            </button>
                           )}
                           {canDelete(SECTION) && (
-                            <Tooltip>
-                              <TooltipTrigger className="inline-flex">
-                                <button type="button" className="btn-icon-sm btn-danger-hover"
-                                  onClick={async () => { const ok = await confirm({ title: "Desactivar", description: "Desactivar partida?", confirmLabel: "Desactivar", destructive: true }); if (!ok) return; deleteTaskMut.mutate(t.id); }}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              </TooltipTrigger>
-                              <TooltipContent side="top">
-                                <p>Desactivar</p>
-                              </TooltipContent>
-                            </Tooltip>
+                            <button type="button" className="btn-icon-sm btn-danger-hover"
+                              onClick={() => { if (confirm("Desactivar partida?")) deleteTaskMut.mutate(t.id); }}
+                              title="Desactivar"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
                           )}
                         </div>
                       </td>
@@ -861,7 +845,7 @@ export function TemparioManager() {
                               <td className="text-muted-foreground">{p.region?.name ?? "—"}</td>
                               <td className="font-mono text-muted-foreground">{p.currency_code}</td>
                               <td className="tabular-nums font-medium">
-                                <span className={est ? "text-amber-600 dark:text-amber-500" : ""} aria-label={p.source ?? undefined}>
+                                <span className={est ? "text-amber-600 dark:text-amber-500" : ""} title={p.source ?? undefined}>
                                   {formatPrice(p.price, p.currency_code)}
                                   {est && <span className="text-amber-500"> *</span>}
                                 </span>
@@ -874,28 +858,15 @@ export function TemparioManager() {
                               <td className="text-muted-foreground text-[10px]">{p.source}</td>
                               <td>
                                 <div className="app-row-actions">
-                                  <Tooltip>
-                                    <TooltipTrigger className="inline-flex">
-                                      <button type="button" className="btn-icon-sm" onClick={() => editPrice(p)}>
-                                        <Pencil className="h-3.5 w-3.5" />
-                                      </button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="top">
-                                      <p>Editar</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                  <Tooltip>
-                                    <TooltipTrigger className="inline-flex">
-                                      <button type="button" className="btn-icon-sm btn-danger-hover"
-                                        onClick={async () => { const ok = await confirm({ title: "Desactivar", description: "Desactivar precio?", confirmLabel: "Desactivar", destructive: true }); if (!ok) return; deletePriceMut.mutate(p.id); }}
-                                      >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                      </button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="top">
-                                      <p>Desactivar</p>
-                                    </TooltipContent>
-                                  </Tooltip>
+                                  <button type="button" className="btn-icon-sm" onClick={() => editPrice(p)} title="Editar">
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button type="button" className="btn-icon-sm btn-danger-hover"
+                                    onClick={() => { if (confirm("Desactivar precio?")) deletePriceMut.mutate(p.id); }}
+                                    title="Desactivar"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
                                 </div>
                               </td>
                             </tr>

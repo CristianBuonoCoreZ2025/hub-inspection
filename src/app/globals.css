@@ -74,16 +74,6 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* ═══════════════════════════════════════════════════════════════
- * Curvas de animación custom — mejores que las nativas de CSS.
- * Basadas en emil-design-eng / Apple-style easing.
- * ═══════════════════════════════════════════════════════════════ */
-:root {
-  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
-  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
-}
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -147,8 +137,6 @@
   color-scheme: light;
   --font-dm-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
   --font-sora: "Sora", ui-sans-serif, system-ui, sans-serif;
-  --font-geist-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
-  --font-space-grotesk: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   /* Paleta base — 9 colores compartidos */
   --c-canvas:   #FAFAFA;
   --c-ink:      #0A0A0A;
@@ -174,9 +162,6 @@
   --c-sky-dark:  #0284C7;
   /* Accent warm foreground (único hex propio) */
   --c-accent-warm-fg: #9A3412;
-  /* Brand colors (color de marca) */
-  --c-brand:      #0095DA;
-  --c-brand-dark: #005BBB;
   /* Overlay/shadow skin */
   --c-overlay-air:      #1223346B;
   --c-overlay-arctic:   #0027326B;

@@ -16,13 +16,11 @@ export default function MobileDamagesTab({
   sessionStatus,
 }: MobileDamagesTabProps) {
   return (
-    <div className="mobile-damage-form">
-      <DamagesTab
-        sessionId={sessionId}
-        propertyClassification={propertyClassification}
-        countryId={countryId}
-        sessionStatus={sessionStatus}
-      />
-    </div>
+    <DamagesTab
+      sessionId={sessionId}
+      propertyClassification={propertyClassification}
+      countryId={countryId}
+      sessionStatus={sessionStatus}
+    />
   );
 }

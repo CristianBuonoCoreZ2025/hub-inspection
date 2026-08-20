@@ -13,7 +13,6 @@ import { Upload, Trash2, ImageIcon, Pencil, Check, X, PenTool, Lock } from "luci
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import { useConfirm } from "@/hooks/use-confirm";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 export default function SketchesTab({ sessionId, sessionStatus, magicLinkToken }: { sessionId: string; sessionStatus?: string; magicLinkToken?: string }) {
  const queryClient = useQueryClient();
@@ -202,36 +201,24 @@ export default function SketchesTab({ sessionId, sessionStatus, magicLinkToken }
  </h3>
  {!readOnly && (
  <>
- <Tooltip>
-   <TooltipTrigger className="inline-flex">
-     <Button
-       variant="ghost"
-       size="icon"
-       className="btn-icon-sm"
-       onClick={() => setMode("draw")}
-     >
-       <PenTool className="h-3.5 w-3.5" />
-     </Button>
-   </TooltipTrigger>
-   <TooltipContent side="top">
-     <p>Dibujar croquis</p>
-   </TooltipContent>
- </Tooltip>
- <Tooltip>
-   <TooltipTrigger className="inline-flex">
-     <Button
-       variant="ghost"
-       size="icon"
-       className="btn-icon-sm"
-       onClick={() => fileInputRef.current?.click()}
-     >
-       <Upload className="h-3.5 w-3.5" />
-     </Button>
-   </TooltipTrigger>
-   <TooltipContent side="top">
-     <p>Subir croquis</p>
-   </TooltipContent>
- </Tooltip>
+ <Button
+ variant="ghost"
+ size="icon"
+ className="btn-icon-sm"
+ title="Dibujar croquis"
+ onClick={() => setMode("draw")}
+ >
+ <PenTool className="h-3.5 w-3.5" />
+ </Button>
+ <Button
+ variant="ghost"
+ size="icon"
+ className="btn-icon-sm"
+ title="Subir croquis"
+ onClick={() => fileInputRef.current?.click()}
+ >
+ <Upload className="h-3.5 w-3.5" />
+ </Button>
  <input
  ref={fileInputRef}
  type="file"
@@ -303,62 +290,44 @@ export default function SketchesTab({ sessionId, sessionStatus, magicLinkToken }
  </span>
  {!readOnly && (
  <>
- <Tooltip>
-   <TooltipTrigger className="inline-flex">
-     <Button
-       variant="ghost"
-       size="icon"
-       className="btn-icon-sm"
-       onClick={() => {
-         setDrawEditingSketch({ id: sketch.id, url: `/api/inspection/sketch/${sketch.id}/image`, sketchData: sketch.sketch_data, label: sketch.label || "" });
-         setMode("draw");
-       }}
-     >
-       <PenTool className="h-3.5 w-3.5" />
-     </Button>
-   </TooltipTrigger>
-   <TooltipContent side="top">
-     <p>Dibujar / Editar</p>
-   </TooltipContent>
- </Tooltip>
- <Tooltip>
-   <TooltipTrigger className="inline-flex">
-     <Button
-       variant="ghost"
-       size="icon"
-       className="btn-icon-sm"
-       onClick={() => startEdit(sketch)}
-     >
-       <Pencil className="h-3.5 w-3.5" />
-     </Button>
-   </TooltipTrigger>
-   <TooltipContent side="top">
-     <p>Renombrar</p>
-   </TooltipContent>
- </Tooltip>
- <Tooltip>
-   <TooltipTrigger className="inline-flex">
-     <Button
-       variant="ghost"
-       size="icon"
-       className="btn-icon-sm"
-       onClick={async () => {
-         const ok = await confirmDelete({
-           title: "Eliminar croquis",
-           description: "¿Estás seguro? Esta acción no se puede deshacer.",
-           destructive: true,
-           confirmLabel: "Eliminar",
-         });
-         if (ok) deleteMutation.mutate(sketch.id);
-       }}
-     >
-       <Trash2 className="h-3.5 w-3.5" />
-     </Button>
-   </TooltipTrigger>
-   <TooltipContent side="top">
-     <p>Eliminar</p>
-   </TooltipContent>
- </Tooltip>
+ <Button
+ variant="ghost"
+ size="icon"
+ className="btn-icon-sm"
+ title="Dibujar / Editar"
+ onClick={() => {
+ setDrawEditingSketch({ id: sketch.id, url: `/api/inspection/sketch/${sketch.id}/image`, sketchData: sketch.sketch_data, label: sketch.label || "" });
+ setMode("draw");
+ }}
+ >
+ <PenTool className="h-3.5 w-3.5" />
+ </Button>
+ <Button
+ variant="ghost"
+ size="icon"
+ className="btn-icon-sm"
+ title="Renombrar"
+ onClick={() => startEdit(sketch)}
+ >
+ <Pencil className="h-3.5 w-3.5" />
+ </Button>
+ <Button
+ variant="ghost"
+ size="icon"
+ className="btn-icon-sm"
+ title="Eliminar"
+ onClick={async () => {
+ const ok = await confirmDelete({
+   title: "Eliminar croquis",
+   description: "¿Estás seguro? Esta acción no se puede deshacer.",
+   destructive: true,
+   confirmLabel: "Eliminar",
+ });
+ if (ok) deleteMutation.mutate(sketch.id);
+ }}
+ >
+ <Trash2 className="h-3.5 w-3.5" />
+ </Button>
  </>
  )}
  </>

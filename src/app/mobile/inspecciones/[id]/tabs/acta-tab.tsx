@@ -30,5 +30,5 @@ export default function MobileActaTab({ sessionId, onComplete }: { sessionId: st
     );
   }
 
-  return <ActaForm session={session} />;
+  return <ActaForm session={session} onComplete={onComplete} />;
 }

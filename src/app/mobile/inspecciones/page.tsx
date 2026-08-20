@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getInspectionSessionsLight, canAccessInspectionSession, type SessionWithRelations } from "@/services/inspections";
 import { useAuth } from "@/hooks/use-auth";
 import { useRealtime } from "@/hooks/use-realtime";
-import { ClipboardCheck, Calendar, MapPin, Loader2, RefreshCw, Video, Home, User, UserCheck } from "lucide-react";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { ClipboardCheck, Calendar, MapPin, Loader2, RefreshCw, Video, Home } from "lucide-react";
 
 type TabKey = "todas" | "hoy" | "pendientes" | "en_curso" | "pausadas" | "completadas";
 
@@ -56,49 +55,29 @@ export default function MobileInspectionsPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { profile, dataAccess } = useAuth();
-  const canSeeAll = dataAccess?.is_admin || profile?.role === "internal";
   const [activeTab, setActiveTab] = useState<TabKey>("todas");
 
   useRealtime("inspection_sessions", [["inspection-sessions-mobile"]]);
 
-  const [page, setPage] = useState(1);
-  const [allSessions, setAllSessions] = useState<SessionWithRelations[]>([]);
-
-  const {
-    data: sessionsPage,
-    isLoading,
-    isFetching,
-  } = useQuery<SessionWithRelations[]>({
-    queryKey: ["inspection-sessions-mobile", page],
-    queryFn: () => getInspectionSessionsLight(undefined, { page, pageSize: 20 }),
+  const { data: sessions, isLoading, isFetching } = useQuery<SessionWithRelations[]>({
+    queryKey: ["inspection-sessions-mobile"],
+    queryFn: () => getInspectionSessionsLight(),
     staleTime: 30 * 1000,
   });
-
-  useEffect(() => {
-    if (!sessionsPage) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setAllSessions((prev) => {
-      if (page === 1) return sessionsPage;
-      const existingIds = new Set(prev.map((s) => s.id));
-      const newItems = sessionsPage.filter((s) => !existingIds.has(s.id));
-      return [...prev, ...newItems];
-    });
-  }, [sessionsPage, page]);
 
   // Filtrar: solo inspecciones presenciales (onsite) del inspector logueado
   // El mobile NO sirve para inspecciones remotas — nunca se muestran
   const mySessions = useMemo(() => {
-    if (!allSessions || !profile?.id) return [];
-    return allSessions.filter((s) => {
-      // Canceladas no se muestran en mobile
-      if (s.status === "cancelled") return false;
+    if (!sessions || !profile?.id) return [];
+    const canSeeAll = dataAccess?.is_admin || profile.role === "internal";
+    return sessions.filter((s) => {
       // Solo presenciales
       if (s.inspection_type !== "onsite") return false;
       if (canSeeAll) return true; // admin/interno ve todas las presenciales
       const effInspector = s.inspector_id || s.claim?.inspector_id;
       return effInspector === profile.id; // inspector ve solo las suyas
     });
-  }, [allSessions, profile, canSeeAll]);
+  }, [sessions, profile, dataAccess]);
 
   // Filtrar por tab
   const filteredSessions = useMemo(() => {
@@ -119,15 +98,13 @@ export default function MobileInspectionsPage() {
       case "pausadas":
         return mySessions.filter((s) => s.substate === "paused");
       case "completadas":
-        return mySessions.filter((s) => s.status === "completed");
+        return mySessions.filter((s) => s.status === "completed" || s.status === "cancelled");
       default:
         return mySessions;
     }
   }, [mySessions, activeTab]);
 
   const handleRefresh = () => {
-    setPage(1);
-    setAllSessions([]);
     queryClient.invalidateQueries({ queryKey: ["inspection-sessions-mobile"] });
   };
 
@@ -137,7 +114,7 @@ export default function MobileInspectionsPage() {
     { key: "pendientes", label: "Programadas", count: mySessions.filter((s) => s.status === "scheduled" && s.substate !== "paused").length },
     { key: "en_curso", label: "En curso", count: mySessions.filter((s) => s.status === "active" && s.substate !== "paused").length },
     { key: "pausadas", label: "Pausadas", count: mySessions.filter((s) => s.substate === "paused").length },
-    { key: "completadas", label: "Completadas", count: mySessions.filter((s) => s.status === "completed").length },
+    { key: "completadas", label: "Completadas", count: mySessions.filter((s) => s.status === "completed" || s.status === "cancelled").length },
   ];
 
   return (
@@ -151,6 +128,9 @@ export default function MobileInspectionsPage() {
             onClick={() => setActiveTab(t.key)}
           >
             {t.label}
+            {t.count > 0 && (
+              <span className="ml-1 text-xs opacity-60">({t.count})</span>
+            )}
           </button>
         ))}
       </div>
@@ -181,16 +161,11 @@ export default function MobileInspectionsPage() {
         ) : (
           filteredSessions.map((session) => {
             const address = session.claim?.claim_address || "Sin dirección";
-            const dateToShow = session.scheduled_at || session.created_at;
-            const dateLabel = dateToShow ? `${formatDate(dateToShow)} ${formatTime(dateToShow)}` : "Sin fecha";
+            const liquidation = session.claim?.liquidation_number || "";
+            const scheduled = session.scheduled_at;
             const statusClass = STATUS_COLORS[session.status] || "scheduled";
             const isPaused = session.substate === "paused";
             const canOpen = canAccessInspectionSession(session, profile, dataAccess);
-            const inspectorName = session.inspector?.full_name ||
-              session.claim?.inspector_id ||
-              session.inspector_id ||
-              "Inspector no asignado";
-            const insuredName = session.claim?.claims_participants?.[0]?.full_name || "";
 
             return (
               <button
@@ -199,10 +174,10 @@ export default function MobileInspectionsPage() {
                 onClick={() => canOpen && router.push(`/mobile/inspecciones/${session.id}`)}
                 disabled={!canOpen}
               >
-                {/* Header: código de inspección + estado + tipo */}
+                {/* Header: código + estado + tipo */}
                 <div className="flex items-center justify-between gap-2">
-                  <span className="mobile-inspection-code truncate">
-                    {session.inspection_number || "Sin código"}
+                  <span className="mobile-inspection-code">
+                    {liquidation || session.inspection_number || "Sin código"}
                   </span>
                   <div className="flex items-center gap-1.5">
                     <span className={`mobile-type-badge ${INSPECTION_TYPE_LABELS[session.inspection_type]?.badgeClass || "mobile-type-badge-onsite"}`}>
@@ -215,63 +190,27 @@ export default function MobileInspectionsPage() {
                   </div>
                 </div>
 
-                <div className="mobile-inspection-inspector">
-                  {canSeeAll && (
-                    <Tooltip>
-                      <TooltipTrigger className="gap-1">
-                        <User className="h-3 w-3 shrink-0 text-blue-500" />
-                        <span>Insp. {inspectorName}</span>
-                      </TooltipTrigger>
-                      <TooltipContent side="top">
-                        <p>Inspector</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                  {insuredName && (
-                    <Tooltip>
-                      <TooltipTrigger className="gap-1">
-                        <UserCheck className="h-3 w-3 shrink-0 text-violet-500" />
-                        <span>Aseg. {insuredName}</span>
-                      </TooltipTrigger>
-                      <TooltipContent side="top">
-                        <p>Asegurado</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                </div>
-
                 {/* Dirección */}
                 <div className="mobile-inspection-address flex items-center gap-1">
                   <MapPin className="h-3 w-3 shrink-0" />
                   <span>{address}</span>
                 </div>
 
-                {/* Meta: fecha */}
+                {/* Meta: fecha + tipo (detalle) */}
                 <div className="mobile-inspection-meta">
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    {dateLabel}
+                  {scheduled && (
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {formatDate(scheduled)} {formatTime(scheduled)}
+                    </span>
+                  )}
+                  <span className="text-muted-foreground">
+                    {session.inspection_type === "remote" ? "Videollamada con asegurado" : "Inspector en campo"}
                   </span>
                 </div>
               </button>
             );
           })
-        )}
-
-        {!isLoading && sessionsPage && sessionsPage.length === 20 && (
-          <div className="mt-4 flex justify-center">
-            <button
-              onClick={() => setPage((p) => p + 1)}
-              disabled={isFetching}
-              className="mobile-btn"
-            >
-              {isFetching ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                "Cargar"
-              )}
-            </button>
-          </div>
         )}
       </div>
     </div>

@@ -13,7 +13,6 @@
 
 import { useMemo, useState } from "react";
 import { X, Save } from "lucide-react";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import * as fabric from "fabric";
 import { Button } from "@/components/ui/button";
 import { getEntityMeta, setEntityMeta } from "./entity-renderer";
@@ -205,21 +204,15 @@ export function SketchPropertiesPanel({ obj, canvas, onClose }: SketchProperties
            meta.category === "equipment" ? "Equipamiento" :
            "Anotación"}
         </span>
-        <Tooltip>
-          <TooltipTrigger render={
-            <button
-              type="button"
-              className="sketch-mode-btn"
-              onClick={onClose}
-              aria-label="Cerrar propiedades"
-            />
-          }>
-            <X className="size-3.5" />
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            <p>Cerrar</p>
-          </TooltipContent>
-        </Tooltip>
+        <button
+          type="button"
+          className="sketch-mode-btn"
+          onClick={onClose}
+          title="Cerrar"
+          aria-label="Cerrar propiedades"
+        >
+          <X className="size-3.5" />
+        </button>
       </div>
 
       <div className="sketch-properties-body">
@@ -249,25 +242,20 @@ export function SketchPropertiesPanel({ obj, canvas, onClose }: SketchProperties
             ) : field.inputType === "color" ? (
               <div className="sketch-properties-colors">
                 {ANNOTATION_COLORS.map((c) => (
-                  <Tooltip key={c.id}>
-                    <TooltipTrigger className="inline-flex">
-                      <button
-                        type="button"
-                        className={`sketch-mode-btn ${(values[field.name] ?? "yellow") === c.id ? "is-active" : ""}`}
-                        onClick={() => handleChange("color", c.id)}
-                        aria-label={`Color ${c.label}`}
-                      >
-                        <span
-                          className="sketch-block-swatch"
-                          // Excepción REGLA #2: color dinámico de la paleta.
-                          style={{ backgroundColor: c.hex }}
-                        />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      <p>{c.label}</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  <button
+                    key={c.id}
+                    type="button"
+                    className={`sketch-mode-btn ${(values[field.name] ?? "yellow") === c.id ? "is-active" : ""}`}
+                    onClick={() => handleChange("color", c.id)}
+                    title={c.label}
+                    aria-label={`Color ${c.label}`}
+                  >
+                    <span
+                      className="sketch-block-swatch"
+                      // Excepción REGLA #2: color dinámico de la paleta.
+                      style={{ backgroundColor: c.hex }}
+                    />
+                  </button>
                 ))}
               </div>
             ) : (

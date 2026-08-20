@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Copy, Check } from "lucide-react";
 import { toast } from "sonner";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 /**
  * Botón pequeño para copiar el resultado del análisis de IA al portapapeles.
@@ -24,17 +23,16 @@ export function AiCopyButton({ text }: { text: string }) {
   };
 
   return (
-    <Tooltip>
-      <TooltipTrigger render={<button onClick={handleCopy} className="ai-copy-btn" />}>
-        {copied ? (
-          <Check className="h-3 w-3" />
-        ) : (
-          <Copy className="h-3 w-3" />
-        )}
-      </TooltipTrigger>
-      <TooltipContent side="top">
-        <p>Copiar análisis</p>
-      </TooltipContent>
-    </Tooltip>
+    <button
+      onClick={handleCopy}
+      className="ai-copy-btn"
+      title="Copiar análisis"
+    >
+      {copied ? (
+        <Check className="h-3 w-3" />
+      ) : (
+        <Copy className="h-3 w-3" />
+      )}
+    </button>
   );
 }

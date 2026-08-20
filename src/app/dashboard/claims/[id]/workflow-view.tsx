@@ -121,7 +121,7 @@ function ActionRow({ action, onOpenAction }: { action: ClaimAction; onOpenAction
           if (lvl.state === "none") return null;
           const lcfg = stateConfig[lvl.state];
           return (
-            <div key={i} className="flex items-center gap-0.5" aria-label={`${lvl.title}: ${lcfg.label}`}>
+            <div key={i} className="flex items-center gap-0.5" title={`${lvl.title}: ${lcfg.label}`}>
               {i > 0 && <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/40" />}
               <div className={`flex items-center justify-center rounded-full ${lcfg.bg} ${lcfg.border} border backdrop-blur-sm w-5 h-5`}>
                 <span className={`text-[9px] font-bold ${lcfg.color}`}>{lvl.label}</span>

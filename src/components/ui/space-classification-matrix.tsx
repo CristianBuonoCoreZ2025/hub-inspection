@@ -4,7 +4,6 @@ import React from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff, Grid3x3 } from "lucide-react";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { DamageSpace, PropertyClassification } from "@/types";
 
 interface SpaceClassificationMatrixProps {
@@ -105,24 +104,18 @@ export function SpaceClassificationMatrix({
                       const isActive = active.has(cn);
                       return (
                         <td key={cn} className="text-center">
-                          <Tooltip>
-                            <TooltipTrigger render={
-                              <button
-                                type="button"
-                                onClick={() => toggle(space.id, cn)}
-                                className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition-all ${
-                                  isActive
-                                    ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400 hover:bg-emerald-200"
-                                    : "bg-muted text-muted-foreground hover:bg-muted/70"
-                                }`}
-                              />
-                            }>
-                              {isActive ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                            </TooltipTrigger>
-                            <TooltipContent side="top">
-                              <p>{isActive ? "Activo" : "Inactivo"}</p>
-                            </TooltipContent>
-                          </Tooltip>
+                          <button
+                            type="button"
+                            onClick={() => toggle(space.id, cn)}
+                            className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition-all ${
+                              isActive
+                                ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400 hover:bg-emerald-200"
+                                : "bg-muted text-muted-foreground hover:bg-muted/70"
+                            }`}
+                            title={isActive ? "Activo" : "Inactivo"}
+                          >
+                            {isActive ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                          </button>
                         </td>
                       );
                     })}

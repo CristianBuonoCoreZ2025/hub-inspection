@@ -324,7 +324,7 @@ export default function UbicacionesPage() {
  <th className="w-10"></th>
  <SortableTh sortKey="name" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Nombre</SortableTh>
  {level <= 1 && <SortableTh sortKey="code" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Codigo</SortableTh>}
- <th className="w-35"></th>
+ <th className="w-[140px]"></th>
  </tr>
  </thead>
  <tbody>

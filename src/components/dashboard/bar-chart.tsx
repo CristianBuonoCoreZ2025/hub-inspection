@@ -101,12 +101,12 @@ export function BarChartGlass({
             const fill = entry.color || color;
             return (
               <div className="horizontal-bar-row" key={`${entry.name}-${index}`}>
-                <div className="horizontal-bar-name" aria-label={entry.name}>
+                <div className="horizontal-bar-name" title={entry.name}>
                   {entry.name}
                 </div>
                 <div
                   className="horizontal-bar-track"
-                  aria-label={`${entry.name} — ${seriesName}: ${display}`}
+                  title={`${entry.name} — ${seriesName}: ${display}`}
                 >
                   <div
                     className="horizontal-bar-fill"

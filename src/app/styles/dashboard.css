@@ -40,7 +40,7 @@
       0 1px 0 0.5px rgba(255, 255, 255, 0.6) inset,
       0 -1px 0 0.5px rgba(0, 0, 0, 0.05) inset !important;
     overflow: visible;
-    transition: background-color 0.4s var(--ease-out), color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s var(--ease-out) !important;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
   }
 
   .dark .topbar-inner {
@@ -602,7 +602,7 @@
     color: var(--muted-foreground);
     cursor: pointer;
     opacity: 0.5;
-    transition: background-color 0.12s var(--ease-out), color 0.12s ease, opacity 0.12s ease;
+    transition: all 0.12s ease;
     flex-shrink: 0;
   }
 
@@ -634,7 +634,7 @@
       0 -1px 0 0.5px rgba(0, 0, 0, 0.03) inset;
     color: var(--foreground);
     cursor: pointer;
-    transition: background-color 0.2s var(--ease-out), color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s var(--ease-out);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     flex-shrink: 0;
     position: relative;
     z-index: 60;
@@ -915,7 +915,7 @@
     color: var(--foreground);
     cursor: pointer;
     flex-shrink: 0;
-    transition: background-color 0.15s var(--ease-out), color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    transition: all 0.15s ease;
   }
 
   .mobile-nav-close:hover {
@@ -962,7 +962,7 @@
     border-radius: 12px;
     color: var(--muted-foreground);
     text-decoration: none;
-    transition: background-color 0.15s var(--ease-out), color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    transition: all 0.15s ease;
     cursor: pointer;
   }
 
@@ -1004,7 +1004,7 @@
     border-radius: 12px;
     color: var(--muted-foreground);
     cursor: pointer;
-    transition: background-color 0.15s var(--ease-out), color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    transition: all 0.15s ease;
     width: 100%;
     background: transparent;
     border: none;
@@ -1051,7 +1051,7 @@
     border-radius: 12px;
     color: var(--muted-foreground);
     cursor: pointer;
-    transition: background-color 0.15s var(--ease-out), color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    transition: all 0.15s ease;
     width: 100%;
     background: transparent;
     border: none;
@@ -2073,7 +2073,7 @@
     font-weight: 600;
     color: var(--muted-foreground);
     text-decoration: none;
-    transition: background-color 0.2s var(--ease-out), color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s var(--ease-out);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
     overflow: hidden;
   }
@@ -2110,7 +2110,7 @@
     height: 28px;
     border-radius: 8px;
     color: var(--muted-foreground);
-    transition: background-color 0.2s var(--ease-out), color 0.2s ease, border-color 0.2s ease;
+    transition: all 0.2s ease;
     background: linear-gradient(
       135deg,
       color-mix(in srgb, var(--sidebar) var(--glass-chip-hover-top), transparent) 0%,
@@ -2171,7 +2171,7 @@
       0 -1px 0 0.5px rgba(0, 0, 0, 0.03) inset;
     text-decoration: none;
     color: var(--foreground);
-    transition: background-color 0.25s var(--ease-out), color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s var(--ease-out);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
     overflow: hidden;
     min-height: 140px;
@@ -2616,7 +2616,7 @@
     justify-content: center !important;
     border-width: 1px !important;
     border-style: solid !important;
-    transition: background-color 0.15s var(--ease-out), color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease !important;
+    transition: all 0.15s ease !important;
   }
   .gestion-light-dot.is-active {
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite !important;

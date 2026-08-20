@@ -6,9 +6,7 @@ import { getChecklists, createChecklistItem, updateChecklistItem, deleteChecklis
 import { toast } from "sonner";
 import { Trash2, CheckCircle, Circle, MinusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useConfirm } from "@/hooks/use-confirm";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 const defaultAreas = [
  "Estructura",
@@ -31,7 +29,6 @@ type Status = "reviewed" | "pending" | "not_applicable";
 
 export default function ChecklistTab({ sessionId }: { sessionId: string }) {
  const queryClient = useQueryClient();
- const confirm = useConfirm();
  const [newItem, setNewItem] = useState({ area: "", item: "" });
 
  const { data: items, isLoading } = useQuery({
@@ -159,8 +156,6 @@ export default function ChecklistTab({ sessionId }: { sessionId: string }) {
  key={item.id}
  className="flex items-center gap-3 rounded-lg border px-3 py-2 hover:bg-muted/30 transition-colors"
  >
- <Tooltip>
- <TooltipTrigger className="inline-flex">
  <button
  onClick={() => {
  const statuses: Status[] = ["pending", "reviewed", "not_applicable"];
@@ -168,14 +163,10 @@ export default function ChecklistTab({ sessionId }: { sessionId: string }) {
  updateMutation.mutate({ id: item.id, data: { status: next } });
  }}
  className="shrink-0 p-1.5 rounded-lg touch-manipulation"
+ title={config.label}
  >
  <Icon className={`h-6 w-6 ${config.className}`} />
  </button>
- </TooltipTrigger>
- <TooltipContent side="top">
- <p>{config.label}</p>
- </TooltipContent>
- </Tooltip>
  <div className="flex-1 min-w-0">
  <p className="text-[13px] font-medium">{item.item}</p>
  {item.notes && <p className="text-xs text-muted-foreground">{item.notes}</p>}
@@ -195,16 +186,7 @@ export default function ChecklistTab({ sessionId }: { sessionId: string }) {
  variant="ghost"
  size="icon"
  className="btn-icon-sm btn-danger-hover h-7 w-7"
- onClick={async () => {
- const ok = await confirm({
- title: "Eliminar item",
- description: "¿Eliminar este item?",
- confirmLabel: "Eliminar",
- destructive: true,
- });
- if (!ok) return;
- deleteMutation.mutate(item.id);
- }}
+ onClick={() => { if (confirm("¿Eliminar este item?")) deleteMutation.mutate(item.id); }}
  >
  <Trash2 className="h-3.5 w-3.5" />
  </Button>

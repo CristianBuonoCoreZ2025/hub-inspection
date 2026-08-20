@@ -11,7 +11,6 @@ import { toast } from "sonner";
 import { FileText, Printer, CheckCircle2, RefreshCw, Lock, Download, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getUserTimeZone } from "@/lib/timezone";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { SessionDetail } from "@/services/inspections";
 
 const SEVERITY_LABELS: Record<string, string> = {
@@ -259,21 +258,21 @@ export default function ReportTab({
           img.src = dataUrl;
         } catch (err) {
           console.error("[report-pdf] Error convirtiendo imagen:", img.src, (err as Error).message);
-          // Reemplazar por un placeholder transparente 1x1 para que html2canvas
-          // no falle al renderizar imágenes que no pudieron cargarse.
-          originalSrcs.push(img.src);
-          img.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0x8AAAAASUVORK5CYII=";
         }
       }
+
+      console.log("[report-pdf] Imágenes convertidas:", originalSrcs.length, "de", images.length);
 
       const canvas = await html2canvas(content, {
         scale: 1,
         useCORS: false,
         allowTaint: false,
         backgroundColor: "#ffffff",
-        logging: false,
+        logging: true,
         imageTimeout: 0,
       });
+
+      console.log("[report-pdf] Canvas:", canvas.width, "x", canvas.height);
 
       // Restaurar los src originales
       Array.from(images).forEach((img, i) => {
@@ -298,6 +297,8 @@ export default function ReportTab({
         pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
       }
+
+      console.log("[report-pdf] PDF generado, páginas:", Math.ceil(imgHeight / pageHeight));
 
       return pdf.output("blob");
     } catch (err) {
@@ -644,7 +645,7 @@ export default function ReportTab({
     } finally {
       setZipPending(false);
     }
-  }, [report, generatePdf, videos, docs, otherEvidences, sketches, claimLiquidationNumber, claimNumber, sessionId, allPhotos]);
+  }, [report, generatePdf, photos, videos, docs, otherEvidences, sketches, claimLiquidationNumber, claimNumber, sessionId]);
   const companyName = profile?.company?.name || "—";
   const companyLogoRaw = profile?.company?.logo_url || null;
   // Validar que logo_url sea una URL válida con extensión de imagen.
@@ -685,7 +686,7 @@ export default function ReportTab({
             {generateMutation.isPending ? "Generando..." : report ? "Regenerar" : "Generar"}
           </Button>
         )}
-        {sessionStatus === "active" && !isCompleted && (
+        {!isFinal && sessionStatus === "active" && (
           <Button
             onClick={() => {
               const hasEvidences = evidences.length > 0;
@@ -720,27 +721,21 @@ export default function ReportTab({
               <Download className="mr-2 h-4 w-4" /> Descargar
             </button>
             {canRegenerate && (
-              <Tooltip>
-                <TooltipTrigger render={
-                  <button
-                    type="button"
-                    onClick={() => regeneratePdfMutation.mutate()}
-                    disabled={regeneratePdfMutation.isPending}
-                    className="pg-btn-platinum"
-                  />
-                }>
-                {regeneratePdfMutation.isPending ? (
-                  <><RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Regenerando...</>
-                ) : (
-                  <><RefreshCw className="mr-2 h-4 w-4" /> Regenerar PDF</>
-                )}
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  <p>Generar el PDF nuevamente y reemplazar el archivo guardado</p>
-                </TooltipContent>
-              </Tooltip>
+              <button
+                type="button"
+                onClick={() => regeneratePdfMutation.mutate()}
+                disabled={regeneratePdfMutation.isPending}
+                className="pg-btn-platinum"
+                title="Generar el PDF nuevamente y reemplazar el archivo guardado"
+              >
+              {regeneratePdfMutation.isPending ? (
+                <><RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Regenerando...</>
+              ) : (
+                <><RefreshCw className="mr-2 h-4 w-4" /> Regenerar PDF</>
+              )}
+              </button>
             )}
-            <button type="button" onClick={handleDownloadZip} disabled={zipPending} className={`pg-btn-platinum ${hideZip ? "hidden" : ""}`}>
+            <button type="button" onClick={handleDownloadZip} disabled={zipPending} className="pg-btn-platinum" style={{ display: hideZip ? "none" : undefined }}>
               <Archive className="mr-2 h-4 w-4" /> {zipPending ? "Comprimiendo..." : "ZIP"}
             </button>
             <div className="report-final-badge">

@@ -4,7 +4,6 @@ import { useState, useMemo, useCallback, Suspense, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { TableSkeleton } from "@/components/ui/skeletons";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import {
@@ -207,6 +206,26 @@ function InspectionsPageContent() {
     return activeInspectors;
   }, [sessions, users]);
 
+  const accessors = useMemo(
+    () => ({
+      internal_number: (s: { claim?: { liquidation_number?: string | null } | null }) => {
+        const match = (s.claim?.liquidation_number || "").match(/\d+/);
+        return match ? parseInt(match[0], 10) : 0;
+      },
+      inspection: (s: { inspection_number?: string | null }) => {
+        const match = (s.inspection_number || "").match(/\d+$/);
+        return match ? parseInt(match[0], 10) : 0;
+      },
+      client_reference: (s: { claim?: { client_reference?: string | null } | null }) => s.claim?.client_reference || "",
+      inspector: (s: { inspector_id?: string | null; claim?: { inspector_id?: string | null } | null }) => resolveInspectorName(s.inspector_id || s.claim?.inspector_id),
+      insured: (s: { claim?: { claims_participants?: { full_name?: string }[] } | null }) => s.claim?.claims_participants?.[0]?.full_name || "",
+      address: (s: { claim?: { claim_address?: string | null } | null }) => s.claim?.claim_address || "",
+      status: (s: { status: string }) => s.status,
+      scheduled: (s: { scheduled_at?: string | null }) => (s.scheduled_at ? new Date(s.scheduled_at).getTime() : 0),
+    }),
+    [resolveInspectorName]
+  );
+
   const filtered = useMemo(
     () =>
       sessions?.filter((s) => {
@@ -251,7 +270,6 @@ function InspectionsPageContent() {
 
   // Resetear a página 1 cuando cambian filtros o sort server-side
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset intencional de paginación al cambiar filtros
     setPage(1);
   }, [statusFilter, inspectorFilter, sortKey, sortDir, internalNumberFilter]);
 
@@ -455,7 +473,11 @@ function InspectionsPageContent() {
             </thead>
             <tbody>
               {isLoading ? (
-                <TableSkeleton rows={8} columns={9} />
+                <tr>
+                  <td colSpan={9} className="py-8 text-center text-muted-foreground">
+                    Cargando inspecciones...
+                  </td>
+                </tr>
               ) : sessionsError ? (
                 <tr>
                   <td colSpan={9} className="py-8 text-center text-destructive">
@@ -563,41 +585,33 @@ function InspectionsPageContent() {
                     </td>
                     <td>
                       <div className="app-row-actions" onClick={(e) => e.stopPropagation()}>
-                        <Tooltip>
-                          <TooltipTrigger className="inline-flex">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="btn-icon-sm"
-                              onClick={() => setLogSessionId(session.id)}
-                            >
-                              <Clock className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top">
-                            <p>Ver log de inicios y términos</p>
-                          </TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger className="inline-flex">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="btn-icon-sm"
-                              disabled={!canOpenSession(session)}
-                              onClick={() => canOpenSession(session) && router.push(`/dashboard/inspecciones/${session.id}`)}
-                            >
-                              {canOpenSession(session) ? (
-                                <Eye className="h-4 w-4" />
-                              ) : (
-                                <EyeOff className="h-4 w-4 text-amber-500" />
-                              )}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top">
-                            <p>{canOpenSession(session) ? "Ver" : "No se puede acceder: la inspección está en curso y siendo realizada por otro inspector"}</p>
-                          </TooltipContent>
-                        </Tooltip>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="btn-icon-sm"
+                          title="Ver log de inicios y términos"
+                          onClick={() => setLogSessionId(session.id)}
+                        >
+                          <Clock className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="btn-icon-sm"
+                          title={
+                            canOpenSession(session)
+                              ? "Ver"
+                              : "No se puede acceder: la inspección está en curso y siendo realizada por otro inspector"
+                          }
+                          disabled={!canOpenSession(session)}
+                          onClick={() => canOpenSession(session) && router.push(`/dashboard/inspecciones/${session.id}`)}
+                        >
+                          {canOpenSession(session) ? (
+                            <Eye className="h-4 w-4" />
+                          ) : (
+                            <EyeOff className="h-4 w-4 text-amber-500" />
+                          )}
+                        </Button>
                         {canEdit("inspecciones") && session.status === "scheduled" && (() => {
                           const effInspector = session.inspector_id || session.claim?.inspector_id || null;
                           const isAssigned = !!profile?.id && effInspector === profile.id;
@@ -605,58 +619,40 @@ function InspectionsPageContent() {
                           return (
                           <>
                             {session.substate === "paused" ? (
-                              <Tooltip>
-                                <TooltipTrigger className="inline-flex">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="btn-icon-sm text-amber-600 hover:text-amber-700"
-                                    onClick={() => resumeMutation.mutate(session.id)}
-                                  >
-                                    <FastForward className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent side="top">
-                                  <p>Reanudar (viene de pausa)</p>
-                                </TooltipContent>
-                              </Tooltip>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="btn-icon-sm text-amber-600 hover:text-amber-700"
+                                title="Reanudar (viene de pausa)"
+                                onClick={() => resumeMutation.mutate(session.id)}
+                              >
+                                <FastForward className="h-4 w-4" />
+                              </Button>
                             ) : (
-                              <Tooltip>
-                                <TooltipTrigger className="inline-flex">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="btn-icon-sm"
-                                    onClick={() => startMutation.mutate(session.id)}
-                                  >
-                                    <Play className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent side="top">
-                                  <p>Iniciar</p>
-                                </TooltipContent>
-                              </Tooltip>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="btn-icon-sm"
+                                title="Iniciar"
+                                onClick={() => startMutation.mutate(session.id)}
+                              >
+                                <Play className="h-4 w-4" />
+                              </Button>
                             )}
-                            <Tooltip>
-                              <TooltipTrigger className="inline-flex">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="btn-icon-sm"
-                                  onClick={() =>
-                                    updateMutation.mutate({
-                                      id: session.id,
-                                      input: { status: "cancelled" },
-                                    })
-                                  }
-                                >
-                                  <Ban className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent side="top">
-                                <p>Cancelar</p>
-                              </TooltipContent>
-                            </Tooltip>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="btn-icon-sm"
+                              title="Cancelar"
+                              onClick={() =>
+                                updateMutation.mutate({
+                                  id: session.id,
+                                  input: { status: "cancelled" },
+                                })
+                              }
+                            >
+                              <Ban className="h-4 w-4" />
+                            </Button>
                           </>
                           );
                         })()}

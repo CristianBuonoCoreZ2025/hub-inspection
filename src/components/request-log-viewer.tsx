@@ -159,7 +159,7 @@ export function RequestLogViewer() {
         </label>
       </div>
       {session && (
-        <div className="px-2 py-1 app-body bg-slate-200 text-slate-700 border-b truncate" aria-label={session.route}>
+        <div className="px-2 py-1 app-body bg-slate-200 text-slate-700 border-b truncate" title={session.route}>
           {session.route} &middot; {session.eventCount} eventos &middot; {session.errorCount} errores &middot; {session.slowCount} lentos &middot; {session.duplicateCount} dup
         </div>
       )}

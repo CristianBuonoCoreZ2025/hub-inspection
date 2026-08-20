@@ -141,9 +141,9 @@ export function SketchEditor({
     const color = "#1f2937";
     switch (m) {
       case "line":
-        return new fabric.Line([x, y, x, y], { stroke: color, strokeWidth: 3, strokeLineCap: "round", originX: "left", originY: "top" });
+        return new fabric.Line([x, y, x, y], { stroke: color, strokeWidth: 3, strokeLineCap: "round" });
       case "rectangle":
-        return new fabric.Rect({ left: x, top: y, width: 0, height: 0, fill: "transparent", stroke: color, strokeWidth: 2, originX: "left", originY: "top" });
+        return new fabric.Rect({ left: x, top: y, width: 0, height: 0, fill: "transparent", stroke: color, strokeWidth: 2 });
       case "circle":
         return new fabric.Circle({ left: x, top: y, radius: 0, originX: "left", originY: "top", fill: "transparent", stroke: color, strokeWidth: 2 });
     }

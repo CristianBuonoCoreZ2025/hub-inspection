@@ -3,7 +3,6 @@
 import { useState, useMemo } from "react";
 import { Search, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { DOCUMENT_FIELDS, FIELD_GROUPS } from "@/lib/document-fields";
 
 interface Props {
@@ -124,36 +123,30 @@ export function FieldInsertor({ activeTarget, onInsert, className }: Props) {
               <ul className="pb-2">
                 {fields.map((f) => (
                   <li key={f.key}>
-                    <Tooltip>
-                      <TooltipTrigger render={
-                        <button
-                          type="button"
-                          draggable
-                          onDragStart={(e) => {
-                            e.dataTransfer.setData("text/plain", `<${f.key}>`);
-                            e.dataTransfer.effectAllowed = "copy";
-                          }}
-                          onClick={() => {
-                            if (activeTarget) {
-                              onInsert(`<${f.key}>`, activeTarget);
-                            }
-                          }}
-                          disabled={!activeTarget}
-                          className="group w-full flex items-center gap-2 px-3 py-1 text-left text-[11px] hover:bg-muted/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        />
-                      }>
-                        <Plus className="h-3 w-3 shrink-0 text-muted-foreground group-hover:text-primary" />
-                        <span className="flex-1 min-w-0 truncate text-foreground">
-                          {f.label}
-                        </span>
-                        <code className="text-[10px] font-mono text-muted-foreground/70 shrink-0">
-                          {f.key}
-                        </code>
-                      </TooltipTrigger>
-                      <TooltipContent side="top">
-                        <p>{`Insertar <${f.key}>`}</p>
-                      </TooltipContent>
-                    </Tooltip>
+                    <button
+                      type="button"
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData("text/plain", `<${f.key}>`);
+                        e.dataTransfer.effectAllowed = "copy";
+                      }}
+                      onClick={() => {
+                        if (activeTarget) {
+                          onInsert(`<${f.key}>`, activeTarget);
+                        }
+                      }}
+                      disabled={!activeTarget}
+                      className="group w-full flex items-center gap-2 px-3 py-1 text-left text-[11px] hover:bg-muted/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      title={`Insertar <${f.key}>`}
+                    >
+                      <Plus className="h-3 w-3 shrink-0 text-muted-foreground group-hover:text-primary" />
+                      <span className="flex-1 min-w-0 truncate text-foreground">
+                        {f.label}
+                      </span>
+                      <code className="text-[10px] font-mono text-muted-foreground/70 shrink-0">
+                        {f.key}
+                      </code>
+                    </button>
                   </li>
                 ))}
               </ul>

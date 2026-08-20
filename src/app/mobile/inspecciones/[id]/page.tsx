@@ -216,7 +216,7 @@ export default function MobileInspectionDetailPage() {
   ];
 
   return (
-    <div className="flex flex-col min-h-dvh">
+    <div className="flex flex-col min-h-screen">
       {/* Header: datos del siniestro + estado */}
       <div className="px-4 py-3 border-b bg-background">
         <div className="flex items-center justify-between gap-2 mb-2">
@@ -233,81 +233,73 @@ export default function MobileInspectionDetailPage() {
             </span>
           </div>
         </div>
-        {/* Split 70-30: izquierda datos, derecha botones de acción */}
-        <div className="mobile-header-split">
-          {/* 70% — dirección + asegurado */}
-          <div className="mobile-header-split-left">
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <MapPin className="h-3 w-3 shrink-0" />
-              <span className="truncate">{address}</span>
-            </div>
-            {insured && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <span className="truncate">{insured.full_name}</span>
-              </div>
-            )}
-          </div>
-          {/* 30% — botones de acción */}
-          {isAssignedInspector && (isPlanned || isActive) && (
-            <div className="mobile-header-split-right">
-              {/* Scheduled + no pausada → Iniciar (verde) */}
-              {isPlanned && !isPaused && (
-                <button
-                  className="mobile-btn mobile-btn-sm mobile-btn-success"
-                  disabled={startMutation.isPending}
-                  onClick={() => startMutation.mutate(session.id)}
-                >
-                  {startMutation.isPending ? (
-                    <><Loader2 className="h-3 w-3 animate-spin" /> Iniciando...</>
-                  ) : (
-                    <><Play className="h-3 w-3" /> Iniciar</>
-                  )}
-                </button>
-              )}
-              {/* Scheduled + pausada → Reanudar (verde) */}
-              {isPaused && (
-                <button
-                  className="mobile-btn mobile-btn-sm mobile-btn-success"
-                  disabled={resumeMutation.isPending}
-                  onClick={() => resumeMutation.mutate(session.id)}
-                >
-                  {resumeMutation.isPending ? (
-                    <><Loader2 className="h-3 w-3 animate-spin" /> Reanudando...</>
-                  ) : (
-                    <><FastForward className="h-3 w-3" /> Reanudar</>
-                  )}
-                </button>
-              )}
-              {/* Active → Pausar (naranja) */}
-              {isActive && (
-                <button
-                  className="mobile-btn mobile-btn-sm mobile-btn-warning"
-                  disabled={pauseMutation.isPending}
-                  onClick={() => pauseMutation.mutate(session.id)}
-                >
-                  {pauseMutation.isPending ? (
-                    <><Loader2 className="h-3 w-3 animate-spin" /> Pausando...</>
-                  ) : (
-                    <><Pause className="h-3 w-3" /> Pausar</>
-                  )}
-                </button>
-              )}
-              {/* Detener (rojo) */}
-              <button
-                className="mobile-btn mobile-btn-sm mobile-btn-danger"
-                disabled={cancelMutation.isPending}
-                onClick={() => setCancelModalOpen(true)}
-                aria-label="Cancelar inspección"
-              >
-                <XCircle className="h-3 w-3" />
-                Detener
-              </button>
-            </div>
-          )}
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <MapPin className="h-3 w-3 shrink-0" />
+          <span className="truncate">{address}</span>
         </div>
+        {insured && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+            <span className="truncate">{insured.full_name}</span>
+          </div>
+        )}
       </div>
 
-
+      {/* Botones de acción: solo inspector asignado */}
+      {isAssignedInspector && (isPlanned || isActive) && (
+        <div className="px-4 py-3 flex gap-2 border-b">
+          {/* Scheduled + no pausada → Iniciar */}
+          {isPlanned && !isPaused && (
+            <button
+              className="mobile-btn mobile-btn-primary flex-1"
+              disabled={startMutation.isPending}
+              onClick={() => startMutation.mutate(session.id)}
+            >
+              {startMutation.isPending ? (
+                <><Loader2 className="h-5 w-5 animate-spin" /> Iniciando...</>
+              ) : (
+                <><Play className="h-5 w-5" /> Iniciar inspección</>
+              )}
+            </button>
+          )}
+          {/* Scheduled + pausada → Reanudar */}
+          {isPaused && (
+            <button
+              className="mobile-btn mobile-btn-warning flex-1"
+              disabled={resumeMutation.isPending}
+              onClick={() => resumeMutation.mutate(session.id)}
+            >
+              {resumeMutation.isPending ? (
+                <><Loader2 className="h-5 w-5 animate-spin" /> Reanudando...</>
+              ) : (
+                <><FastForward className="h-5 w-5" /> Reanudar inspección</>
+              )}
+            </button>
+          )}
+          {/* Active → Pausar */}
+          {isActive && (
+            <button
+              className="mobile-btn mobile-btn-warning flex-1"
+              disabled={pauseMutation.isPending}
+              onClick={() => pauseMutation.mutate(session.id)}
+            >
+              {pauseMutation.isPending ? (
+                <><Loader2 className="h-5 w-5 animate-spin" /> Pausando...</>
+              ) : (
+                <><Pause className="h-5 w-5" /> Pausar</>
+              )}
+            </button>
+          )}
+          {/* Cancelar (scheduled o active) */}
+          <button
+            className="mobile-btn mobile-btn-danger"
+            disabled={cancelMutation.isPending}
+            onClick={() => setCancelModalOpen(true)}
+            aria-label="Cancelar inspección"
+          >
+            <XCircle className="h-5 w-5" />
+          </button>
+        </div>
+      )}
 
       {/* Work periods indicator */}
       {workPeriods && workPeriods.length > 0 && (
@@ -440,7 +432,7 @@ export default function MobileInspectionDetailPage() {
                 {cancelMutation.isPending ? (
                   <><Loader2 className="h-5 w-5 animate-spin" /> Cancelando...</>
                 ) : (
-                  "Confirmar"
+                  "Confirmar cancelación"
                 )}
               </button>
             </div>

@@ -249,20 +249,20 @@ ${bodyHtml}
                 type="button"
                 onClick={() => resendMutation.mutate()}
                 disabled={resendMutation.isPending}
-                aria-label="Reenviar correo"
+                title="Reenviar correo"
                 className="inline-flex h-8 items-center gap-1.5 px-3 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors text-[12px] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <RotateCw className={`h-3.5 w-3.5 ${resendMutation.isPending ? "animate-spin" : ""}`} />
                 {resendMutation.isPending ? "Reenviando..." : "Reenviar"}
               </button>
             )}
-            <button type="button" onClick={handleDownload} aria-label="Descargar .eml" className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+            <button type="button" onClick={handleDownload} title="Descargar .eml" className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
               <Download className="h-3.5 w-3.5" />
             </button>
-            <button type="button" onClick={handlePrint} aria-label="Imprimir" className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+            <button type="button" onClick={handlePrint} title="Imprimir" className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
               <Printer className="h-3.5 w-3.5" />
             </button>
-            <button type="button" onClick={() => onOpenChange(false)} aria-label="Cerrar" className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+            <button type="button" onClick={() => onOpenChange(false)} title="Cerrar" className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
               <X className="h-3.5 w-3.5" />
             </button>
           </div>

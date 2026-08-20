@@ -25,6 +25,8 @@ export function usePasteHandler() {
       const html = e.clipboardData?.getData("text/html");
       const text = e.clipboardData?.getData("text/plain") ?? "";
 
+      console.log("[paste] html length:", html?.length ?? 0, "text length:", text.length);
+
       // Si no hay HTML ni texto, no hacer nada
       if (!html && !text) return;
 

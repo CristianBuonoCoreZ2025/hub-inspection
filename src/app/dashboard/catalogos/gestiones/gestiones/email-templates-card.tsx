@@ -32,8 +32,6 @@ import {
 } from "@/services/email-template-actions";
 import { getBusinessLines } from "@/services/catalogs";
 import { useAuth } from "@/hooks/use-auth";
-import { useConfirm } from "@/hooks/use-confirm";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 interface Props {
   actionTemplateId: string;
@@ -54,7 +52,6 @@ export function EmailTemplatesCard({ actionTemplateId, businessLineId }: Props) 
   const { profile } = useAuth();
   const companyId = profile?.company_id;
   const queryClient = useQueryClient();
-  const confirm = useConfirm();
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -212,7 +209,7 @@ export function EmailTemplatesCard({ actionTemplateId, businessLineId }: Props) 
                 }`}
               >
                 <div className="flex items-center gap-2 px-3 py-2 hover:bg-muted/30 transition-colors">
-                  <Mail className="h-4 w-4 text-brand shrink-0" />
+                  <Mail className="h-4 w-4 text-[#0095DA] shrink-0" />
                   <div className="flex flex-col leading-tight min-w-0 flex-1">
                     <span className="text-[11px] font-medium truncate">{t.name}</span>
                     <span className="text-[10px] text-muted-foreground/70 truncate">
@@ -234,47 +231,35 @@ export function EmailTemplatesCard({ actionTemplateId, businessLineId }: Props) 
                     )}
                     {t.body_format === "html" ? "HTML" : "Plano"}
                   </span>
-                  <Tooltip>
-                    <TooltipTrigger className="inline-flex">
-                      <button
-                        type="button"
-                        onClick={() => setDefaultMutation.mutate(t.id)}
-                        disabled={isDefault || setDefaultMutation.isPending}
-                        className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] transition-colors ${
-                          isDefault
-                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 font-semibold cursor-default"
-                            : "bg-muted text-muted-foreground hover:bg-emerald-100 hover:text-emerald-700"
-                        }`}
-                      >
-                        <Star
-                          className={`h-3 w-3 ${isDefault ? "fill-current" : ""}`}
-                        />
-                        {isDefault ? "Default" : "Marcar"}
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      <p>{isDefault ? "Plantilla por defecto" : "Marcar como por defecto"}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger render={
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="btn-icon-sm btn-danger-hover"
-                        onClick={async () => {
-                          const ok = await confirm({ title: "Desvincular", description: "¿Desvincular esta plantilla? (no se borra)", confirmLabel: "Desvincular", destructive: true });
-                          if (!ok) return;
-                          unlinkMutation.mutate(t.id);
-                        }}
-                      />
-                    }>
-                      <X className="h-3.5 w-3.5" />
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      <p>Desvincular</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  <button
+                    type="button"
+                    onClick={() => setDefaultMutation.mutate(t.id)}
+                    disabled={isDefault || setDefaultMutation.isPending}
+                    className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] transition-colors ${
+                      isDefault
+                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 font-semibold cursor-default"
+                        : "bg-muted text-muted-foreground hover:bg-emerald-100 hover:text-emerald-700"
+                    }`}
+                    title={isDefault ? "Plantilla por defecto" : "Marcar como por defecto"}
+                  >
+                    <Star
+                      className={`h-3 w-3 ${isDefault ? "fill-current" : ""}`}
+                    />
+                    {isDefault ? "Default" : "Marcar"}
+                  </button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="btn-icon-sm btn-danger-hover"
+                    onClick={() => {
+                      if (confirm("¿Desvincular esta plantilla? (no se borra)")) {
+                        unlinkMutation.mutate(t.id);
+                      }
+                    }}
+                    title="Desvincular"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
               </div>
             );
@@ -322,7 +307,7 @@ export function EmailTemplatesCard({ actionTemplateId, businessLineId }: Props) 
                     disabled={linkMutation.isPending}
                     className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/50 disabled:opacity-50 transition-colors border-b border-border/40 last:border-0"
                   >
-                    <Mail className="h-3.5 w-3.5 text-brand shrink-0" />
+                    <Mail className="h-3.5 w-3.5 text-[#0095DA] shrink-0" />
                     <div className="flex flex-col leading-tight min-w-0 flex-1">
                       <span className="text-[11px] font-medium truncate">{t.name}</span>
                       <span className="text-[10px] text-muted-foreground/70 truncate">

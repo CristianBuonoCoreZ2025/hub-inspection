@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { TableSkeleton } from "@/components/ui/skeletons";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { getClaims, getClaimsCount, getClaimsParticipants, createClaimMinimal, checkClaimNumberExists, findParticipantByRut } from "@/services/claims";
@@ -37,7 +36,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { useAuth } from "@/hooks/use-auth";
 import { useRealtime } from "@/hooks/use-realtime";
 import { toast } from "sonner";
-import { Search, Trash2, FileText, ClipboardCheck, Download, Check, Upload, ChevronDown, Shield, MapPin, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Search, Trash2, FileText, ClipboardCheck, Download, Check, Upload, ChevronDown, Shield, MapPin, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { getClaimTypeIcon } from "@/lib/claim-type-icons";
@@ -1249,7 +1248,7 @@ const paginatedData = sortedClaims ?? [];
  <div className="app-grid-header-right">
  <Button
  className="pg-btn-platinum"
-onClick={async () => {
+onClick={async (e) => {
 const total = claimsCount ?? 0;
 if (total > 500) {
   const ok = await confirm({
@@ -2397,7 +2396,7 @@ disabled={!!exportProgress}
  onClick={() => setLocationSelectorOpen(true)}
  >
  <MapPin className="h-3 w-3 mr-1" />
- Buscar
+ Buscar ubicación
  </Button>
  </div>
  {(claimLatitudeW && claimLongitudeW) ? (
@@ -2805,7 +2804,7 @@ disabled={!!exportProgress}
  </thead>
  <tbody>
  {isLoading ? (
- <TableSkeleton rows={8} columns={10} />
+ <tr><td colSpan={10} className="text-center text-muted-foreground py-4">Cargando...</td></tr>
  ) : filtered?.length === 0 ? (
  <tr><td colSpan={10} className="text-center text-muted-foreground py-4">No se encontraron siniestros.</td></tr>
  ) : (
@@ -2860,7 +2859,7 @@ disabled={!!exportProgress}
  <td className="hidden md:table-cell">{new Date(claim.created_at).toLocaleDateString("es-CL")}</td>
  <td className="text-center hidden md:table-cell">
  <div className="flex items-center justify-center gap-1.5">
- <span aria-label={claimType?.name ?? "Tipo de Siniestro"}>
+ <span title={claimType?.name ?? "Tipo de Siniestro"}>
  <BlIcon className="size-3.5 text-muted-foreground" />
  </span>
  {flagUrl ? (
@@ -2868,7 +2867,7 @@ disabled={!!exportProgress}
  src={flagUrl}
  alt={country?.code ?? ""}
  className="recent-claim-flag-img"
- aria-label={country?.name ?? ""}
+ title={country?.name ?? ""}
  width={18}
  height={13}
  unoptimized

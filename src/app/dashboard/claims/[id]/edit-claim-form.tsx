@@ -50,7 +50,6 @@ import { getUsersByRoleForCompany } from "@/services/users";
 import { ClaimLocationSelector } from "@/components/claims/claim-location-selector";
 import type { GeocodeCandidate } from "@/lib/geo";
 import type { Claim, ClaimsParticipant, UserOption as UserOptionType } from "@/types";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 // ──────────────────────────────────────────────────────────────
 // Types
@@ -1458,21 +1457,15 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  <div className="space-y-1">
  <div className="flex items-center justify-between">
  <FieldLabel label="Póliza" />
- <Tooltip>
- <TooltipTrigger render={
  <button
  type="button"
  onClick={() => setOpenPolicyModal(true)}
  className="app-body text-primary hover:text-primary/80 flex items-center gap-0.5"
- />
- }>
+ title="Crear nueva póliza"
+ >
  <Plus className="h-3 w-3" />
  Crear
- </TooltipTrigger>
- <TooltipContent side="top">
- <p>Crear nueva póliza</p>
- </TooltipContent>
- </Tooltip>
+ </button>
  </div>
  <FormSelect
  control={control}
@@ -2080,7 +2073,7 @@ export default function EditClaimForm({ claim, participants, catalogs, onCancel,
  className="pg-btn-platinum h-6 app-body shrink-0"
  onClick={() => setLocationSelectorOpen(true)}
  >
- Buscar
+ Buscar ubicación
  </Button>
  </div>
  <ClaimLocationSelector

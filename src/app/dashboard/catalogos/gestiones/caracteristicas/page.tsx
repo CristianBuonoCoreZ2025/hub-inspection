@@ -164,7 +164,7 @@ export default function CaracteristicasPage() {
  <th>Pantalla Asociada</th>
  <th>Tipo</th>
  <SortableTh sortKey="max_review_levels" currentKey={sortKey} direction={sortDir} onSort={toggleSort}>Max. niveles</SortableTh>
- <th className="w-20"></th>
+ <th className="w-[80px]"></th>
  </tr>
  </thead>
  <tbody>
