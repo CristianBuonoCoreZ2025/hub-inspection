@@ -68,6 +68,7 @@ export default function MobileInspectionsPage() {
     data: sessionsPage,
     isLoading,
     isFetching,
+    error: queryError,
   } = useQuery<SessionWithRelations[]>({
     queryKey: ["inspection-sessions-mobile", page],
     queryFn: () => getInspectionSessionsLight(undefined, { page, pageSize: 50, inspectionType: "onsite", statusFilter: ["scheduled", "active", "completed"] }),
@@ -76,6 +77,7 @@ export default function MobileInspectionsPage() {
 
   useEffect(() => {
     if (!sessionsPage) return;
+    console.log("[mobile-insp] sessionsPage:", sessionsPage.length, "page:", page, "profile:", profile?.id, "canSeeAll:", canSeeAll);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setAllSessions((prev) => {
       if (page === 1) return sessionsPage;
@@ -83,7 +85,7 @@ export default function MobileInspectionsPage() {
       const newItems = sessionsPage.filter((s) => !existingIds.has(s.id));
       return [...prev, ...newItems];
     });
-  }, [sessionsPage, page]);
+  }, [sessionsPage, page, profile, canSeeAll]);
 
   // Filtrar: solo inspecciones presenciales (onsite) del inspector logueado
   // El mobile NO sirve para inspecciones remotas — nunca se muestran
@@ -172,6 +174,11 @@ export default function MobileInspectionsPage() {
           <div className="mobile-empty">
             <Loader2 className="h-6 w-6 animate-spin mobile-empty-icon" />
             <p className="mobile-empty-text">Cargando inspecciones...</p>
+          </div>
+        ) : queryError ? (
+          <div className="mobile-empty">
+            <ClipboardCheck className="h-10 w-10 mobile-empty-icon" />
+            <p className="mobile-empty-text">Error: {queryError.message}</p>
           </div>
         ) : filteredSessions.length === 0 ? (
           <div className="mobile-empty">
