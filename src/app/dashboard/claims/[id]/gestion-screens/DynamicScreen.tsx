@@ -416,11 +416,19 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
  // Verifica que todos los campos obligatorios (según `required` o `requiredRule`)
  // tengan valor, respetando la visibilidad condicional (`visibilityRule`).
  // Se usa para bloquear el botón "Emitir" hasta que la gestión esté completa.
+ // Excepción: coord_ubicacion no es obligatorio en inspecciones remotas,
+ // porque en remoto se le pregunta al asegurado dónde está y esa validación basta.
+ const inspectionTypeFieldForRequired = allFields.find((f) => f.type === "coord_inspection_type");
+ const currentInspectionType = inspectionTypeFieldForRequired
+ ? String(values[inspectionTypeFieldForRequired.id] || "onsite")
+ : "onsite";
  const missingRequired = allFields.filter((f) => f.category === "own").filter((f) => {
  // Si el campo no es visible según su visibilityRule, no se valida
  if (!isFieldVisible(f, values)) return false;
  // Si el campo no es obligatorio según requiredRule o required, no se valida
  if (!isFieldRequired(f, values)) return false;
+ // Eximir coord_ubicacion en inspecciones remotas
+ if (f.type === "coord_ubicacion" && currentInspectionType === "remote") return false;
  const v = values[f.id];
  return v === undefined || v === null || v === "" || (Array.isArray(v) && v.length === 0);
  });
@@ -2312,10 +2320,18 @@ function OwnField({
  const claimCoords = claim && Number.isFinite(claim.claim_latitude) && Number.isFinite(claim.claim_longitude)
  ? { lat: claim.claim_latitude!, lng: claim.claim_longitude! }
  : null;
+ // En inspecciones remotas la ubicación no es obligatoria: se le pregunta
+ // al asegurado dónde está y esa validación basta. El textarea es editable
+ // para que el operador pueda escribir la ubicación que indica el asegurado.
+ const inspectionTypeField = allFields.find((f) => f.type === "coord_inspection_type");
+ const isRemote = inspectionTypeField
+ ? String(allValues?.[inspectionTypeField.id] || "onsite") === "remote"
+ : false;
+ const isLocationRequired = field.required && !isRemote;
  return (
  <div className="flex flex-col gap-2">
  <Label className="app-field-label">
- {field.label} {field.required && <span className="text-red-500">*</span>}
+ {field.label} {isLocationRequired && <span className="text-red-500">*</span>}
  </Label>
  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
  <div className="rounded-lg border border-border p-3 text-[11px] space-y-1">
@@ -2335,9 +2351,12 @@ function OwnField({
  <Textarea
  className="app-input min-h-15 py-2 text-[13px]"
  value={String(value || "")}
- readOnly
+ onChange={isRemote ? (e) => onChange(field.id, e.target.value) : undefined}
+ readOnly={!isRemote || !!readOnly}
  rows={2}
- placeholder="Aclaración según el punto seleccionado en el mapa."
+ placeholder={isRemote
+ ? "Indique la ubicación que reporta el asegurado (o use el mapa opcional)."
+ : "Aclaración según el punto seleccionado en el mapa."}
  />
  </div>
  <Button
