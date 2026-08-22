@@ -37,7 +37,7 @@ function fmtDate(s?: string | null): string {
   // new Date('2026-08-01') o new Date('2026-08-01T00:00:00.000Z') interpreta UTC
   // midnight y al convertir a America/Santiago (UTC-4) desplaza al dia anterior.
   const m = s.slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
   return new Date(s).toLocaleDateString("es-CL", { timeZone: getUserTimeZone(), day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
