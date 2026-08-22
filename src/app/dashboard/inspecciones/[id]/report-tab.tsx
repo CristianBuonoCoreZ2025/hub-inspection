@@ -33,10 +33,10 @@ function fmtDateTimeSeconds(s?: string | null): string {
 
 function fmtDate(s?: string | null): string {
   if (!s) return "—";
-  // Si es solo fecha (YYYY-MM-DD sin componente de hora), parsear manualmente
-  // para evitar que new Date() interprete UTC midnight y la conversión de
-  // zona horaria desplace el día (ej: 2026-08-01 -> 31/07/2026 en UTC-4).
-  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  // Extraer YYYY-MM-DD de los primeros 10 caracteres (campo DATE o timestamp ISO).
+  // new Date('2026-08-01') o new Date('2026-08-01T00:00:00.000Z') interpreta UTC
+  // midnight y al convertir a America/Santiago (UTC-4) desplaza al dia anterior.
+  const m = s.slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (m) return `${m[3]}/${m[2]}/${m[1]}`;
   return new Date(s).toLocaleDateString("es-CL", { timeZone: getUserTimeZone(), day: "2-digit", month: "2-digit", year: "numeric" });
 }
