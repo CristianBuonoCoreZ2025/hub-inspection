@@ -822,7 +822,7 @@ export default function ReportTab({
           </div>
           {fieldRow("Aseguradora", session.claim?.insurance_company?.name)}
           {fieldRow("Causa Origen", claimCause)}
-          {fieldRow("Fecha de Siniestro", fmtDateTime(claimDate))}
+          {fieldRow("Fecha de Siniestro", fmtDate(claimDate))}
           {fieldRow("Fecha de Inspección", fmtDateTime(session.inspection_date ? `${session.inspection_date}T${session.inspection_time || "00:00"}` : session.scheduled_at))}
 
           {/* ═══ ANTECEDENTES DEL ASEGURADO ═══ */}
