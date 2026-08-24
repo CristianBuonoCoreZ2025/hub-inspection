@@ -158,7 +158,9 @@ export async function getClaimContacts(claimId: string): Promise<EmailContact[]>
     const { data: teamProfiles } = await supabase
       .from("profiles")
       .select("id, full_name, email")
-      .in("id", teamIds);
+      .in("id", teamIds)
+      .eq("is_active", true)
+      .is("deleted_at", null);
 
     const profMap = new Map<string, { full_name: string; email: string }>(
       (teamProfiles || []).map((p: { id: string; full_name: string; email: string }) => [p.id, p])
@@ -187,11 +189,13 @@ export async function getClaimContacts(claimId: string): Promise<EmailContact[]>
     }
   }
 
-  // ─── 5. Directorio global (todos los profiles, excluyendo los del equipo) ───
+  // ─── 5. Directorio global (todos los profiles activos, excluyendo los del equipo) ───
   const { data: allProfiles } = await supabase
     .from("profiles")
     .select("id, full_name, email")
-    .neq("email", "");
+    .neq("email", "")
+    .eq("is_active", true)
+    .is("deleted_at", null);
 
   // Emails ya incluidos en participantes/equipo/asesor — no duplicar en directorio
   const existingEmails = new Set(byEmail.keys());
