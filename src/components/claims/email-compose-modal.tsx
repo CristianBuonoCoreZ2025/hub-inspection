@@ -146,9 +146,9 @@ function ContactBookButton({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        render={
-          <Tooltip>
+      <Tooltip>
+        <PopoverTrigger
+          render={
             <TooltipTrigger className="inline-flex">
               <button
                 type="button"
@@ -158,12 +158,12 @@ function ContactBookButton({
                 {label}
               </button>
             </TooltipTrigger>
-            <TooltipContent side="top">
-              <p>Abrir libreta de contactos</p>
-            </TooltipContent>
-          </Tooltip>
-        }
-      />
+          }
+        />
+        <TooltipContent side="top">
+          <p>Abrir libreta de contactos</p>
+        </TooltipContent>
+      </Tooltip>
       <PopoverContent align="start" sideOffset={4} className="w-80 max-h-96 p-0 flex flex-col overflow-hidden">
         {/* Header */}
         <div className="px-3 py-2 border-b border-border/50 shrink-0 flex items-center justify-between">
