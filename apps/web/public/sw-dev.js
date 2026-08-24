@@ -1,7 +1,7 @@
 // Service worker para desarrollo.
 // Estrategia: cachea todo lo que se carga exitosamente (stale-while-revalidate).
 // Cuando offline, sirve desde cache. Cuando online, actualiza en background.
-const CACHE = "dev-cache-v4";
+const CACHE = "dev-cache-v5";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

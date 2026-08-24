@@ -1,0 +1,13 @@
+# Dependencies
+node_modules/
+
+# Next.js export
+out/
+.next/
+
+# Capacitor nativo
+ios/
+android/
+
+# Env
+.env*
