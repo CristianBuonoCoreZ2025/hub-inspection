@@ -229,7 +229,7 @@ export async function getClaimContacts(claimId: string): Promise<EmailContact[]>
     byEmail.set(c.email.toLowerCase().trim(), c);
   }
 
-  // ─── 6. Ordenar resultado final por grupo, luego por orden interno ───
+  // ─── 6. Ordenar resultado final por grupo, luego por nombre+apellido asc ───
   const groupOrder: Record<EmailContact["group"], number> = {
     participants: 1,
     team: 2,
@@ -237,49 +237,19 @@ export async function getClaimContacts(claimId: string): Promise<EmailContact[]>
     global: 4,
   };
 
-  // Orden dentro de participantes: por orden de roles
-  const roleOrderParticipants: Record<string, number> = {
-    Asegurado: 1,
-    Contratante: 2,
-    Beneficiario: 3,
-    Contacto: 4,
-    Ejecutivo: 5,
-  };
-
-  // Orden dentro de equipo: por orden de roles
-  const roleOrderTeam: Record<string, number> = {
-    Inspector: 1,
-    Liquidador: 2,
-    "Liq. Asignado": 3,
-    Auditor: 4,
-    Despacho: 5,
-    Asistente: 6,
+  const byNameAsc = (a: EmailContact, b: EmailContact) => {
+    const la = lastName(a.fullName);
+    const lb = lastName(b.fullName);
+    if (la !== lb) return la.localeCompare(lb);
+    return (a.fullName || a.email).localeCompare(b.fullName || b.email);
   };
 
   const result = Array.from(byEmail.values()).sort((a, b) => {
     if (groupOrder[a.group] !== groupOrder[b.group]) {
       return groupOrder[a.group] - groupOrder[b.group];
     }
-    // Dentro de participantes: ordenar por el primer rol
-    if (a.group === "participants" && b.group === "participants") {
-      const ra = roleOrderParticipants[a.roles[0]] ?? 99;
-      const rb = roleOrderParticipants[b.roles[0]] ?? 99;
-      return ra - rb;
-    }
-    // Dentro de equipo: ordenar por el primer rol
-    if (a.group === "team" && b.group === "team") {
-      const ra = roleOrderTeam[a.roles[0]] ?? 99;
-      const rb = roleOrderTeam[b.roles[0]] ?? 99;
-      return ra - rb;
-    }
-    // Dentro de directorio: ordenar por apellido
-    if (a.group === "global" && b.group === "global") {
-      const la = lastName(a.fullName);
-      const lb = lastName(b.fullName);
-      if (la !== lb) return la.localeCompare(lb);
-      return (a.fullName || a.email).localeCompare(b.fullName || b.email);
-    }
-    return (a.fullName || a.email).localeCompare(b.fullName || b.email);
+    // Dentro de cada grupo: ordenar por apellido, luego nombre
+    return byNameAsc(a, b);
   });
 
   return result;
