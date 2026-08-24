@@ -18,14 +18,16 @@ export interface EmailContact {
 }
 
 /**
- * Extrae el apellido de un nombre completo.
+ * Convierte "Nombre Apellido" → "Apellido, Nombre" para ordenamiento y display.
  * Asume formato "Nombre Apellido" o "Nombre Apellido1 Apellido2".
- * Toma la última palabra como apellido para ordenar.
+ * Toma la última palabra como apellido.
  */
-function lastName(fullName: string | null): string {
-  if (!fullName) return "";
+function toLastFirst(fullName: string | null): string | null {
+  if (!fullName) return null;
   const parts = fullName.trim().split(/\s+/);
-  return parts[parts.length - 1].toLowerCase();
+  if (parts.length < 2) return fullName;
+  const last = parts.pop();
+  return `${last}, ${parts.join(" ")}`;
 }
 
 /**
@@ -77,6 +79,7 @@ export async function getClaimContacts(claimId: string): Promise<EmailContact[]>
   ) => {
     const key = email.toLowerCase().trim();
     if (!key) return;
+    const display = toLastFirst(fullName);
     const existing = byEmail.get(key);
     if (existing) {
       if (!existing.roles.includes(role)) {
@@ -88,11 +91,11 @@ export async function getClaimContacts(claimId: string): Promise<EmailContact[]>
         existing.group = group;
       }
       if (isInternal) existing.isInternal = true;
-      if (fullName && !existing.fullName) existing.fullName = fullName;
+      if (display && !existing.fullName) existing.fullName = display;
     } else {
       byEmail.set(key, {
         email,
-        fullName,
+        fullName: display,
         group,
         roles: [role],
         isInternal,
@@ -210,18 +213,15 @@ export async function getClaimContacts(claimId: string): Promise<EmailContact[]>
     if (teamProfileIds.has(p.id)) continue;
     dirContacts.push({
       email: p.email,
-      fullName: p.full_name,
+      fullName: toLastFirst(p.full_name),
       group: "global",
       roles: ["Usuario"],
       isInternal: true,
     });
   }
 
-  // Ordenar directorio por apellido
+  // Ordenar directorio por "Apellido, Nombre"
   dirContacts.sort((a, b) => {
-    const la = lastName(a.fullName);
-    const lb = lastName(b.fullName);
-    if (la !== lb) return la.localeCompare(lb);
     return (a.fullName || a.email).localeCompare(b.fullName || b.email);
   });
 
@@ -238,9 +238,6 @@ export async function getClaimContacts(claimId: string): Promise<EmailContact[]>
   };
 
   const byNameAsc = (a: EmailContact, b: EmailContact) => {
-    const la = lastName(a.fullName);
-    const lb = lastName(b.fullName);
-    if (la !== lb) return la.localeCompare(lb);
     return (a.fullName || a.email).localeCompare(b.fullName || b.email);
   };
 
