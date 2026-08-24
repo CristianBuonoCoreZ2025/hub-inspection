@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { MessageSquare, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getUserTimeZone } from "@/lib/timezone";
 
 export default function ChatTab({ sessionId, compact = false }: { sessionId: string; compact?: boolean }) {
  const queryClient = useQueryClient();
@@ -100,6 +101,7 @@ export default function ChatTab({ sessionId, compact = false }: { sessionId: str
  }`}
  >
  {new Date(msg.created_at).toLocaleString("es-CL", {
+ timeZone: getUserTimeZone(),
  hour: "2-digit",
  minute: "2-digit",
  hour12: false,

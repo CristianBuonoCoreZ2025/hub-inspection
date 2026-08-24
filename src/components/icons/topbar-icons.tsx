@@ -438,3 +438,44 @@ export function CorreoIcon({ size = 18, ...props }: IconProps) {
     </svg>
   );
 }
+
+/* ─────────────────────────────────────────────────────────
+ * Save — disquete azul con gradiente, estilo Fluent Color
+ * Cuerpo azul con degradado, etiqueta blanca, línea superior
+ * ───────────────────────────────────────────────────────── */
+export function SaveIcon({ size = 18, ...props }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+      <defs>
+        <linearGradient id="save-body" x1="3" y1="3" x2="21" y2="21" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#60a5fa" />
+          <stop offset="0.5" stopColor="#3b82f6" />
+          <stop offset="1" stopColor="#1d4ed8" />
+        </linearGradient>
+        <linearGradient id="save-body-light" x1="5" y1="4" x2="12" y2="12" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#ffffff" stopOpacity="0.35" />
+          <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
+        </linearGradient>
+        <filter id="save-shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="0.8" stdDeviation="0.7" floodColor="#1e3a8a" floodOpacity="0.4" />
+        </filter>
+      </defs>
+      {/* Sombra del disquete */}
+      <path d="M4 3h12l4 4v14H4V3z" fill="#1e3a8a" opacity="0.25" transform="translate(0.6 0.9)" />
+      {/* Cuerpo del disquete con degradado */}
+      <path d="M4 3h12l4 4v14H4V3z" fill="url(#save-body)" filter="url(#save-shadow)" />
+      {/* Brillo superior */}
+      <path d="M4 3h12l4 4v14H4V3z" fill="url(#save-body-light)" />
+      {/* Etiqueta blanca inferior */}
+      <rect x="7.5" y="12" width="9" height="6" rx="0.8" fill="#ffffff" opacity="0.95" />
+      {/* Líneas de la etiqueta */}
+      <path d="M9 14h6M9 16h4" stroke="#3b82f6" strokeWidth="0.9" strokeLinecap="round" opacity="0.5" />
+      {/* Solapa superior (ranura del disquete) */}
+      <rect x="7.5" y="3" width="6" height="5" rx="0.5" fill="#ffffff" opacity="0.9" />
+      {/* Detalle de la solapa */}
+      <rect x="9.5" y="3" width="2" height="3.5" rx="0.3" fill="#3b82f6" opacity="0.4" />
+      {/* Borde del disquete */}
+      <path d="M4 3h12l4 4v14H4V3z" stroke="#ffffff" strokeWidth="0.5" strokeLinejoin="round" fill="none" opacity="0.3" />
+    </svg>
+  );
+}

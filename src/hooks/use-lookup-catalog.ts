@@ -12,11 +12,12 @@ import type { LookupCatalog } from "@/types";
  *   const { items, isLoading } = useLookupCatalog("materiality_walls");
  *   items.forEach(i => console.log(i.code, i.name));
  */
-export function useLookupCatalog(category: string) {
+export function useLookupCatalog(category: string, enabled = true) {
   const { data, isLoading } = useQuery({
     queryKey: ["lookup-catalog", category],
     queryFn: () => getLookupCatalog(category),
     staleTime: 1000 * 60 * 30, // 30 min (catálogos cambian poco)
+    enabled,
   });
 
   return { items: data ?? [], isLoading };
@@ -32,7 +33,7 @@ export function useLookupCatalog(category: string) {
  *   ]);
  *   catalogs["materiality_walls"] // LookupCatalog[]
  */
-export function useLookupCatalogs(categories: string[]) {
+export function useLookupCatalogs(categories: string[], enabled = true) {
   const queries = useQuery({
     queryKey: ["lookup-catalogs", categories],
     queryFn: async () => {
@@ -45,6 +46,7 @@ export function useLookupCatalogs(categories: string[]) {
       return Object.fromEntries(results) as Record<string, LookupCatalog[]>;
     },
     staleTime: 1000 * 60 * 30,
+    enabled,
   });
 
   return { catalogs: queries.data ?? {}, isLoading: queries.isLoading };

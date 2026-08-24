@@ -33,7 +33,7 @@ import { getInspectionSessions, getInspectorSchedule } from "@/services/inspecti
 import { getCoverageCatalog } from "@/services/coverage-catalog";
 import { getLookupCatalog } from "@/services/catalogs";
 import { getDocumentTemplates, type DocumentTemplate } from "@/services/document-templates";
-import { toUserISO, formatUserDateTime, fromDateTimeLocalInput, toDateTimeLocalInput } from "@/lib/timezone";
+import { toUserISO, formatUserDateTime, fromDateTimeLocalInput, toDateTimeLocalInput, getUserTimeZone } from "@/lib/timezone";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { Plus, Ban, ChevronDown, ChevronRight, Check, CheckCircle, Circle, Clock, X, XCircle, FileText, Download, Loader2, Play, Upload, History, Lock, LockOpen, AlertTriangle, Star, FileSpreadsheet, Presentation, File as FileIcon, RotateCcw, MapPin, UserCog } from "lucide-react";
@@ -440,11 +440,11 @@ export default function DynamicScreen({ action, fields, onChange, readOnly, onAd
  <div className="grid grid-cols-2 gap-3 app-body text-muted-foreground px-1 pb-1">
  <div>
  <span>Creación: </span>
- <span className="font-mono">{action.created_on ? new Date(action.created_on).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : "—"}</span>
+ <span className="font-mono">{action.created_on ? new Date(action.created_on).toLocaleString("es-CL", { timeZone: getUserTimeZone(), day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : "—"}</span>
  </div>
  <div>
  <span>Actualización: </span>
- <span className="font-mono">{action.updated_on ? new Date(action.updated_on).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : "—"}</span>
+ <span className="font-mono">{action.updated_on ? new Date(action.updated_on).toLocaleString("es-CL", { timeZone: getUserTimeZone(), day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : "—"}</span>
  </div>
  </div>
 
@@ -693,7 +693,7 @@ function getClaimEntityValue(type: string, claim?: Claim | null, participants?: 
  case "claim_status":
  return claim.status?.name || claim.status?.code || "—";
  case "claim_date":
- return claim.claim_date ? new Date(claim.claim_date).toLocaleDateString("es-CL") : "—";
+ return claim.claim_date ? new Date(claim.claim_date).toLocaleDateString("es-CL", { timeZone: getUserTimeZone() }) : "—";
  case "policy_number":
  return claim.policy_number || "—";
  case "insured_name": {
@@ -800,9 +800,9 @@ function getActionEntityValue(type: string, action: ActionWithRelations | null, 
  case "action_approver":
  return action.approver?.name || action.approver?.email || "Aprobador asignado";
  case "action_created_at":
- return action.created_on ? new Date(action.created_on).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : String(fallback || "");
+ return action.created_on ? new Date(action.created_on).toLocaleString("es-CL", { timeZone: getUserTimeZone(), day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : String(fallback || "");
  case "action_updated_at":
- return action.updated_on ? new Date(action.updated_on).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : String(fallback || "");
+ return action.updated_on ? new Date(action.updated_on).toLocaleString("es-CL", { timeZone: getUserTimeZone(), day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : String(fallback || "");
  case "action_expected_date":
  return action.expected_date || String(fallback || "");
  default:
@@ -2562,7 +2562,7 @@ function CoordInspectionStatus({
  <span className="text-muted-foreground">Tipo:</span> {activeSession.inspection_type === "onsite" ? "Presencial" : "Remota"}
  </div>
  <div>
- <span className="text-muted-foreground">Fecha:</span> {activeSession.scheduled_at ? new Date(activeSession.scheduled_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : "—"}
+ <span className="text-muted-foreground">Fecha:</span> {activeSession.scheduled_at ? new Date(activeSession.scheduled_at).toLocaleString("es-CL", { timeZone: getUserTimeZone(), day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : "—"}
  </div>
  <div>
  <span className="text-muted-foreground">Contacto:</span> {activeSession.interviewed_name || "—"}
@@ -4252,7 +4252,7 @@ function DocumentReceiptView({ claimId, actionId, readOnly, action, fieldConfig 
  const formatReceivedDate = (dateStr: string | null) => {
  if (!dateStr) return null;
  const d = new Date(dateStr);
- return d.toLocaleDateString("es-CL") + " " + d.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit", hour12: false });
+ return d.toLocaleDateString("es-CL", { timeZone: getUserTimeZone() }) + " " + d.toLocaleTimeString("es-CL", { timeZone: getUserTimeZone(), hour: "2-digit", minute: "2-digit", hour12: false });
  };
 
  return (
@@ -4525,15 +4525,15 @@ function InspectionSessionView({ claimId }: { claimId?: string; readOnly?: boole
  <div className="grid grid-cols-2 gap-2 app-body">
  <div>
  <span className="text-muted-foreground">Agendada:</span>{" "}
- {session.scheduled_at ? new Date(session.scheduled_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : "—"}
+ {session.scheduled_at ? new Date(session.scheduled_at).toLocaleString("es-CL", { timeZone: getUserTimeZone(), day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : "—"}
  </div>
  <div>
  <span className="text-muted-foreground">Iniciada:</span>{" "}
- {session.started_at ? new Date(session.started_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : "—"}
+ {session.started_at ? new Date(session.started_at).toLocaleString("es-CL", { timeZone: getUserTimeZone(), day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : "—"}
  </div>
  <div>
  <span className="text-muted-foreground">Finalizada:</span>{" "}
- {session.ended_at ? new Date(session.ended_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : "—"}
+ {session.ended_at ? new Date(session.ended_at).toLocaleString("es-CL", { timeZone: getUserTimeZone(), day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : "—"}
  </div>
  <div>
  <span className="text-muted-foreground">Contacto:</span> {session.interviewed_name || "—"}
@@ -4864,7 +4864,7 @@ function CoordScheduler({
 
  // Formatear fecha seleccionada para mostrar
  const selectedDateLabel = selectedDate
- ? new Date(selectedDate + "T12:00:00").toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" })
+ ? new Date(selectedDate + "T12:00:00").toLocaleDateString("es-CL", { timeZone: getUserTimeZone(), weekday: "long", day: "numeric", month: "long" })
  : null;
 
  return (
@@ -5812,7 +5812,7 @@ function formatFileSize(bytes: number | null | undefined): string {
 function formatDate(iso: string): string {
   try {
     const d = new Date(iso);
-    return d.toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
+    return d.toLocaleString("es-CL", { timeZone: getUserTimeZone(), day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
   } catch {
     return iso;
   }

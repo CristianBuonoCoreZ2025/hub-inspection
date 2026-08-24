@@ -995,7 +995,16 @@ export async function getBrandsByTypeId(typeId: string) {
   return items
     .map((r) => r.brand)
     .filter((b): b is ContentGoodBrand => !!b && b.is_active)
-    .sort((a, b) => naturalCompare(a.name, b.name));
+}
+
+/** Trae TODOS los content_good_type_brands con su brand anidado (para offline) */
+export async function getContentGoodTypeBrands() {
+  return fetchAll<{ id: string; content_good_type_id: string; brand_id: string; brand: { id: string; name: string; is_active: boolean } | null }>(
+    "content_good_type_brands",
+    {
+      select: TYPE_BRAND_SELECT,
+    }
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════

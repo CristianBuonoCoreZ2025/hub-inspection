@@ -16,6 +16,7 @@ import { convertHeicToJpeg } from "@/lib/heic-convert";
 import { logConnectionEvent, type ConnectionLogEntry } from "@/services/connection-logs";
 import { logInspectionEvent } from "@/services/inspection-events";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { getUserTimeZone } from "@/lib/timezone";
 
 
 const GeoCapture = dynamic(() => import("@/components/inspection/geo-capture").then((m) => ({ default: m.GeoCapture })), { ssr: false });
@@ -138,13 +139,14 @@ const statusLabels: Record<string, string> = {
 function fmtDate(d: string | null) {
   if (!d) return "—";
   return new Date(d).toLocaleString("es-CL", {
+    timeZone: getUserTimeZone(),
     day: "2-digit", month: "2-digit", year: "numeric",
     hour: "2-digit", minute: "2-digit", hour12: false,
   });
 }
 function fmtTime(d: string | null) {
   if (!d) return "—";
-  return new Date(d).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit", hour12: false });
+  return new Date(d).toLocaleTimeString("es-CL", { timeZone: getUserTimeZone(), hour: "2-digit", minute: "2-digit", hour12: false });
 }
 function val(obj: Record<string, unknown> | null, key: string): string {
   const v = obj?.[key];
@@ -932,7 +934,7 @@ function ActaTab({ session, actaStep }: { session: LiveSession; actaStep: string
               const claimCoords = claimLat != null && claimLng != null ? `${claimLat.toFixed(6)}, ${claimLng.toFixed(6)}` : "—";
               const geoCoords = geoLat != null && geoLng != null ? `${geoLat.toFixed(6)}, ${geoLng.toFixed(6)}` : "—";
               const capturedAt = session.geo_captured_at
-                ? new Date(session.geo_captured_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })
+                ? new Date(session.geo_captured_at).toLocaleString("es-CL", { timeZone: getUserTimeZone(), day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })
                 : "—";
               const distance = session.geo_distance_meters != null ? `${session.geo_distance_meters} m` : "—";
               return (

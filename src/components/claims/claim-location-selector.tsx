@@ -1,8 +1,14 @@
+/// <reference types="google.maps" />
 "use client";
 
+declare global {
+  interface Window {
+    google: typeof google;
+    __gmapsInit?: () => void;
+  }
+}
+
 import * as React from "react";
-import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
-import L from "leaflet";
 import { MapPin, Loader2, AlertTriangle, CheckCircle2, MousePointer2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,62 +22,201 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { geocodeAddressCandidates, reverseGeocode, type GeocodeCandidate, type LatLng, type MapProvider } from "@/lib/geo";
 
-// Fix iconos de Leaflet en Next.js (CDN)
-delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-});
+// ─── Google Maps loader (singleton) ─────────────────────────────
+// Carga el script de Google Maps una sola vez y reutiliza la instancia.
+let googleMapsPromise: Promise<typeof google> | null = null;
 
-const blueIcon = L.divIcon({
-  className: "geo-marker-blue",
-  html: `<div style="background:#0095DA;width:18px;height:18px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>`,
-  iconSize: [18, 18],
-  iconAnchor: [9, 18],
-});
+function loadGoogleMaps(apiKey: string): Promise<typeof google> {
+  if (typeof window === "undefined") return Promise.reject(new Error("SSR"));
+  if (window.google?.maps) return Promise.resolve(window.google);
+  if (googleMapsPromise) return googleMapsPromise;
 
-const grayIcon = L.divIcon({
-  className: "geo-marker-gray",
-  html: `<div style="background:#6b7280;width:14px;height:14px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>`,
-  iconSize: [14, 14],
-  iconAnchor: [7, 14],
-});
-
-function Recenter({ center }: { center: { lat: number; lng: number } }) {
-  const map = useMap();
-  React.useEffect(() => {
-    map.setView([center.lat, center.lng], 16);
-  }, [center.lat, center.lng, map]);
-  return null;
-}
-
-// Leaflet no detecta cambios de tamaño del contenedor automáticamente.
-// Cuando la lista de candidatos cambia (al buscar), el layout se reajusta
-// y el mapa queda "chico" o distorsionado. Este componente llama a
-// invalidateSize() periódicamente y cuando cambia el número de candidatos
-// para forzar al mapa a recalcular su tamaño real.
-function MapResizer({ trigger }: { trigger: unknown }) {
-  const map = useMap();
-  React.useEffect(() => {
-    // Pequeño delay para que el DOM se reajuste antes de invalidar
-    const id = setTimeout(() => {
-      map.invalidateSize();
-    }, 50);
-    return () => clearTimeout(id);
-  }, [map, trigger]);
-  return null;
-}
-
-function MapClickHandler({ onClick }: { onClick: (latlng: { lat: number; lng: number }) => void }) {
-  useMapEvents({
-    click(e) {
-      onClick({ lat: e.latlng.lat, lng: e.latlng.lng });
-    },
+  googleMapsPromise = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places&language=es&callback=__gmapsInit`;
+    script.async = true;
+    script.defer = true;
+    (window as unknown as { __gmapsInit?: () => void }).__gmapsInit = () => {
+      resolve(window.google);
+    };
+    script.onerror = () => {
+      googleMapsPromise = null;
+      reject(new Error("No se pudo cargar Google Maps"));
+    };
+    document.head.appendChild(script);
   });
-  return null;
+  return googleMapsPromise;
 }
 
+// ─── Hook: useGoogleMap ──────────────────────────────────────────
+// Crea un mapa de Google en el contenedor ref y expone la instancia.
+function useGoogleMap(
+  containerRef: React.RefObject<HTMLDivElement | null>,
+  apiKey: string | null,
+  center: LatLng,
+  onMapClick: (latlng: LatLng) => void,
+) {
+  const [map, setMap] = React.useState<google.maps.Map | null>(null);
+  const [ready, setReady] = React.useState(false);
+  const onMapClickRef = React.useRef(onMapClick);
+  React.useEffect(() => { onMapClickRef.current = onMapClick; });
+
+  React.useEffect(() => {
+    if (!apiKey || !containerRef.current || map) return;
+    let cancelled = false;
+
+    loadGoogleMaps(apiKey).then((g) => {
+      if (cancelled || !containerRef.current) return;
+      const m = new g.maps.Map(containerRef.current, {
+        center: { lat: center.lat, lng: center.lng },
+        zoom: 16,
+        mapTypeControl: false,
+        streetViewControl: true,
+        fullscreenControl: false,
+        clickableIcons: false,
+      });
+      m.addListener("click", (e: google.maps.MapMouseEvent) => {
+        if (e.latLng) {
+          onMapClickRef.current({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+        }
+      });
+      setMap(m);
+      setReady(true);
+    }).catch(() => {
+      // Si Google falla, el componente muestra fallback de lista
+    });
+
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiKey]);
+
+  // Recentrar cuando cambia el centro
+  React.useEffect(() => {
+    if (map && ready) {
+      map.setCenter({ lat: center.lat, lng: center.lng });
+      if (map.getZoom()! < 14) map.setZoom(16);
+    }
+  }, [map, ready, center.lat, center.lng]);
+
+  return { map, ready };
+}
+
+// ─── Hook: useGoogleMarkers ──────────────────────────────────────
+// Gestiona los marcadores en el mapa de Google.
+function useGoogleMarkers(
+  map: google.maps.Map | null,
+  ready: boolean,
+  candidates: GeocodeCandidate[],
+  selectedIndex: number,
+  manualPin: LatLng | null,
+  onMarkerClick: (index: number) => void,
+) {
+  const markersRef = React.useRef<google.maps.Marker[]>([]);
+  const manualMarkerRef = React.useRef<google.maps.Marker | null>(null);
+  const onMarkerClickRef = React.useRef(onMarkerClick);
+  React.useEffect(() => { onMarkerClickRef.current = onMarkerClick; });
+
+  // Limpiar al desmontar
+  React.useEffect(() => {
+    return () => {
+      markersRef.current.forEach((m) => m.setMap(null));
+      markersRef.current = [];
+      manualMarkerRef.current?.setMap(null);
+      manualMarkerRef.current = null;
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (!map || !ready || !window.google?.maps) return;
+
+    // Limpiar marcadores anteriores
+    markersRef.current.forEach((m) => m.setMap(null));
+    markersRef.current = [];
+
+    // Crear marcadores para cada candidato
+    candidates.forEach((c, i) => {
+      const isSelected = i === selectedIndex && !manualPin;
+      const marker = new window.google.maps.Marker({
+        position: { lat: c.lat, lng: c.lng },
+        map,
+        label: {
+          text: String(i + 1),
+          fontSize: "11px",
+          fontWeight: "bold",
+          color: isSelected ? "#ffffff" : "#6b7280",
+        },
+        zIndex: isSelected ? 100 : 1,
+      });
+      marker.addListener("click", () => onMarkerClickRef.current(i));
+      markersRef.current.push(marker);
+    });
+  }, [map, ready, candidates, selectedIndex, manualPin]);
+
+  // Marcador manual (click en mapa)
+  React.useEffect(() => {
+    if (!map || !ready || !window.google?.maps) return;
+    manualMarkerRef.current?.setMap(null);
+    manualMarkerRef.current = null;
+    if (manualPin) {
+      manualMarkerRef.current = new window.google.maps.Marker({
+        position: { lat: manualPin.lat, lng: manualPin.lng },
+        map,
+        icon: {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: "#0095DA",
+          fillOpacity: 1,
+          strokeColor: "#ffffff",
+          strokeWeight: 3,
+        },
+        zIndex: 200,
+      });
+    }
+  }, [map, ready, manualPin]);
+}
+
+// ─── Hook: useGoogleAutocomplete ─────────────────────────────────
+// Autocomplete de Places en el input de búsqueda.
+function useGoogleAutocomplete(
+  inputRef: React.RefObject<HTMLInputElement | null>,
+  apiKey: string | null,
+  onPlaceSelect: (place: { lat: number; lng: number; displayName: string }) => void,
+) {
+  const onPlaceSelectRef = React.useRef(onPlaceSelect);
+  React.useEffect(() => { onPlaceSelectRef.current = onPlaceSelect; });
+  const [autocomplete, setAutocomplete] = React.useState<google.maps.places.Autocomplete | null>(null);
+
+  React.useEffect(() => {
+    if (!apiKey || !inputRef.current || autocomplete) return;
+    let cancelled = false;
+
+    loadGoogleMaps(apiKey).then((g) => {
+      if (cancelled || !inputRef.current) return;
+      const ac = new g.maps.places.Autocomplete(inputRef.current, {
+        types: ["geocode"],
+        fields: ["geometry.location", "formatted_address", "name"],
+      });
+      ac.addListener("place_changed", () => {
+        const place = ac.getPlace();
+        if (place.geometry?.location) {
+          onPlaceSelectRef.current({
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng(),
+            displayName: place.formatted_address || place.name || "",
+          });
+        }
+      });
+      setAutocomplete(ac);
+    }).catch(() => { /* ignore */ });
+
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiKey]);
+
+  return autocomplete;
+}
+
+// ─── Componente principal ────────────────────────────────────────
 interface ClaimLocationSelectorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -96,20 +241,24 @@ export function ClaimLocationSelector({
   onSelect,
 }: ClaimLocationSelectorProps) {
   const [selectedIndex, setSelectedIndex] = React.useState(0);
-  const [manualPin, setManualPin] = React.useState<{ lat: number; lng: number } | null>(null);
+  const [manualPin, setManualPin] = React.useState<LatLng | null>(null);
   const [manualPinAddress, setManualPinAddress] = React.useState<string | null>(null);
   const [draftQuery, setDraftQuery] = React.useState(address);
   const [searchQuery, setSearchQuery] = React.useState(address);
+  const [googlePlace, setGooglePlace] = React.useState<GeocodeCandidate | null>(null);
   const validClaimCoords = claimCoords && Number.isFinite(claimCoords.lat) && Number.isFinite(claimCoords.lng) ? claimCoords : null;
 
-  // Reset selected index y búsqueda cuando se abre con una nueva dirección
-  // Se difiere con setTimeout para evitar setState sincrónico dentro del effect.
+  const mapContainerRef = React.useRef<HTMLDivElement>(null);
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Reset al abrir
   React.useEffect(() => {
     if (!open) return;
     const id = setTimeout(() => {
       setSelectedIndex(0);
       setManualPin(null);
       setManualPinAddress(null);
+      setGooglePlace(null);
       setDraftQuery(address);
       setSearchQuery(address);
     }, 0);
@@ -121,12 +270,14 @@ export function ClaimLocationSelector({
     setSelectedIndex(0);
     setManualPin(null);
     setManualPinAddress(null);
+    setGooglePlace(null);
   };
 
-  const handleMapClick = async (latlng: { lat: number; lng: number }) => {
+  const handleMapClick = async (latlng: LatLng) => {
     setManualPin(latlng);
     setManualPinAddress(null);
     setSelectedIndex(-1);
+    setGooglePlace(null);
     const addr = await reverseGeocode(latlng.lat, latlng.lng);
     if (addr) {
       setManualPinAddress(addr);
@@ -146,6 +297,8 @@ export function ClaimLocationSelector({
     refetchOnWindowFocus: false,
   });
 
+  const googleApiKey = mapProviders?.tokens?.google ?? null;
+
   const { data: candidates = [], isLoading } = useQuery({
     queryKey: ["geocode-candidates", searchQuery, commune, city, region, country, mapProviders],
     queryFn: () => geocodeAddressCandidates(searchQuery, { commune, city, region, country }, {
@@ -156,7 +309,7 @@ export function ClaimLocationSelector({
     staleTime: 0,
   });
 
-  // Reverse geocode de las coordenadas ya registradas del siniestro
+  // Reverse geocode de coordenadas ya registradas
   const { data: claimAddressFromCoords } = useQuery({
     queryKey: ["reverse-geocode", validClaimCoords],
     queryFn: () => reverseGeocode(validClaimCoords!.lat, validClaimCoords!.lng),
@@ -164,7 +317,7 @@ export function ClaimLocationSelector({
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fallback: centrar el mapa manual en la comuna/ciudad/región/país
+  // Fallback: centrar mapa en comuna/ciudad/región/país
   const centerAddress = [city, commune, region, country].filter(Boolean).join(", ") || "Chile";
   const { data: centerCandidates = [] } = useQuery({
     queryKey: ["geocode-center", centerAddress],
@@ -181,10 +334,34 @@ export function ClaimLocationSelector({
         displayName: claimAddressFromCoords || address || "Coordenadas registradas",
       }
     : null;
-  const allCandidates = candidates.length > 0 ? candidates : fallbackCandidate ? [fallbackCandidate] : [];
+  const allCandidates = googlePlace
+    ? [googlePlace]
+    : candidates.length > 0 ? candidates : fallbackCandidate ? [fallbackCandidate] : [];
   const selected = selectedIndex >= 0 ? allCandidates[selectedIndex] || null : null;
   const mapCenter = manualPin || selected || centerCandidates[0] || { lat: -33.44, lng: -70.66 };
   const hasCandidates = allCandidates.length > 0;
+
+  // Google Maps
+  const { map, ready } = useGoogleMap(mapContainerRef, googleApiKey, mapCenter, handleMapClick);
+  useGoogleMarkers(map, ready, allCandidates, selectedIndex, manualPin, (i) => {
+    setSelectedIndex(i);
+    setManualPin(null);
+    setManualPinAddress(null);
+    setGooglePlace(null);
+  });
+
+  // Autocomplete en el input de búsqueda
+  useGoogleAutocomplete(searchInputRef, googleApiKey, (place) => {
+    setGooglePlace({
+      lat: place.lat,
+      lng: place.lng,
+      label: place.displayName.split(",")[0] || place.displayName,
+      displayName: place.displayName,
+    });
+    setSelectedIndex(0);
+    setManualPin(null);
+    setManualPinAddress(null);
+  });
 
   const handleConfirm = () => {
     if (manualPin) {
@@ -215,11 +392,12 @@ export function ClaimLocationSelector({
           </DialogDescription>
           <div className="mt-3 flex items-center gap-2">
             <Input
+              ref={searchInputRef}
               className="app-input h-8 flex-1"
               value={draftQuery}
               onChange={(e) => setDraftQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              placeholder="Editar dirección de búsqueda"
+              placeholder="Escribir dirección (autocompleta con Google)"
             />
             <Button type="button" variant="outline" className="h-8 px-3" onClick={handleSearch}>
               <Search className="h-4 w-4" />
@@ -272,6 +450,7 @@ export function ClaimLocationSelector({
                     setSelectedIndex(i);
                     setManualPin(null);
                     setManualPinAddress(null);
+                    setGooglePlace(null);
                   }}
                   className={`w-full text-left rounded-lg border p-3 text-[11px] transition-colors ${
                     i === selectedIndex && !manualPin
@@ -317,43 +496,15 @@ export function ClaimLocationSelector({
             </div>
           </div>
 
-          {/* Mapa — siempre visible, mismo tamaño que el modal de siniestro */}
+          {/* Mapa — Google Maps si hay API key, sino Leaflet fallback */}
           <div className="relative h-full min-h-70 md:min-h-0">
-            <MapContainer
-              center={[mapCenter.lat, mapCenter.lng]}
-              zoom={16}
-              className="h-full w-full"
-              scrollWheelZoom={false}
-            >
-              <TileLayer
-                url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-              />
-              {allCandidates.map((c, i) => (
-                <Marker
-                  key={i}
-                  position={[c.lat, c.lng]}
-                  icon={i === selectedIndex && !manualPin ? blueIcon : grayIcon}
-                  eventHandlers={{
-                    click: () => {
-                      setSelectedIndex(i);
-                      setManualPin(null);
-                      setManualPinAddress(null);
-                    },
-                  }}
-                />
-              ))}
-              {manualPin && (
-                <Marker
-                  position={[manualPin.lat, manualPin.lng]}
-                  icon={blueIcon}
-                />
-              )}
-              <MapClickHandler onClick={handleMapClick} />
-              <Recenter center={mapCenter} />
-              <MapResizer trigger={allCandidates.length} />
-              <MapResizer trigger={isLoading} />
-            </MapContainer>
+            {googleApiKey ? (
+              <div ref={mapContainerRef} className="h-full w-full" />
+            ) : (
+              <div className="flex items-center justify-center h-full bg-muted/20 text-[11px] text-muted-foreground">
+                Configura NEXT_PUBLIC_GOOGLE_MAPS_API_KEY para ver el mapa.
+              </div>
+            )}
           </div>
         </div>
       </DialogContent>

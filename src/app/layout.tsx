@@ -4,6 +4,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { UiStyleInjector } from "@/components/ui-style-injector";
+import { DevLog } from "@/components/mobile/dev-log";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,13 +40,14 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning className={`${geistSans.variable} ${spaceGrotesk.variable}`}>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
+        <script suppressHydrationWarning dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
       </head>
       <body>
         <UiStyleInjector />
         <Providers>
           <ErrorBoundary>{children}</ErrorBoundary>
         </Providers>
+        {process.env.NODE_ENV === "development" && <DevLog />}
       </body>
     </html>
   );

@@ -3,10 +3,9 @@
  *
  * Regla de negocio:
  * - Toda fecha/hora visible para el usuario se muestra en la zona horaria del usuario.
- * - Por defecto se usa la zona horaria del dispositivo/navegador del usuario
- *   (detectada via `Intl.DateTimeFormat().resolvedOptions().timeZone`).
- * - Si el usuario tiene una zona horaria configurada en su perfil, se puede sobrescribir
- *   con `setUserTimeZone()` y se persiste en `localStorage`.
+ * - La zona horaria del usuario se obtiene de su perfil (profiles.timezone).
+ * - Si el perfil no tiene zona horaria, se detecta automáticamente del navegador
+ *   y se guarda en el perfil para futuras sesiones.
  * - Fallback en servidor: `America/Santiago`.
  * - La base de datos siempre almacena UTC (`timestamptz`).
  * - Cuando el usuario selecciona una fecha/hora local, se convierte a ISO con offset

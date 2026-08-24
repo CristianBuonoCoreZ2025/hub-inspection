@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { refreshMagicLink } from "@/services/inspections";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { getUserTimeZone } from "@/lib/timezone";
 
 interface MagicLinkSenderProps {
   token: string;
@@ -24,7 +25,7 @@ interface MagicLinkSenderProps {
 function fmt(d: string | null | undefined) {
   if (!d) return "—";
   return new Date(d).toLocaleString("es-CL", {
-    timeZone: "America/Santiago",
+    timeZone: getUserTimeZone(),
     day: "2-digit", month: "2-digit", year: "numeric",
     hour: "2-digit", minute: "2-digit", hour12: false,
   });

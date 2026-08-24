@@ -7,6 +7,7 @@ import type { GestionScreen as GestionScreenType, ClaimAction, Claim } from "@/t
 import DynamicScreen from "./DynamicScreen";
 import type { ScreenField } from "./DynamicScreen";
 import { getInspectionSessions } from "@/services/inspections";
+import { getUserTimeZone } from "@/lib/timezone";
 
 interface GestionScreenSwitcherProps {
   screens: GestionScreenType[];
@@ -114,7 +115,7 @@ export default function GestionScreenSwitcher({ screens, action, claim, onChange
         <p className="app-dynamic-title text-foreground mb-1">Datos de la Coordinación</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
           <div><span className="text-muted-foreground">Tipo:</span> {inherited.inspectionType === "remote" ? "Remota" : inherited.inspectionType === "onsite" ? "Presencial" : "—"}</div>
-          <div><span className="text-muted-foreground">Fecha:</span> {inherited.fecha ? new Date(inherited.fecha).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : "—"}</div>
+          <div><span className="text-muted-foreground">Fecha:</span> {inherited.fecha ? new Date(inherited.fecha).toLocaleString("es-CL", { timeZone: getUserTimeZone(), day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : "—"}</div>
           <div className="col-span-2"><span className="text-muted-foreground">Dirección del Siniestro:</span> {claimAddress || "—"}</div>
           {inherited.aclaracionDireccion && (
             <div className="col-span-2"><span className="text-muted-foreground">Aclaración Dirección:</span> {inherited.aclaracionDireccion}</div>
@@ -142,7 +143,7 @@ export default function GestionScreenSwitcher({ screens, action, claim, onChange
             </p>
             <p className="app-body text-muted-foreground">
               Estado: {linkedSession.status}
-              {linkedSession.scheduled_at && ` · Programada: ${new Date(linkedSession.scheduled_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}`}
+              {linkedSession.scheduled_at && ` · Programada: ${new Date(linkedSession.scheduled_at).toLocaleString("es-CL", { timeZone: getUserTimeZone(), day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}`}
             </p>
             <Button
               className="pg-btn-platinum"

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, Fragment } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { useForm } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { actaSchema, type ActaInput } from "@/lib/validations";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { updateInspectionSession, type SessionDetail } from "@/services/inspections";
+import { updateInspectionSession, createThirdParty, updateThirdParty, deleteThirdParty, getInspectionSessionById, type SessionDetail } from "@/services/inspections";
 import { useFlash } from "@/components/ui/alert-context";
 import {
  Shield,
@@ -19,6 +19,10 @@ import {
  MapPin,
  AlertTriangle,
  XCircle,
+ Loader2,
+ Save,
+ Trash2,
+ Plus,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -31,8 +35,11 @@ import { VoiceTextarea } from "@/components/ui/voice-textarea";
 import { useLookupCatalogs } from "@/hooks/use-lookup-catalog";
 import { getPropertyClassifications, getHousingDestinations, getClassificationDestinations, getBuildingAges } from "@/services/catalogs";
 import { resolveFieldConfig, filterClassificationsByDestination, getSortedVisibleFields } from "@/lib/field-config";
+import { savePendingActa } from "@/lib/offline/sync-session";
 import { useQuery } from "@tanstack/react-query";
 import type { InspectionSession } from "@/types";
+import type { OfflineCatalogs } from "@/db/offline-db";
+import { getUserTimeZone } from "@/lib/timezone";
 
 const steps = [
  { id: 1, label: "Datos Generales", icon: ClipboardList, key: "datos" },
@@ -50,14 +57,16 @@ interface ActaFormProps {
  offlineMode?: boolean;
  /** Callback al guardar offline (para refrescar estado del padre) */
  onOfflineSaved?: () => void;
+ /** Catálogos descargados para uso offline */
+ offlineCatalogs?: OfflineCatalogs;
 }
 
-export default function ActaForm({ session, readOnly = false, offlineMode = false, onOfflineSaved }: ActaFormProps) {
+export default function ActaForm({ session, readOnly = false, offlineMode = false, onOfflineSaved, offlineCatalogs }: ActaFormProps) {
  const queryClient = useQueryClient();
  const flash = useFlash();
  const [step, setStep] = useState(1);
 
- const { catalogs } = useLookupCatalogs([
+ const { catalogs: lookupCatalogs } = useLookupCatalogs([
  "interviewed_relationship",
  "materiality_walls",
  "materiality_roof",
@@ -68,27 +77,38 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
  "materiality_closure",
  ]);
 
+ const catalogs = offlineMode && offlineCatalogs ? offlineCatalogs.lookup_catalog : lookupCatalogs;
+
  // Catálogos desde tablas separadas
- const { data: propertyClassifications = [] } = useQuery({
+ const { data: propertyClassificationsQuery = [] } = useQuery({
  queryKey: ["property-classifications"],
  queryFn: getPropertyClassifications,
  staleTime: 1000 * 60 * 30,
+ enabled: !offlineMode,
  });
- const { data: housingDestinations = [] } = useQuery({
+ const { data: housingDestinationsQuery = [] } = useQuery({
  queryKey: ["housing-destinations"],
  queryFn: getHousingDestinations,
  staleTime: 1000 * 60 * 30,
+ enabled: !offlineMode,
  });
- const { data: classificationDestinations = [] } = useQuery({
+ const { data: classificationDestinationsQuery = [] } = useQuery({
  queryKey: ["classification-destinations"],
  queryFn: getClassificationDestinations,
  staleTime: 1000 * 60 * 30,
+ enabled: !offlineMode,
  });
- const { data: buildingAges = [] } = useQuery({
+ const { data: buildingAgesQuery = [] } = useQuery({
  queryKey: ["building-ages"],
  queryFn: getBuildingAges,
  staleTime: 1000 * 60 * 30,
+ enabled: !offlineMode,
  });
+
+ const propertyClassifications = offlineMode && offlineCatalogs ? offlineCatalogs.property_classifications : propertyClassificationsQuery;
+ const housingDestinations = offlineMode && offlineCatalogs ? offlineCatalogs.housing_destinations : housingDestinationsQuery;
+ const classificationDestinations = offlineMode && offlineCatalogs ? offlineCatalogs.classification_destinations : classificationDestinationsQuery;
+ const buildingAges = offlineMode && offlineCatalogs ? offlineCatalogs.building_ages : buildingAgesQuery;
 
  // Pre-llenar desde el siniestro: si el acta no tiene datos del entrevistado,
  // usar los del asegurado desde claims_participants
@@ -164,11 +184,44 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
  },
  });
 
+ const [offlineSaving, setOfflineSaving] = useState(false);
+
+ // Sincronizar la tabla third_parties con el campo JSON del acta
+ const syncThirdPartiesTable = async (sessionId: string, actaThirdParties: Array<Record<string, unknown>>) => {
+   const freshSession = await getInspectionSessionById(sessionId).catch(() => null);
+   const serverThirdParties = (freshSession?.third_parties ?? []) as unknown as Array<{ id: string }>;
+   const serverIds = new Set(serverThirdParties.map((t) => t.id));
+
+   // Eliminar terceros que ya no están en el acta
+   for (const serverTp of serverThirdParties) {
+     const stillExists = actaThirdParties.some((tp) => tp.id === serverTp.id);
+     if (!stillExists) {
+       await deleteThirdParty(serverTp.id);
+     }
+   }
+
+   // Crear o actualizar terceros del acta
+   for (const tp of actaThirdParties) {
+     const { id: _id, created_at: _c, updated_at: _u, ...rest } = tp;
+     void _c; void _u;
+     if (_id && serverIds.has(_id as string)) {
+       // Ya existe: actualizar
+       await updateThirdParty(_id as string, rest as Partial<import("@/types").ThirdParty>);
+     } else {
+       // No existe: crear
+       void _id;
+       await createThirdParty({
+         ...rest,
+         session_id: sessionId,
+       } as Omit<import("@/types").ThirdParty, "id" | "created_at" | "updated_at">);
+     }
+   }
+ };
+
  const saveMutation = useMutation({
  mutationFn: async (data: ActaInput) => {
    if (offlineMode) {
-     const { savePendingActa } = await import("@/lib/offline/sync-session");
-     await savePendingActa(session.id, {
+      await savePendingActa(session.id, {
        inspection_date: data.inspection_date || null,
        inspection_time: data.inspection_time || null,
        interviewed_name: data.interviewed_name || null,
@@ -190,7 +243,7 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
      onOfflineSaved?.();
      return;
    }
-   return updateInspectionSession(session.id, {
+   await updateInspectionSession(session.id, {
      inspection_date: data.inspection_date || null,
      inspection_time: data.inspection_time || null,
      interviewed_name: data.interviewed_name || null,
@@ -209,6 +262,9 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
      insured_statement: data.insured_statement,
      third_parties: data.third_parties,
    } as Partial<InspectionSession>);
+   // Sincronizar tabla third_parties
+   await syncThirdPartiesTable(session.id, data.third_parties as Array<Record<string, unknown>>);
+   return;
  },
  onSuccess: () => {
    if (!offlineMode) {
@@ -219,30 +275,43 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
  onError: (err: Error) => flash({ description: err.message, type: "error" }),
  });
 
- const onSubmit = form.handleSubmit((data) => {
- saveMutation.mutate(data);
- });
-
- // ── Guardado manual (botón Guardar) ──
- // Sin auto-save. El usuario guarda explícitamente con el botón Guardar.
- const toSessionPatch = (data: ActaInput): Partial<InspectionSession> => ({
- inspection_date: data.inspection_date || null,
- inspection_time: data.inspection_time || null,
- interviewed_name: data.interviewed_name || null,
- interviewed_email: data.interviewed_email || null,
- interviewed_relationship: data.interviewed_relationship || null,
- police_report_number: data.police_report_number || null,
- police_report_name: data.police_report_name || null,
- police_report_rut: data.police_report_rut || null,
- firefighters_company: data.firefighters_company || null,
- other_insurances: data.other_insurances,
- other_insurance_company: data.other_insurance_company || null,
- inspector_observations: data.inspector_observations || null,
- property_risk: data.property_risk,
- property_materiality: data.property_materiality,
- security_measures: data.security_measures,
- insured_statement: data.insured_statement,
- third_parties: data.third_parties,
+ const onSubmit = form.handleSubmit(async (data) => {
+   if (offlineMode) {
+     // En modo offline, llamar directamente sin useMutation
+     // (useMutation puede colgarse si hay mutations online pendientes en el cache)
+     setOfflineSaving(true);
+     try {
+       await savePendingActa(session.id, {
+         inspection_date: data.inspection_date || null,
+         inspection_time: data.inspection_time || null,
+         interviewed_name: data.interviewed_name || null,
+         interviewed_email: data.interviewed_email || null,
+         interviewed_relationship: data.interviewed_relationship || null,
+         police_report_number: data.police_report_number || null,
+         police_report_name: data.police_report_name || null,
+         police_report_rut: data.police_report_rut || null,
+         firefighters_company: data.firefighters_company || null,
+         other_insurances: data.other_insurances,
+         other_insurance_company: data.other_insurance_company || null,
+         inspector_observations: data.inspector_observations || null,
+         property_risk: data.property_risk,
+         property_materiality: data.property_materiality,
+         security_measures: data.security_measures,
+         insured_statement: data.insured_statement,
+         third_parties: data.third_parties,
+       } as Partial<InspectionSession>);
+       flash({ description: "Acta guardada", type: "success", duration: 800 });
+       // Resetear isDirty del form para que no muestre "Cambios sin guardar"
+       form.reset(data);
+       onOfflineSaved?.();
+     } catch (err) {
+       flash({ description: (err as Error).message, type: "error" });
+     } finally {
+       setOfflineSaving(false);
+     }
+     return;
+   }
+   saveMutation.mutate(data);
  });
 
  // Sincronizar el step del acta con el cliente (piloto automático)
@@ -263,7 +332,9 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
    classificationDestinations,
    propertyType,
   );
-  const stillValid = filtered.some((c) => c.name === riskClass);
+  // No borrar mientras los catálogos aún cargan o si no hay filtros disponibles
+  if (filtered.length === 0) return;
+  const stillValid = filtered.some((c) => c.name === riskClass || c.id === riskClass);
   if (!stillValid) {
    form.setValue("property_risk.risk_class" as never, "" as never);
   }
@@ -338,9 +409,37 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
  {Array.from({ length: max }, (_, i) => String(i + 1)).map((n) => (
  <SelectItem key={n} value={n}>{n}</SelectItem>
  ))}
- <SelectItem value="10+">10+</SelectItem>
+ {max >= 10 && <SelectItem value={`${max}+`}>{`${max}+`}</SelectItem>}
  </SelectContent>
  </Select>
+ );
+ };
+
+ // Input numérico con sugerencias (datalist) — permite escribir cualquier número
+ // pero muestra valores del catálogo como sugerencias.
+ // Usa type="text" + inputMode="numeric" para que el navegador no bloquee
+ // el submit cuando el value viene del catálogo con texto (ej: "5 Años").
+ const numberInputWithSuggestions = (name: string, suggestions: { id: string; name: string }[], placeholder = "0") => {
+ const raw = watch(name);
+ const current = raw ? String(raw) : "";
+ const listId = `${name.replace(/\./g, "-")}-suggestions`;
+ return (
+ <>
+ <Input
+ type="text"
+ inputMode="numeric"
+ list={listId}
+ placeholder={placeholder}
+ value={current}
+ onChange={(e) => set(name, e.target.value)}
+ className="app-input"
+ />
+ <datalist id={listId}>
+ {suggestions.map((s) => (
+ <option key={s.id} value={s.name} />
+ ))}
+ </datalist>
+ </>
  );
  };
 
@@ -351,27 +450,6 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
  <div className="flex items-center gap-2 rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-300">
  <Lock className="h-3.5 w-3.5 shrink-0" />
  Inspección finalizada — el acta es de solo lectura
- </div>
- )}
- {/* Barra superior: Guardar + estado */}
- {!readOnly && (
- <div className="flex items-center justify-between gap-3">
- <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
- {saveMutation.isPending ? (
- <span className="text-amber-600">Guardando...</span>
- ) : saveMutation.isSuccess ? (
- <span className="text-emerald-600">Guardado</span>
- ) : form.formState.isDirty ? (
- <span className="text-amber-600">Cambios sin guardar</span>
- ) : null}
- </div>
- <Button
- type="submit"
- disabled={saveMutation.isPending || readOnly}
- className="pg-btn-platinum"
- >
- {saveMutation.isPending ? "Guardando..." : "Guardar"}
- </Button>
  </div>
  )}
  {/* Stepper horizontal — wizard de pasos */}
@@ -416,8 +494,22 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
  <div className="space-y-3">
  {/* Datos del Siniestro (readonly, vienen del claim) */}
  <div className="app-panel">
- <h3 className="app-section-title">
- Dirección del Siniestro
+ <h3 className="app-section-title flex items-center justify-between gap-2">
+ <span>Dirección del Siniestro</span>
+ {!readOnly && (
+ <button
+ type="submit"
+ disabled={saveMutation.isPending || offlineSaving || readOnly}
+ className="acta-save-btn"
+ aria-label="Guardar"
+ >
+ {saveMutation.isPending || offlineSaving ? (
+ <Loader2 size={18} strokeWidth={2} className="animate-spin" />
+ ) : (
+ <Save size={18} strokeWidth={2} />
+ )}
+ </button>
+ )}
  </h3>
  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-2 text-[11px]">
  <div>
@@ -542,8 +634,22 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
  {/* Paso 2: Descripcion del Riesgo */}
  {step === 2 && (
  <div className="app-panel">
- <h3 className="app-section-title">
- Descripcion del Riesgo Siniestrado
+ <h3 className="app-section-title flex items-center justify-between gap-2">
+ <span>Descripcion del Riesgo Siniestrado</span>
+ {!readOnly && (
+ <button
+ type="submit"
+ disabled={saveMutation.isPending || offlineSaving || readOnly}
+ className="acta-save-btn"
+ aria-label="Guardar"
+ >
+ {saveMutation.isPending || offlineSaving ? (
+ <Loader2 size={18} strokeWidth={2} className="animate-spin" />
+ ) : (
+ <Save size={18} strokeWidth={2} />
+ )}
+ </button>
+ )}
  </h3>
  {(() => {
  const riskClass = String(watch("property_risk.risk_class") ?? "");
@@ -580,15 +686,15 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
    const renderField = () => {
      switch (key) {
        case "age_years":
-         return tableSelect("property_risk.age_years", buildingAges);
+         return numberInputWithSuggestions("property_risk.age_years", buildingAges, "0");
        case "room_count":
-         return numberSelect("property_risk.room_count", 10);
+         return numberSelect("property_risk.room_count", 20);
        case "bathroom_count":
          return numberSelect("property_risk.bathroom_count", 10);
        case "office_count":
-         return numberSelect("property_risk.office_count", 10);
+         return numberSelect("property_risk.office_count", 20);
        case "warehouse_count":
-         return numberSelect("property_risk.warehouse_count", 10);
+         return numberSelect("property_risk.warehouse_count", 999);
        case "is_habitable":
          return (
            <ToggleChip
@@ -599,9 +705,9 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
            </ToggleChip>
          );
        case "apartment_number":
-         return <Input {...field("property_risk.apartment_number")} placeholder="606" className="app-input" />;
+         return numberSelect("property_risk.apartment_number", 999);
        case "floor_count":
-         return <Input {...field("property_risk.floor_count")} type="number" placeholder="6" className="app-input" />;
+         return numberSelect("property_risk.floor_count", 99);
        case "built_surface":
          return <Input {...field("property_risk.built_surface")} type="number" placeholder="0" className="app-input" />;
        case "owner_name":
@@ -632,8 +738,22 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
  {/* Paso 3: Materialidad */}
  {step === 3 && (
  <div className="app-panel">
- <h3 className="app-section-title">
- Materialidad del Inmueble
+ <h3 className="app-section-title flex items-center justify-between gap-2">
+ <span>Materialidad del Inmueble</span>
+ {!readOnly && (
+ <button
+ type="submit"
+ disabled={saveMutation.isPending || offlineSaving || readOnly}
+ className="acta-save-btn"
+ aria-label="Guardar"
+ >
+ {saveMutation.isPending || offlineSaving ? (
+ <Loader2 size={18} strokeWidth={2} className="animate-spin" />
+ ) : (
+ <Save size={18} strokeWidth={2} />
+ )}
+ </button>
+ )}
  </h3>
  <div className="modal-grid-3">
  <div className="modal-field">
@@ -675,8 +795,22 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
  {/* Paso 4: Medidas de Seguridad */}
  {step === 4 && (
  <div className="app-panel">
- <h3 className="app-section-title">
- Medidas de Asegurabilidad
+ <h3 className="app-section-title flex items-center justify-between gap-2">
+ <span>Medidas de Asegurabilidad</span>
+ {!readOnly && (
+ <button
+ type="submit"
+ disabled={saveMutation.isPending || offlineSaving || readOnly}
+ className="acta-save-btn"
+ aria-label="Guardar"
+ >
+ {saveMutation.isPending || offlineSaving ? (
+ <Loader2 size={18} strokeWidth={2} className="animate-spin" />
+ ) : (
+ <Save size={18} strokeWidth={2} />
+ )}
+ </button>
+ )}
  </h3>
  <div className="space-y-2">
  {(
@@ -726,8 +860,22 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
  {/* Paso 5: Declaracion del Asegurado */}
  {step === 5 && (
  <div className="app-panel">
- <h3 className="app-section-title">
- Declaracion del Asegurado
+ <h3 className="app-section-title flex items-center justify-between gap-2">
+ <span>Declaracion del Asegurado</span>
+ {!readOnly && (
+ <button
+ type="submit"
+ disabled={saveMutation.isPending || offlineSaving || readOnly}
+ className="acta-save-btn"
+ aria-label="Guardar"
+ >
+ {saveMutation.isPending || offlineSaving ? (
+ <Loader2 size={18} strokeWidth={2} className="animate-spin" />
+ ) : (
+ <Save size={18} strokeWidth={2} />
+ )}
+ </button>
+ )}
  </h3>
  <div className="modal-grid">
  <div className="modal-field modal-field-full">
@@ -767,8 +915,22 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
  {/* Paso 6: Terceros */}
  {step === 6 && (
  <div className="app-panel">
- <h3 className="app-section-title">
- Datos de Terceros
+ <h3 className="app-section-title flex items-center justify-between gap-2">
+ <span>Datos de Terceros</span>
+ {!readOnly && (
+ <button
+ type="submit"
+ disabled={saveMutation.isPending || offlineSaving || readOnly}
+ className="acta-save-btn"
+ aria-label="Guardar"
+ >
+ {saveMutation.isPending || offlineSaving ? (
+ <Loader2 size={18} strokeWidth={2} className="animate-spin" />
+ ) : (
+ <Save size={18} strokeWidth={2} />
+ )}
+ </button>
+ )}
  </h3>
  <div className="space-y-3">
  {((watch("third_parties") as Array<Record<string, unknown>>) || []).map((_, idx) => (
@@ -776,18 +938,17 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
  <div className="flex items-center justify-between">
  <span className="text-[11px] font-medium">Tercero {idx + 1}</span>
  {!readOnly && (
- <Button
+ <button
  type="button"
- variant="ghost"
- size="sm"
- className="h-7 text-xs pg-btn-platinum"
+ className="acta-save-btn"
+ aria-label={`Eliminar tercero ${idx + 1}`}
  onClick={() => {
  const current = (watch("third_parties") as Array<Record<string, unknown>>) || [];
  set("third_parties", current.filter((_, i) => i !== idx));
  }}
  >
- Eliminar
- </Button>
+ <Trash2 size={18} strokeWidth={2} />
+ </button>
  )}
  </div>
  <div className="modal-grid-3">
@@ -878,11 +1039,11 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
  </div>
  ))}
  {!readOnly && (
- <Button
+ <div className="flex justify-end">
+ <button
  type="button"
- variant="outline"
- size="sm"
- className="pg-btn-platinum"
+ className="acta-save-btn"
+ aria-label="Agregar tercero"
  onClick={() => {
  const current = (watch("third_parties") as Array<Record<string, unknown>>) || [];
  set("third_parties", [
@@ -891,8 +1052,9 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
  ]);
  }}
  >
- Agregar
- </Button>
+ <Plus size={18} strokeWidth={2} />
+ </button>
+ </div>
  )}
  </div>
  </div>
@@ -973,6 +1135,7 @@ function GeoValidationBlock({
  <p className="font-medium">
  {session.geo_captured_at
  ? new Date(session.geo_captured_at).toLocaleString("es-CL", {
+ timeZone: getUserTimeZone(),
  day: "2-digit",
  month: "2-digit",
  year: "numeric",

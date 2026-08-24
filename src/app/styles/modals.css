@@ -1097,3 +1097,42 @@
   color: var(--st-error) !important;
 }
 
+/* ── Sección PIN offline ── */
+.my-profile-pin-section {
+  margin-top: 16px !important;
+  padding-top: 16px !important;
+  border-top: 1px solid var(--border) !important;
+}
+.my-profile-pin-header {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+.my-profile-pin-status {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 2px 8px !important;
+  border-radius: 999px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+}
+.my-profile-pin-status.configured {
+  background: hsl(150 60% 95%) !important;
+  color: hsl(150 60% 35%) !important;
+}
+.my-profile-pin-status.pending {
+  background: hsl(35 80% 95%) !important;
+  color: hsl(35 80% 40%) !important;
+}
+.my-profile-pin-row {
+  display: flex !important;
+  align-items: flex-end !important;
+  gap: 8px !important;
+  margin-top: 10px !important;
+}
+.my-profile-pin-row .pg-btn-platinum,
+.my-profile-pin-row .pg-btn-ghost {
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+}
+

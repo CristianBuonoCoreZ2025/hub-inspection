@@ -1,21 +1,35 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { getInspectionSessionById } from "@/services/inspections";
+import { getInspectionSessionById, type SessionDetail } from "@/services/inspections";
 import { useAuth } from "@/hooks/use-auth";
 import ReportTab from "@/app/dashboard/inspecciones/[id]/report-tab";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, CloudOff } from "lucide-react";
+import type { OfflineSession } from "@/db/offline-db";
 
-export default function MobileReportTab({ sessionId }: { sessionId: string }) {
+interface MobileReportTabProps {
+  sessionId: string;
+  offlineMode?: boolean;
+  offlineSession?: OfflineSession | null;
+}
+
+export default function MobileReportTab({ sessionId, offlineMode = false, offlineSession }: MobileReportTabProps) {
   const { profile } = useAuth();
 
-  const { data: session, isLoading, isError } = useQuery({
+  const { data: onlineSession, isLoading, isError } = useQuery({
     queryKey: ["inspection-session", sessionId],
     queryFn: () => getInspectionSessionById(sessionId),
-    enabled: !!sessionId,
+    enabled: !!sessionId && !offlineMode,
   });
 
-  if (isLoading) {
+  // En modo offline, usar el snapshot de IndexedDB
+  const session = offlineMode ? (offlineSession?.session as SessionDetail | undefined) : onlineSession;
+
+  if (process.env.NODE_ENV === "development") {
+    console.log("[MobileReportTab]", { offlineMode, hasOfflineSession: !!offlineSession, hasSession: !!session, sessionId });
+  }
+
+  if (isLoading && !offlineMode) {
     return (
       <div className="mobile-empty">
         <Loader2 className="h-6 w-6 animate-spin mobile-empty-icon" />
@@ -24,11 +38,29 @@ export default function MobileReportTab({ sessionId }: { sessionId: string }) {
     );
   }
 
-  if (isError || !session) {
+  if (offlineMode && !offlineSession) {
+    return (
+      <div className="mobile-empty">
+        <CloudOff className="h-6 w-6 mobile-empty-icon" />
+        <p className="mobile-empty-text">No hay inspección descargada para mostrar el informe offline</p>
+      </div>
+    );
+  }
+
+  if (!offlineMode && (isError || !session)) {
     return (
       <div className="mobile-empty">
         <AlertCircle className="h-6 w-6 mobile-empty-icon" />
         <p className="mobile-empty-text">No se pudo cargar el informe</p>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className="mobile-empty">
+        <AlertCircle className="h-6 w-6 mobile-empty-icon" />
+        <p className="mobile-empty-text">No hay datos del informe</p>
       </div>
     );
   }
@@ -60,6 +92,7 @@ export default function MobileReportTab({ sessionId }: { sessionId: string }) {
       claimDate={claim?.claim_date}
       commune={claim?.commune?.name}
       hideZip
+      offlineMode={offlineMode}
     />
   );
 }

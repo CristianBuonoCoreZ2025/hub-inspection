@@ -8,7 +8,7 @@ import { getPropertyClassifications, getHousingDestinations } from "@/services/c
 import { resolveFieldConfig, getSortedVisibleFields } from "@/lib/field-config";
 import { issueClaimAction } from "@/services/claim-actions";
 import { toast } from "sonner";
-import { FileText, Printer, CheckCircle2, RefreshCw, Lock, Download, Archive } from "lucide-react";
+import { FileText, Printer, CheckCircle2, RefreshCw, Lock, Download, Archive, CloudOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getUserTimeZone } from "@/lib/timezone";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -120,6 +120,7 @@ export default function ReportTab({
   cancellationNotes,
   cancelledAt,
   hideZip = false,
+  offlineMode = false,
 }: {
   session: SessionDetail;
   profile?: { id?: string; company?: { name?: string | null; logo_url?: string | null; phone?: string | null; email?: string | null; address?: string | null } | null } | null;
@@ -137,6 +138,7 @@ export default function ReportTab({
   cancellationNotes?: string | null;
   cancelledAt?: string | null;
   hideZip?: boolean;
+  offlineMode?: boolean;
 }) {
   const queryClient = useQueryClient();
   const printRef = useRef<HTMLDivElement>(null);
@@ -144,13 +146,17 @@ export default function ReportTab({
   const canRegenerate = dataAccess?.is_admin ?? false;
   const sessionId = session.id;
   const sessionStatus = session.status;
+
+  if (process.env.NODE_ENV === "development") {
+    console.log("[ReportTab]", { sessionId, offlineMode, sessionStatus });
+  }
   const isCancellation = sessionStatus === "cancelled";
   const isCompleted = sessionStatus === "completed";
 
   // Refrescar la sesión completa al entrar a la pestaña del informe
   useEffect(() => {
-    queryClient.invalidateQueries({ queryKey: ["inspection-session-full", sessionId] });
-  }, [sessionId, queryClient]);
+    if (!offlineMode) queryClient.invalidateQueries({ queryKey: ["inspection-session-full", sessionId] });
+  }, [sessionId, queryClient, offlineMode]);
 
   const { data: reportMaxPhotos } = useQuery({
     queryKey: ["report-max-photos"],
@@ -159,11 +165,13 @@ export default function ReportTab({
       const data = (await res.json()) as { value?: number };
       return typeof data.value === "number" ? data.value : 18;
     },
+    enabled: !offlineMode,
   });
 
   const { data: report, isLoading, isError, error: reportError } = useQuery({
     queryKey: ["report", sessionId],
     queryFn: () => getReport(sessionId),
+    enabled: !offlineMode,
   });
 
   const { data: propertyClassifications = [] } = useQuery({
@@ -171,18 +179,62 @@ export default function ReportTab({
     queryFn: getPropertyClassifications,
     staleTime: 0,
     refetchOnMount: true,
+    enabled: !offlineMode,
   });
   const { data: housingDestinations = [] } = useQuery({
     queryKey: ["housing-destinations"],
     queryFn: getHousingDestinations,
     staleTime: 0,
     refetchOnMount: true,
+    enabled: !offlineMode,
   });
 
   // Forzar isFinal durante la generación del PDF para que el watermark
   // "BORRADOR" no aparezca y el footer diga "definitivo"
   const [forceFinalForPdf, setForceFinalForPdf] = useState(false);
   const isFinal = report?.status === "final" || isCompleted || forceFinalForPdf;
+
+  // Mapa de URLs offline: id -> blob URL (para imágenes offline)
+  const [offlineBlobUrls, setOfflineBlobUrls] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (!offlineMode) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { getOfflineDB } = await import("@/db/offline-db");
+        const db = getOfflineDB();
+        const map: Record<string, string> = {};
+        // Evidencias
+        for (const ev of session.inspection_evidences || []) {
+          const cached = await db.evidenceBlobs.get(ev.id);
+          if (cached && !cancelled) map[ev.id] = URL.createObjectURL(cached.blob);
+        }
+        // Croquis
+        for (const sk of session.damage_sketches || []) {
+          const cached = await db.evidenceBlobs.get(`sketch-${sk.id}`);
+          if (cached && !cancelled) map[`sketch-${sk.id}`] = URL.createObjectURL(cached.blob);
+        }
+        // Firmas
+        for (const sig of session.inspection_signatures || []) {
+          const cached = await db.evidenceBlobs.get(`sig-${sig.id}`);
+          if (cached && !cancelled) map[`sig-${sig.id}`] = URL.createObjectURL(cached.blob);
+        }
+        if (!cancelled) setOfflineBlobUrls(map);
+      } catch (e) {
+        console.warn("No se pudieron cargar blobs offline para reporte:", e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [offlineMode, session]);
+
+  // Helper: obtener URL de imagen (blob offline si está disponible, sino proxy)
+  const imgUrl = useCallback((id: string, url: string | null | undefined, kind: "evidence" | "sketch" | "sig" = "evidence"): string => {
+    if (!url) return "";
+    const key = kind === "evidence" ? id : `${kind}-${id}`;
+    if (offlineBlobUrls[key]) return offlineBlobUrls[key];
+    if (offlineMode) return ""; // No mostrar imagen rota offline
+    return proxyR2Url(url);
+  }, [offlineBlobUrls, offlineMode]);
 
   const generateMutation = useMutation({
     mutationFn: async () => {
@@ -678,7 +730,15 @@ export default function ReportTab({
 
   return (
     <div className="app-stack">
+      {/* Aviso offline */}
+      {offlineMode && (
+        <div className="flex items-center gap-2 rounded-xl border border-amber-300/40 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-300">
+          <CloudOff className="h-3.5 w-3.5 shrink-0" />
+          Modo offline — la vista previa del informe está disponible. La generación de PDF y finalización requieren conexión.
+        </div>
+      )}
       {/* Acciones — botones de una sola palabra */}
+      {!offlineMode && (
       <div className="report-actions">
         {!isFinal && (
           <Button
@@ -755,11 +815,12 @@ export default function ReportTab({
           </>
         )}
       </div>
+      )}
 
       {/* Preview del acta — vista tipo PDF con scroll */}
-      {isLoading ? (
+      {isLoading && !offlineMode ? (
         <div className="report-loading app-panel app-body">Cargando...</div>
-      ) : isError ? (
+      ) : isError && !offlineMode ? (
         <div className="report-loading app-panel app-body text-rose-600 dark:text-rose-400">
           Error al cargar el acta: {reportError?.message || "No se pudo obtener el acta."}
         </div>
@@ -793,7 +854,7 @@ export default function ReportTab({
             <div>
               {companyLogo ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={proxyR2Url(companyLogo)} alt={companyName} className="report-logo" />
+                <img src={offlineMode ? (companyLogo || "") : proxyR2Url(companyLogo)} alt={companyName} className="report-logo" />
               ) : (
                 <div className="report-logo-text app-body">{companyName}</div>
               )}
@@ -1093,7 +1154,7 @@ export default function ReportTab({
                 {photos.map((ev, idx) => (
                   <div key={ev.id} className="report-photo-item">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={proxyR2Url(ev.url)} alt={`Foto ${idx + 1}`} className="report-photo-img" />
+                    <img src={imgUrl(ev.id, ev.url)} alt={`Foto ${idx + 1}`} className="report-photo-img" />
                     <p className="report-photo-label app-body">
                       Foto {idx + 1}{ev.description ? ` — ${ev.description}` : ""}
                     </p>
@@ -1209,7 +1270,7 @@ export default function ReportTab({
                 {sketches.map((sk, idx) => (
                   <div key={sk.id}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={proxyR2Url(sk.sketch_url)} alt={`Croquis ${idx + 1}`} className="report-sketch-img" />
+                    <img src={imgUrl(sk.id, sk.sketch_url, "sketch")} alt={`Croquis ${idx + 1}`} className="report-sketch-img" />
                     <p className="report-photo-label app-body">
                       Croquis {idx + 1}{sk.label ? ` — ${sk.label}` : ""}
                     </p>
@@ -1235,7 +1296,7 @@ export default function ReportTab({
                     {sig ? (
                       <>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={proxyR2Url(sig.signature_url)} alt={`Firma ${label}`} className="report-sig-img h-16 object-contain" />
+                        <img src={imgUrl(sig.id, sig.signature_url, "sig")} alt={`Firma ${label}`} className="report-sig-img h-16 object-contain" />
                         <p className="report-sig-name app-body">{label}</p>
                         <p className="report-sig-role app-body">{fmtDateTime(sig.signed_at)}</p>
                       </>

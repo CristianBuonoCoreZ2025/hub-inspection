@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
+import { hasOfflinePinInSupabase } from "@/lib/auth/offline-auth";
 import { toast } from "sonner";
-import { User, Upload, X } from "lucide-react";
+import { User, Upload, X, Lock, Smartphone, Loader2 } from "lucide-react";
 import { uploadFileToStorage } from "@/lib/supabase/storage-upload";
 
 /**
@@ -51,6 +52,42 @@ function MyProfileInner({
   const [rut, setRut] = useState(profile?.rut || "");
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || "");
   const [avatarUploading, setAvatarUploading] = useState(false);
+
+  // PIN offline (consultar Supabase)
+  const [hasPin, setHasPin] = useState<boolean | null>(null);
+  const [newPin, setNewPin] = useState("");
+  const [pinSaving, setPinSaving] = useState(false);
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    hasOfflinePinInSupabase(profile.id).then(setHasPin).catch(() => setHasPin(false));
+  }, [profile?.id]);
+
+  const handleSavePin = async () => {
+    if (newPin.length < 4 || newPin.length > 6 || !/^\d+$/.test(newPin)) {
+      toast.error("El PIN debe ser de 4 a 6 dígitos numéricos");
+      return;
+    }
+    setPinSaving(true);
+    try {
+      const res = await fetch("/api/users/me", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ offline_pin: newPin }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Error al guardar PIN");
+      }
+      setHasPin(true);
+      setNewPin("");
+      toast.success("PIN offline actualizado");
+    } catch (e) {
+      toast.error((e as Error).message || "Error al guardar el PIN");
+    } finally {
+      setPinSaving(false);
+    }
+  };
 
   const updateMutation = useMutation({
     mutationFn: async (input: { phone?: string; rut?: string; avatar_url?: string }) => {
@@ -189,6 +226,48 @@ function MyProfileInner({
               onChange={(e) => setRut(e.target.value)}
               placeholder="12.345.678-9"
             />
+          </div>
+        </div>
+
+        {/* PIN Offline */}
+        <div className="my-profile-pin-section">
+          <div className="my-profile-pin-header">
+            <Smartphone className="h-4 w-4 text-primary" />
+            <span className="app-body font-semibold">PIN offline</span>
+            <span className={`my-profile-pin-status ${hasPin ? "configured" : "pending"}`}>
+              {hasPin === null ? "Verificando..." : hasPin ? "Configurado" : "Sin configurar"}
+            </span>
+          </div>
+          <p className="app-body text-muted-foreground mt-1">
+            PIN de 4 a 6 dígitos para acceder a inspecciones descargadas sin conexión.
+          </p>
+          <div className="my-profile-pin-row">
+            <div className="flex-1">
+              <Label className="app-field-label">{hasPin ? "PIN nuevo" : "Elegir PIN"}</Label>
+              <Input
+                type="password"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                value={newPin}
+                onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ""))}
+                placeholder="Ej: 1234"
+                className="app-input"
+              />
+            </div>
+            <button
+              type="button"
+              className="pg-btn-platinum"
+              onClick={handleSavePin}
+              disabled={pinSaving || newPin.length < 4}
+            >
+              {pinSaving ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Lock className="h-3 w-3" />
+              )}
+              Guardar
+            </button>
           </div>
         </div>
       </div>

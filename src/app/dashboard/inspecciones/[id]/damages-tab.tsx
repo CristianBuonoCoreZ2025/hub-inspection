@@ -7,7 +7,7 @@ import { getDamageSpaces, getContentGoodTypes, getContentGoodProducts, getBrands
 import { ProductSearch, type ProductSearchItem } from "@/components/ui/product-search";
 import { useLookupCatalogs } from "@/hooks/use-lookup-catalog";
 import { toast } from "sonner";
-import { Trash2, Pencil, Building2, Package, Lock, Info } from "lucide-react";
+import { Trash2, Pencil, Building2, Package, Lock, Info, Plus, Save, ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/hooks/use-confirm";
 import { useAlert } from "@/hooks/use-alert";
@@ -22,7 +22,11 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { amountInWords } from "@/lib/amount-words";
-import type { InspectionDamage } from "@/types";
+import type { InspectionDamage, InspectionEvidence, ThirdParty } from "@/types";
+import { mergeInspectionDamages, getGlobalCatalogs, type OfflineCatalogs, type OfflineSession } from "@/db/offline-db";
+import { getDownloadedSession } from "@/lib/offline/download-session";
+import { addPendingDamageCreated, addPendingDamageDeleted, addPendingDamageUpdated } from "@/lib/offline/sync-session";
+import type { SessionDetail } from "@/services/inspections";
 
 const unitOptions = ["UND", "M2", "M3", "KG", "LT", "MT", "GLB"];
 
@@ -173,7 +177,7 @@ function damageToForm(d: InspectionDamage): DamageForm {
  };
 }
 
-export default function DamagesTab({ sessionId, propertyClassification, countryId, sessionStatus, offlineMode = false, onOfflineSaved }: { sessionId: string; propertyClassification?: string | null; countryId?: string | null; sessionStatus?: string; offlineMode?: boolean; onOfflineSaved?: () => void }) {
+export default function DamagesTab({ sessionId, propertyClassification, countryId, sessionStatus, offlineMode = false, onOfflineSaved, offlineCatalogs, session, offlineSession, isMobile = false }: { sessionId: string; propertyClassification?: string | null; countryId?: string | null; sessionStatus?: string; offlineMode?: boolean; onOfflineSaved?: (updated?: OfflineSession) => void | Promise<void>; offlineCatalogs?: OfflineCatalogs | null; session?: SessionDetail | null; offlineSession?: OfflineSession | null; isMobile?: boolean }) {
  const queryClient = useQueryClient();
  const confirmDelete = useConfirm();
  const showAlert = useAlert();
@@ -184,7 +188,31 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  const [amountFocused, setAmountFocused] = useState(false);
  const [contentDocType, setContentDocType] = useState("Boleta");
  const [contentDocFile, setContentDocFile] = useState<File | null>(null);
+ const [damageTab, setDamageTab] = useState<"building" | "content">("building");
  const readOnly = sessionStatus === "completed" || sessionStatus === "cancelled";
+
+ // Cargar catálogos globales de IndexedDB si estamos offline y no vienen del padre
+ const { data: localCatalogs, isLoading: loadingCatalogs } = useQuery({
+   queryKey: ["offline-global-catalogs"],
+   queryFn: getGlobalCatalogs,
+   enabled: offlineMode && !offlineCatalogs,
+   staleTime: Infinity,
+ });
+
+ // Cargar sesión offline de IndexedDB si estamos offline y no viene del padre
+ const { data: localOfflineSession, isError: localOfflineError } = useQuery({
+   queryKey: ["offline-session", sessionId],
+   queryFn: async () => {
+     console.log("[DamagesTab] loading offline session from IndexedDB", sessionId);
+     const result = await getDownloadedSession(sessionId);
+     console.log("[DamagesTab] getDownloadedSession result", !!result, result?.id);
+     return result;
+   },
+   enabled: offlineMode && !offlineSession,
+   staleTime: 0,
+ });
+ if (localOfflineError) console.error("[DamagesTab] offline session query error");
+ const effectiveOfflineSession = offlineSession ?? localOfflineSession ?? null;
 
  const formatAmount = (value: number) =>
    new Intl.NumberFormat("es-CL", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(value);
@@ -274,21 +302,21 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  };
 
  const handleDimensionChange = (field: "length" | "width" | "height" | "damage_length" | "damage_width" | "damage_height", value: string) => {
-   setForm((prev) => {
-     const raw = value ? Number(value) : null;
-     const isDamage = field.startsWith("damage_");
-     const surfaceField = isDamage ? (field.replace("damage_", "") as "length" | "width" | "height") : field;
-     const surfaceValue = prev[surfaceField] as number | null;
-     const limit = prev.unit === "M2" || prev.unit === "M3" || prev.unit === "MT" ? (surfaceValue ?? 0) : null;
+   const raw = value ? Number(value) : null;
+   const isDamage = field.startsWith("damage_");
+   const surfaceField = isDamage ? (field.replace("damage_", "") as "length" | "width" | "height") : field;
+   const surfaceValue = form[surfaceField] as number | null;
+   const limit = form.unit === "M2" || form.unit === "M3" || form.unit === "MT" ? (surfaceValue ?? 0) : null;
 
-     if (raw != null && !isNaN(raw)) {
-       if (isDamage && limit != null && raw > limit) {
-         const label = surfaceField === "length" ? "largo" : surfaceField === "width" ? "ancho" : "alto";
-         showAlert({ title: "Valor fuera de rango", description: `El ${label} del daño no puede ser mayor que el de la superficie`, type: "error" });
-         return prev;
-       }
+   if (raw != null && !isNaN(raw)) {
+     if (isDamage && limit != null && raw > limit) {
+       const label = surfaceField === "length" ? "largo" : surfaceField === "width" ? "ancho" : "alto";
+       showAlert({ title: "Valor fuera de rango", description: `El ${label} del daño no puede ser mayor que el de la superficie`, type: "error" });
+       return;
      }
+   }
 
+   setForm((prev) => {
      const clamped = raw == null || isNaN(raw) ? null : Math.min(raw, MAX_DIMENSION);
      const next = { ...prev, [field]: clamped } as DamageForm;
 
@@ -332,37 +360,67 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  };
 
  const handleDamageQuantityChange = (value: string) => {
-   setForm((prev) => {
-     const damage_quantity = parseQuantity(value);
-     if (damage_quantity > prev.quantity) {
-       showAlert({ title: "Valor fuera de rango", description: "La cantidad del daño no puede ser mayor que la de la superficie", type: "error" });
-       return prev;
-     }
-     return { ...prev, damage_quantity };
-   });
+   const damage_quantity = parseQuantity(value);
+   if (damage_quantity > form.quantity) {
+     showAlert({ title: "Valor fuera de rango", description: "La cantidad del daño no puede ser mayor que la de la superficie", type: "error" });
+     return;
+   }
+   setForm((prev) => ({ ...prev, damage_quantity }));
  };
 
- const { data: damages, isLoading } = useQuery({
+ const { data: onlineDamages, isLoading: damagesLoading } = useQuery({
  queryKey: ["damages", sessionId],
  queryFn: () => getDamages(sessionId),
+ enabled: !offlineMode,
  });
 
- const { data: evidences } = useQuery({
+ const { data: onlineEvidences } = useQuery({
  queryKey: ["evidences", sessionId],
  queryFn: () => getEvidences(sessionId),
- enabled: !!sessionId,
+ enabled: !!sessionId && !offlineMode,
  });
 
+ const { data: onlineThirdParties } = useQuery({
+ queryKey: ["third-parties", sessionId],
+ queryFn: () => getThirdParties(sessionId),
+ staleTime: 1000 * 60 * 5,
+ enabled: !offlineMode,
+ });
+
+ // Datos offline desde el session descargado
+ const offlineAvailable = !!effectiveOfflineSession || offlineMode;
+ const mergedFromSession = mergeInspectionDamages(
+   [
+     effectiveOfflineSession?.session.inspection_damages as InspectionDamage[] | undefined,
+     session?.inspection_damages as InspectionDamage[] | undefined,
+     onlineDamages,
+   ],
+   effectiveOfflineSession?.pending,
+ );
+ const damages = mergedFromSession.length > 0
+   ? mergedFromSession
+   : (offlineMode ? (session?.inspection_damages ?? []) as InspectionDamage[] : (onlineDamages ?? []));
+ const evidences = onlineEvidences
+   ?? ((effectiveOfflineSession?.session.inspection_evidences ?? session?.inspection_evidences ?? []) as InspectionEvidence[]);
+ const thirdParties = onlineThirdParties
+   ?? ((effectiveOfflineSession?.session.third_parties ?? session?.third_parties ?? []) as ThirdParty[]);
+ const isLoading = (!offlineAvailable && !offlineMode && damagesLoading) || loadingCatalogs;
+ const effectiveOfflineCatalogs = offlineCatalogs ?? localCatalogs ?? null;
+ const useOfflineCatalogs = (offlineAvailable || offlineMode) && !!effectiveOfflineCatalogs;
+
+ // Catálogos: usar datos offline si estamos en modo offline
  const { data: spaces = [] } = useQuery({
  queryKey: ["damage-spaces"],
  queryFn: getDamageSpaces,
  staleTime: 1000 * 60 * 30,
+ enabled: !offlineMode && !useOfflineCatalogs,
  });
 
  const { data: goodTypes = [] } = useQuery({
  queryKey: ["content-good-types"],
  queryFn: getContentGoodTypes,
  staleTime: 1000 * 60 * 30,
+ enabled: !offlineMode && !useOfflineCatalogs,
  });
 
  // Todos los productos (con su tipo) para el buscador inteligente
@@ -370,13 +428,14 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  queryKey: ["content-good-products"],
  queryFn: getContentGoodProducts,
  staleTime: 1000 * 60 * 30,
+ enabled: !offlineMode && !useOfflineCatalogs,
  });
 
  // Marcas válidas para el tipo de bien seleccionado (vía matriz N:M)
  const { data: brandsByType = [] } = useQuery({
  queryKey: ["brands-by-type", form.content_good_type_id],
  queryFn: () => getBrandsByTypeId(form.content_good_type_id),
- enabled: !!form.content_good_type_id,
+ enabled: !!form.content_good_type_id && !offlineMode && !useOfflineCatalogs,
  staleTime: 1000 * 60 * 30,
  });
 
@@ -384,66 +443,105 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  queryKey: ["damage-classifications"],
  queryFn: getDamageClassifications,
  staleTime: 1000 * 60 * 30,
+ enabled: !offlineMode && !useOfflineCatalogs,
  });
 
- const severityOptions = damageClassifications
-   .filter((d) => d.code)
-   .map((d) => ({
-     value: d.code?.toLowerCase() || "",
-     label: d.name,
-   }));
+ // En modo offline, usar catálogos de IndexedDB
+ const offlineSpaces = effectiveOfflineCatalogs?.damage_spaces ?? [];
+ const offlineGoodTypes = effectiveOfflineCatalogs?.content_good_types ?? [];
+ const offlineAllProducts = effectiveOfflineCatalogs?.content_good_products ?? [];
+ const offlineDamageClassifications = effectiveOfflineCatalogs?.damage_classifications ?? [];
+ const offlineCountryCurrencies = effectiveOfflineCatalogs?.country_currencies ?? [];
+ const offlineMaterialityCatalogs = effectiveOfflineCatalogs?.lookup_catalog ?? {};
+
+ // Valores efectivos (online u offline)
+ const effectiveSpaces = useOfflineCatalogs ? offlineSpaces : spaces;
+ const effectiveGoodTypes = useOfflineCatalogs ? offlineGoodTypes : goodTypes;
+ const effectiveAllProducts = useOfflineCatalogs ? offlineAllProducts : allProducts;
+ const effectiveDamageClassifications = useOfflineCatalogs ? offlineDamageClassifications : damageClassifications;
+
+ // Marcas offline: filtrar content_good_type_brands por type_id y mapear a brand
+ const offlineBrandsByType = useOfflineCatalogs && form.content_good_type_id
+   ? (offlineCatalogs?.content_good_type_brands ?? [])
+       .filter((tb) => tb.content_good_type_id === form.content_good_type_id && tb.brand)
+       .map((tb) => ({ id: tb.brand!.id, name: tb.brand!.name }))
+   : [];
+ const effectiveBrandsByType = useOfflineCatalogs ? offlineBrandsByType : brandsByType;
+
+ const severityOptions = effectiveDamageClassifications
+   .filter((d) => ("code" in d && d.code) || ("severity" in d && d.severity))
+   .map((d) => {
+     const dc = d as { code?: string; severity?: string; name: string };
+     return { value: (dc.code || dc.severity || "").toLowerCase(), label: dc.name };
+   });
  const severityLabelMap = Object.fromEntries(
-   damageClassifications
-     .filter((d) => d.code)
-     .map((d) => [d.code?.toLowerCase() || "", d.name])
+   effectiveDamageClassifications
+     .filter((d) => ("code" in d && d.code) || ("severity" in d && d.severity))
+     .map((d) => {
+       const dc = d as { code?: string; severity?: string; name: string };
+       return [(dc.code || dc.severity || "").toLowerCase(), dc.name];
+     })
  );
 
- const { catalogs: materialityCatalogs } = useLookupCatalogs(MATERIALITY_CATALOGS);
+ const { catalogs: materialityCatalogs } = useLookupCatalogs(MATERIALITY_CATALOGS, !useOfflineCatalogs);
+ const effectiveMaterialityCatalogs = useOfflineCatalogs ? offlineMaterialityCatalogs : materialityCatalogs;
 
  const materialityCategoryCode =
    MATERIALITY_CATALOGS.find((c) => MATERIALITY_CATALOG_LABELS[c] === form.subcategory) || "";
  const selectedCategoryRequiresDetail =
    DAMAGE_CATEGORIES.find((c) => c.label === form.subcategory)?.requires_detail ?? false;
- const currentMaterialityItems = materialityCatalogs[materialityCategoryCode] || [];
+ const currentMaterialityItems = effectiveMaterialityCatalogs[materialityCategoryCode] || [];
  const selectedMaterialityItem = currentMaterialityItems.find((i) => i.name === form.materiality_type);
- const selectedGoodType = goodTypes.find((g) => g.id === form.content_good_type_id);
+ const selectedGoodType = effectiveGoodTypes.find((g) => g.id === form.content_good_type_id);
  // requiresDetail aplica a daños constructivos (categoría/materialidad) y a
  // daños de contenido (Tipo de Bien con requires_detail=true).
  const requiresDetail =
    selectedCategoryRequiresDetail ||
-   !!selectedMaterialityItem?.requires_detail ||
+   !!(selectedMaterialityItem as { requires_detail?: boolean })?.requires_detail ||
    !!selectedGoodType?.requires_detail;
  const materialitySelectValue = selectedMaterialityItem?.id || "";
+
+// Validación para guardar:
+// - Constructivo: necesita espacio, materialidad y categoría (subcategory). Si categoría es "Otros", necesita aclaratoria.
+// - Contenido: necesita aclaratoria O tipo de contenido (content_good_type_id).
+const isBuildingDamage = form.damage_type === "building";
+const isContentDamage = form.damage_type === "content";
+const buildingValid =
+  !!form.space_id &&
+  !!form.subcategory &&
+  !!form.materiality_type &&
+  (!selectedCategoryRequiresDetail || !!form.description?.trim());
+const contentValid =
+  !!form.description?.trim() ||
+  !!form.content_good_type_id;
+const canSaveDamage = isBuildingDamage ? buildingValid : isContentDamage ? contentValid : false;
 
  // Monedas filtradas por país del siniestro
  const { data: countryCurrencies = [] } = useQuery({
  queryKey: ["country-currencies", countryId],
  queryFn: () => getCountryCurrencies(countryId),
  staleTime: 1000 * 60 * 30,
+ enabled: !offlineMode && !useOfflineCatalogs,
  });
 
  // Construir opciones de moneda desde el catálogo del país
  // Fallback: si no hay monedas configuradas, usar CLP
- const currencyOptions = countryCurrencies.length > 0
- ? countryCurrencies.map((c) => ({
- value: c.code || c.name,
- label: `${c.code} — ${c.name}`,
- }))
+ const currencyOptions = (useOfflineCatalogs ? offlineCountryCurrencies : countryCurrencies).length > 0
+ ? (useOfflineCatalogs ? offlineCountryCurrencies : countryCurrencies).map((c) => {
+     const cc = c as { code?: string; name?: string };
+     return { value: cc.code || cc.name || "CLP", label: `${cc.code} — ${cc.name}` };
+   })
  : [{ value: "CLP", label: "CLP — Peso Chileno" }];
 
- const { data: thirdParties = [] } = useQuery({
- queryKey: ["third-parties", sessionId],
- queryFn: () => getThirdParties(sessionId),
- staleTime: 1000 * 60 * 5,
- });
+ const effectiveThirdParties = thirdParties;
 
  // Terceros afectados (para asociar daños)
- const affectedThirdParties = thirdParties.filter((t) => t.party_type === "afectado");
+ const affectedThirdParties = effectiveThirdParties.filter((t) => t.party_type === "afectado");
  const evidenceDocs = (evidences || []).filter((e) => e.damage_id === editing);
 
  // Filtrar espacios según la clasificación del inmueble
  const filteredSpaces = propertyClassification
- ? spaces.filter((s) =>
+ ? effectiveSpaces.filter((s) =>
  !s.applicable_classifications ||
  s.applicable_classifications.length === 0 ||
  s.applicable_classifications.includes(propertyClassification)
@@ -452,71 +550,135 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
 
  const createMutation = useMutation({
  mutationFn: async (input: Parameters<typeof createDamage>[0]) => {
-   if (offlineMode) {
-     const { addPendingDamageCreated } = await import("@/lib/offline/sync-session");
-     const tempId = "offline-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
-     const damage: InspectionDamage = {
+   const isOffline = offlineAvailable || offlineMode;
+   const timeout = new Promise<never>((_, reject) =>
+     setTimeout(
+       () => reject(new Error(isOffline ? "Timeout guardando daño offline (>3s)" : "Timeout guardando daño online (>10s)")),
+       isOffline ? 3000 : 10000,
+     ),
+   );
+   const work = async () => {
+     console.log("[createDamage] start", { offlineAvailable, offlineMode, sessionId, input });
+     if (!offlineAvailable) {
+       console.log("[createDamage] online mode", { onLine: navigator.onLine });
+       if (typeof navigator !== "undefined" && !navigator.onLine) {
+         throw new Error("No hay conexión a internet. Conectate o usá la vista mobile con la inspección descargada.");
+       }
+       return createDamage(input);
+     }
+     if (!effectiveOfflineSession) {
+       console.log("[createDamage] loading session from IndexedDB");
+       const loaded = await getDownloadedSession(sessionId);
+       if (!loaded) throw new Error("No hay sesión offline descargada. Descargá la inspección primero.");
+     }
+     const now = new Date().toISOString();
+     const tempId = `offline-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+     const damage = {
        ...input,
        id: tempId,
-       created_at: new Date().toISOString(),
-       updated_at: new Date().toISOString(),
+       created_at: now,
+       updated_at: now,
      } as InspectionDamage;
-     await addPendingDamageCreated(sessionId, damage);
-     onOfflineSaved?.();
+     console.log("[createDamage] calling addPendingDamageCreated", damage.id);
+     const updatedOffline = await addPendingDamageCreated(sessionId, damage);
+     console.log("[createDamage] addPendingDamageCreated done");
+     console.log("[createDamage] calling onOfflineSaved", !!updatedOffline);
+     await onOfflineSaved?.(updatedOffline);
+     console.log("[createDamage] onOfflineSaved done");
      return damage;
-   }
-   return createDamage(input);
+   };
+   return Promise.race([work(), timeout]);
  },
  onSuccess: () => {
-   if (!offlineMode) {
-     queryClient.invalidateQueries({ queryKey: ["damages", sessionId] });
-   }
+   if (!offlineAvailable) queryClient.invalidateQueries({ queryKey: ["damages", sessionId] });
    setForm(emptyForm(sessionId, newType));
    setEditing(null);
    toast.success("Daño registrado");
  },
- onError: (err: Error) => toast.error(err.message),
+ onError: (err: Error) => {
+   console.error("[createDamage] error:", err);
+   toast.error(err.message);
+ },
  });
 
  const updateMutation = useMutation({
  mutationFn: async ({ id, data }: { id: string; data: Partial<InspectionDamage> }) => {
-   if (offlineMode) {
-     const { addPendingDamageUpdated } = await import("@/lib/offline/sync-session");
-     const existing = damages?.find((d) => d.id === id);
-     const merged = { ...(existing || {}), ...data, id, updated_at: new Date().toISOString() } as InspectionDamage;
-     await addPendingDamageUpdated(sessionId, merged);
-     onOfflineSaved?.();
+   console.log("[updateDamage] mutationFn start", { id, offlineAvailable, offlineMode });
+   const isOffline = offlineAvailable || offlineMode;
+   const timeout = new Promise<never>((_, reject) =>
+     setTimeout(
+       () => reject(new Error(isOffline ? "Timeout actualizando daño offline (>3s)" : "Timeout actualizando daño online (>10s)")),
+       isOffline ? 3000 : 10000,
+     ),
+   );
+   const work = async () => {
+     console.log("[updateDamage] work start");
+     if (!offlineAvailable) {
+       console.log("[updateDamage] online mode");
+       return updateDamage(id, data);
+     }
+     // Cargar sesión offline directamente de IndexedDB si no la tenemos
+     let session = effectiveOfflineSession;
+     if (!session) {
+       console.log("[updateDamage] loading session from IndexedDB");
+       session = await getDownloadedSession(sessionId);
+       console.log("[updateDamage] session from IndexedDB", !!session);
+     }
+     if (!session) {
+       throw new Error("No hay sesión offline descargada. Descargá la inspección primero.");
+     }
+     const existing = damages.find((damage) => damage.id === id);
+     console.log("[updateDamage] existing damage", !!existing, existing?.id);
+     if (!existing) throw new Error("Daño no encontrado");
+     const merged = { ...existing, ...data, id, updated_at: new Date().toISOString() } as InspectionDamage;
+     console.log("[updateDamage] calling addPendingDamageUpdated");
+     const updatedOffline = await addPendingDamageUpdated(sessionId, merged);
+     console.log("[updateDamage] addPendingDamageUpdated done");
+     await onOfflineSaved?.(updatedOffline);
+     console.log("[updateDamage] onOfflineSaved done");
      return merged;
-   }
-   return updateDamage(id, data);
+   };
+   return Promise.race([work(), timeout]);
  },
  onSuccess: () => {
-   if (!offlineMode) {
-     queryClient.invalidateQueries({ queryKey: ["damages", sessionId] });
-   }
+   if (!offlineAvailable) queryClient.invalidateQueries({ queryKey: ["damages", sessionId] });
    setEditing(null);
    toast.success("Daño actualizado");
  },
- onError: (err: Error) => toast.error(err.message),
+ onError: (err: Error) => {
+   console.error("[updateDamage] error:", err);
+   toast.error(err.message);
+ },
  });
 
  const deleteMutation = useMutation({
  mutationFn: async (id: string) => {
-   if (offlineMode) {
-     const { addPendingDamageDeleted } = await import("@/lib/offline/sync-session");
-     await addPendingDamageDeleted(sessionId, id);
-     onOfflineSaved?.();
-     return;
-   }
-   return deleteDamage(id);
+   const isOffline = offlineAvailable || offlineMode;
+   const timeout = new Promise<never>((_, reject) =>
+     setTimeout(
+       () => reject(new Error(isOffline ? "Timeout eliminando daño offline (>3s)" : "Timeout eliminando daño online (>10s)")),
+       isOffline ? 3000 : 10000,
+     ),
+   );
+   const work = async () => {
+     if (!offlineAvailable) return deleteDamage(id);
+     if (!effectiveOfflineSession) {
+       const loaded = await getDownloadedSession(sessionId);
+       if (!loaded) throw new Error("No hay sesión offline descargada. Descargá la inspección primero.");
+     }
+     const updatedOffline = await addPendingDamageDeleted(sessionId, id);
+     await onOfflineSaved?.(updatedOffline);
+   };
+   return Promise.race([work(), timeout]);
  },
  onSuccess: () => {
-   if (!offlineMode) {
-     queryClient.invalidateQueries({ queryKey: ["damages", sessionId] });
-   }
+   if (!offlineAvailable) queryClient.invalidateQueries({ queryKey: ["damages", sessionId] });
    toast.success("Daño eliminado");
  },
- onError: (err: Error) => toast.error(err.message),
+ onError: (err: Error) => {
+   console.error("[deleteDamage] error:", err);
+   toast.error(err.message);
+ },
  });
 
  const uploadDocMutation = useMutation({
@@ -576,10 +738,18 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  total: t.building + t.content,
  }));
 
- const spaceName = (id: string | null) => spaces.find((s) => s.id === id)?.name || "—";
- const goodTypeName = (id: string | null) => goodTypes.find((g) => g.id === id)?.name || "—";
+ const spaceName = (id: string | null) => effectiveSpaces.find((s) => s.id === id)?.name || "—";
+ const goodTypeName = (id: string | null) => effectiveGoodTypes.find((g) => g.id === id)?.name || "—";
 
  const handleSubmit = () => {
+ if (!canSaveDamage) {
+   if (isBuildingDamage) {
+     toast.error("Falta: espacio, materialidad y categoría (o aclaratoria si es Otros)");
+   } else {
+     toast.error("Falta: aclaratoria o tipo de contenido");
+   }
+   return;
+ }
  // Convertir "" y 0 a null para campos opcionales de la API
  const payload = {
  ...form,
@@ -603,9 +773,74 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  building_damage_category_id: form.building_damage_category_id || null,
  };
  if (editing === "new") {
- createMutation.mutate(payload);
+ console.log("[handleSubmit] creating new damage");
+ if (offlineAvailable || offlineMode) {
+   // Bypass React Query: guardar offline directamente
+   (async () => {
+     try {
+       console.log("[handleSubmit] creating offline directly");
+       let session = effectiveOfflineSession;
+       if (!session) {
+         console.log("[handleSubmit] loading session from IndexedDB");
+         session = await getDownloadedSession(sessionId);
+       }
+       if (!session) {
+         throw new Error("No hay sesión offline descargada. Descargá la inspección primero.");
+       }
+       const now = new Date().toISOString();
+       const tempId = `offline-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+       const damage = { ...payload, id: tempId, created_at: now, updated_at: now } as InspectionDamage;
+       console.log("[handleSubmit] calling addPendingDamageCreated", damage.id);
+       const updatedOffline = await addPendingDamageCreated(sessionId, damage);
+       console.log("[handleSubmit] addPendingDamageCreated done");
+       await onOfflineSaved?.(updatedOffline);
+       console.log("[handleSubmit] onOfflineSaved done");
+       setForm(emptyForm(sessionId, newType));
+       setEditing(null);
+       toast.success("Daño registrado");
+     } catch (err) {
+       console.error("[handleSubmit] offline create error", err);
+       toast.error((err as Error).message);
+     }
+   })();
+ } else {
+   createMutation.mutate(payload);
+ }
  } else if (editing) {
- updateMutation.mutate({ id: editing, data: payload });
+ console.log("[handleSubmit] updating damage", editing);
+ if (offlineAvailable || offlineMode) {
+   // Bypass React Query: guardar offline directamente
+   (async () => {
+     try {
+       console.log("[handleSubmit] saving offline directly");
+       let session = effectiveOfflineSession;
+       if (!session) {
+         console.log("[handleSubmit] loading session from IndexedDB");
+         session = await getDownloadedSession(sessionId);
+       }
+       if (!session) {
+         throw new Error("No hay sesión offline descargada. Descargá la inspección primero.");
+       }
+       const existing = damages.find((d) => d.id === editing);
+       if (!existing) throw new Error("Daño no encontrado");
+       const merged = { ...existing, ...payload, id: editing, updated_at: new Date().toISOString() } as InspectionDamage;
+       console.log("[handleSubmit] calling addPendingDamageUpdated");
+       const updatedOffline = await addPendingDamageUpdated(sessionId, merged);
+       console.log("[handleSubmit] addPendingDamageUpdated done");
+       await onOfflineSaved?.(updatedOffline);
+       console.log("[handleSubmit] onOfflineSaved done");
+       setEditing(null);
+       toast.success("Daño actualizado");
+     } catch (err) {
+       console.error("[handleSubmit] offline save error", err);
+       toast.error((err as Error).message);
+     }
+   })();
+ } else {
+   updateMutation.mutate({ id: editing, data: payload });
+ }
+ } else {
+ console.log("[handleSubmit] no editing value, doing nothing");
  }
  };
 
@@ -647,7 +882,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  </div>
 
  {/* Botones de nuevo daño — estilo tiles */}
- {!isEditingNew && !readOnly && (
+ {!isEditingNew && !readOnly && !isMobile && (
  <div className="grid grid-cols-2 gap-3">
  <Tooltip>
  <TooltipTrigger className="inline-flex">
@@ -684,13 +919,59 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  </div>
  )}
 
- {/* Formulario */}
+ {/* Tab bar (mobile) */}
+ {isMobile && (
+ <div className="flex gap-2">
+   <button
+     onClick={() => editing === null && setDamageTab("building")}
+    disabled={editing !== null}
+     className={`flex-1 rounded-lg px-3 py-2 app-body font-medium transition-colors ${damageTab === "building" ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground"} ${editing !== null ? "opacity-50 cursor-not-allowed" : ""}`}
+   >
+     Constructivos
+   </button>
+   <button
+     onClick={() => editing === null && setDamageTab("content")}
+    disabled={editing !== null}
+     className={`flex-1 rounded-lg px-3 py-2 app-body font-medium transition-colors ${damageTab === "content" ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground"} ${editing !== null ? "opacity-50 cursor-not-allowed" : ""}`}
+   >
+     Contenidos
+   </button>
+ </div>
+ )}
+
+ 
+{/* Formulario */}
  {editing !== null && (
  <div className="app-panel space-y-3" key={`edit-${editing}-${form.damage_type}`}>
- <h3 className="app-section-title flex items-center gap-2">
- {form.damage_type === "building" ? <Building2 className="h-4 w-4" /> : <Package className="h-4 w-4" />}
- {editing === "new" ? "Nuevo" : "Editar"} {form.damage_type === "building" ? "Daño Constructivo" : "Daño de Contenido"}
- </h3>
+   <div className="flex items-center justify-between gap-2">
+     <h3 className="app-section-title flex items-center gap-2">
+       {form.damage_type === "building" ? <Building2 className="h-4 w-4" /> : <Package className="h-4 w-4" />}
+       {editing === "new" ? "Nuevo" : "Editar"} {form.damage_type === "building" ? "Daño Constructivo" : "Daño de Contenido"}
+     </h3>
+     <div className="flex gap-2">
+       <button
+         type="button"
+         onClick={() => setEditing(null)}
+         className="acta-save-btn"
+         aria-label="Cancelar"
+       >
+         <ArrowLeft size={18} strokeWidth={2} />
+       </button>
+       <button
+         type="button"
+         onClick={() => { if (canSaveDamage && !createMutation.isPending && !updateMutation.isPending) handleSubmit(); else if (!canSaveDamage) { if (isBuildingDamage) toast.error("Falta: espacio, materialidad y categoría (o aclaratoria si es Otros)"); else toast.error("Falta: aclaratoria o tipo de contenido"); } }}
+         className="acta-save-btn"
+         aria-label="Guardar"
+       >
+         {createMutation.isPending || updateMutation.isPending ? (
+           <Loader2 size={18} strokeWidth={2} className="animate-spin" />
+         ) : (
+           <Save size={18} strokeWidth={2} />
+         )}
+       </button>
+     </div>
+   </div>
+ <div className={isMobile ? "space-y-3" : ""}>
 
  {form.damage_type === "building" ? (
  /* ── FORMULARIO CONSTRUCTIVO ── */
@@ -701,8 +982,8 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  value={form.space_id || ""}
  items={filteredSpaces.map((s) => ({ value: s.id, label: s.name }))}
  onValueChange={(v) => {
- const space = spaces.find((s) => s.id === v);
- setForm({ ...form, space_id: v || "", dependency: space?.name || "" });
+ const space = effectiveSpaces.find((s) => s.id === v);
+ setForm({ ...form, space_id: v || "", dependency: space?.name || "", sector: space?.name || "" });
  }}
  >
  <SelectTrigger className="app-input w-full" disabled={!propertyClassification}>
@@ -739,7 +1020,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
      setForm({
        ...form,
        materiality_type: item?.name || "",
-       description: item?.requires_detail ? form.description : "",
+       description: (item as { requires_detail?: boolean })?.requires_detail ? form.description : "",
      });
    }}
  >
@@ -1035,11 +1316,11 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  </Popover>
  </div>
  <ProductSearch
- products={allProducts as ProductSearchItem[]}
+ products={effectiveAllProducts as ProductSearchItem[]}
  selectedProductId={form.product_id || undefined}
  selectedLabel={form.product || undefined}
  onSelect={(p) => {
- const gt = goodTypes.find((g) => g.id === p.content_good_type_id);
+ const gt = effectiveGoodTypes.find((g) => g.id === p.content_good_type_id);
  setForm({
  ...form,
  content_good_type_id: p.content_good_type_id,
@@ -1080,7 +1361,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <Select
  value={form.brand_id || "__none"}
  onValueChange={(v) => {
- const brand = brandsByType.find((b) => b.id === v);
+ const brand = effectiveBrandsByType.find((b) => b.id === v);
  setForm({
  ...form,
  brand_id: v === "__none" ? "" : (v ?? ""),
@@ -1089,11 +1370,11 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  }}
  >
  <SelectTrigger className="app-input w-full">
- <SelectValue>{form.brand_id ? (brandsByType.find((b) => b.id === form.brand_id)?.name || "Seleccionar...") : (form.content_good_type_id ? "Seleccionar..." : "Seleccione tipo de bien...")}</SelectValue>
+ <SelectValue>{form.brand_id ? (effectiveBrandsByType.find((b) => b.id === form.brand_id)?.name || "Seleccionar...") : (form.content_good_type_id ? "Seleccionar..." : "Seleccione tipo de bien...")}</SelectValue>
  </SelectTrigger>
  <SelectContent>
  <SelectItem value="__none">Sin selección</SelectItem>
- {brandsByType.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+ {effectiveBrandsByType.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
  </SelectContent>
  </Select>
  </div>
@@ -1266,26 +1547,13 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  </div>
  )}
 
- {/* Botones */}
- <div className="flex items-center justify-between border-t border-border pt-3">
- <div className="app-body text-muted-foreground">
- {form.damage_type === "building" ? "Daño constructivo" : "Daño de contenido"}
- </div>
- <div className="flex gap-2">
- <Button onClick={() => setEditing(null)} className="pg-btn-platinum">Cancelar</Button>
- <Button
- onClick={handleSubmit}
- disabled={(requiresDetail && !form.description?.trim()) || createMutation.isPending || updateMutation.isPending}
- className="pg-btn-platinum"
- >
- {createMutation.isPending || updateMutation.isPending ? "Guardando..." : "Guardar"}
- </Button>
+  {/* Botones ya están arriba del formulario */}
  </div>
  </div>
- </div>
- )}
+)}
 
- {/* ── SECCIÓN: DAÑOS CONSTRUCTIVOS ── */}
+{/* ── SECCIÓN: DAÑOS CONSTRUCTIVOS ── */}
+ {(!isMobile || damageTab === "building" && editing === null) && (
  <div className="app-panel">
  <h3 className="app-section-title flex items-center gap-2">
  <span className="flex h-6 w-6 items-center justify-center rounded-md bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400">
@@ -1295,6 +1563,16 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <span className="app-body text-muted-foreground font-normal">
  ({buildingDamages.length})
  </span>
+ {!readOnly && (
+   <button
+     onClick={() => startNew("building")}
+     disabled={!propertyClassification}
+     className={`ml-auto btn-icon-sm ${!propertyClassification ? "opacity-50 cursor-not-allowed" : ""}`}
+     aria-label="Nuevo daño constructivo"
+   >
+     <Plus className="h-3.5 w-3.5" />
+   </button>
+ )}
  </h3>
  {isLoading ? (
  <div className="text-center py-6 text-muted-foreground app-body">Cargando...</div>
@@ -1307,23 +1585,22 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <table className="app-data-table">
  <thead>
  <tr>
- <th>Espacio</th>
+ <th>Sector</th>
  <th>Categoría</th>
  <th>Materialidad</th>
  <th className="text-right">Superficie / Daño</th>
  <th className="text-right">Monto</th>
- <th className="w-[80px]">Acciones</th>
+ <th className="w-20">Acciones</th>
  </tr>
  </thead>
  <tbody>
  {buildingDamages.map((d) => [
  <tr key={d.id} className={d.observations ? "with-observation" : ""}>
- <td className="app-body">{spaceName(d.space_id)}</td>
+ <td className="app-body">{d.sector || d.dependency || "—"}</td>
  <td className="app-body">{d.subcategory || "—"}</td>
- <td className="app-body max-w-[200px] truncate">{d.description || d.materiality_type || "—"}</td>
+ <td className="app-body max-w-50 truncate">{d.description || d.materiality_type || "—"}</td>
  <td className="text-right app-body">{formatQuantity(d)}</td>
  <td className="text-right font-medium app-body">{formatMoney(d.estimated_amount || 0, d.currency || "CLP")}</td>
- <td className="app-body">{d.purchase_date ? new Date(d.purchase_date).toLocaleDateString('es-CL') : '—'}</td>
  <td>
  <div className="app-row-actions">
  {!readOnly && (
@@ -1331,7 +1608,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <button type="button" className="btn-icon-sm" onClick={() => { setEditing(d.id); setForm(damageToForm(d)); }}>
  <Pencil className="h-3.5 w-3.5" />
  </button>
- <button type="button" className="btn-icon-sm text-rose-500 hover:text-rose-600" onClick={async () => { const ok = await confirmDelete({ title: "Eliminar daño", description: "¿Eliminar este daño? Esta acción no se puede deshacer.", destructive: true, confirmLabel: "Eliminar" }); if (ok) deleteMutation.mutate(d.id); }}>
+ <button type="button" className="btn-icon-sm text-rose-500 hover:text-rose-600" onClick={async () => { const ok = await confirmDelete({ title: "Eliminar daño", description: "¿Eliminar este daño? Esta acción no se puede deshacer.", destructive: true, confirmLabel: "Eliminar" }); if (ok) { if (offlineAvailable || offlineMode) { (async () => { try { let session = effectiveOfflineSession; if (!session) session = await getDownloadedSession(sessionId); if (!session) throw new Error('No hay sesión offline descargada.'); const updatedOffline = await addPendingDamageDeleted(sessionId, d.id); await onOfflineSaved?.(updatedOffline); toast.success('Daño eliminado'); } catch (err) { console.error('[deleteDamage] offline error', err); toast.error((err as Error).message); } })(); } else { deleteMutation.mutate(d.id); } } }}>
  <Trash2 className="h-3.5 w-3.5" />
  </button>
  </>
@@ -1352,8 +1629,10 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  </div>
  )}
  </div>
+ )}
 
  {/* ── SECCIÓN: DAÑOS DE CONTENIDO ── */}
+ {(!isMobile || damageTab === "content" && editing === null) && (
  <div className="app-panel">
  <h3 className="app-section-title flex items-center gap-2">
  <span className="flex h-6 w-6 items-center justify-center rounded-md bg-violet-100 text-violet-600 dark:bg-violet-900/50 dark:text-violet-400">
@@ -1363,6 +1642,15 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <span className="app-body text-muted-foreground font-normal">
  ({contentDamages.length})
  </span>
+ {!readOnly && (
+   <button
+     onClick={() => startNew("content")}
+     className="ml-auto btn-icon-sm"
+     aria-label="Nuevo daño de contenido"
+   >
+     <Plus className="h-3.5 w-3.5" />
+   </button>
+ )}
  </h3>
  {isLoading ? (
  <div className="text-center py-6 text-muted-foreground app-body">Cargando...</div>
@@ -1382,7 +1670,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <th className="text-right">Cantidad</th>
  <th className="text-right">Monto</th>
  <th>Compra</th>
- <th className="w-[80px]">Acciones</th>
+ <th className="w-20">Acciones</th>
  </tr>
  </thead>
  <tbody>
@@ -1413,7 +1701,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  <button type="button" className="btn-icon-sm" onClick={() => { setEditing(d.id); setForm(damageToForm(d)); }}>
  <Pencil className="h-3.5 w-3.5" />
  </button>
- <button type="button" className="btn-icon-sm text-rose-500 hover:text-rose-600" onClick={async () => { const ok = await confirmDelete({ title: "Eliminar daño", description: "¿Eliminar este daño? Esta acción no se puede deshacer.", destructive: true, confirmLabel: "Eliminar" }); if (ok) deleteMutation.mutate(d.id); }}>
+ <button type="button" className="btn-icon-sm text-rose-500 hover:text-rose-600" onClick={async () => { const ok = await confirmDelete({ title: "Eliminar daño", description: "¿Eliminar este daño? Esta acción no se puede deshacer.", destructive: true, confirmLabel: "Eliminar" }); if (ok) { if (offlineAvailable || offlineMode) { (async () => { try { let session = effectiveOfflineSession; if (!session) session = await getDownloadedSession(sessionId); if (!session) throw new Error('No hay sesión offline descargada.'); const updatedOffline = await addPendingDamageDeleted(sessionId, d.id); await onOfflineSaved?.(updatedOffline); toast.success('Daño eliminado'); } catch (err) { console.error('[deleteDamage] offline error', err); toast.error((err as Error).message); } })(); } else { deleteMutation.mutate(d.id); } } }}>
  <Trash2 className="h-3.5 w-3.5" />
  </button>
  </>
@@ -1434,6 +1722,7 @@ export default function DamagesTab({ sessionId, propertyClassification, countryI
  </div>
  )}
  </div>
+ )}
  </div>
  );
 }

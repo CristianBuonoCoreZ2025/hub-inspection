@@ -51,6 +51,7 @@ import {
   Radio,
   LayersArrowUp,
   Import,
+  Smartphone,
   type LucideIcon,
 } from "lucide-react";
 
@@ -172,6 +173,7 @@ export const operationLinks: NavLink[] = [
   { href: "/dashboard/operaciones/reabrir", label: "Reabrir", icon: LockOpen },
   { href: "/dashboard/operaciones/reabrir-inspecciones", label: "Reabrir Inspecciones", icon: LockOpen },
   { href: "/dashboard/operaciones/reasignar-inspecciones", label: "Reasignar Inspecciones", icon: Users },
+  { href: "/dashboard/operaciones/liberar-offline", label: "Liberar Offline", icon: Smartphone },
 ];
 
 // ── Administración ──

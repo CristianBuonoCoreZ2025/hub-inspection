@@ -16,13 +16,14 @@ import {
  rescheduleInspectionViaCIN,
  cancelInspectionViaCIN,
  canAccessInspectionSession,
+ forceReleaseOfflineSession,
 } from "@/services/inspections";
 import { getInspectionMaxDate } from "@/server/actions/inspections";
 import { updateClaimStatus } from "@/services/claims";
 import { getLookupCatalog } from "@/services/catalogs";
 import { getUsers, getUsersByRoleForCompany } from "@/services/users";
 import { usePermissions } from "@/hooks/use-permissions";
-import { formatUserDateTime as formatDateTime, formatDuration } from "@/lib/timezone";
+import { formatUserDateTime as formatDateTime, formatDuration, getUserTimeZone } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
 
 const GeoCapture = dynamic(() => import("@/components/inspection/geo-capture").then((m) => ({ default: m.GeoCapture })), { ssr: false });
@@ -394,6 +395,27 @@ enabled: activeTab === "informe",
    return !canAccessInspectionSession(session, profile, dataAccess);
  }, [session, profile, dataAccess]);
 
+ // Liberación forzada de inspección descargada offline (admin/internal)
+ const releaseOfflineMutation = useMutation({
+   mutationFn: () => forceReleaseOfflineSession(sessionId, profile?.user_id),
+   onSuccess: () => {
+     showAlert({ title: "Inspección liberada", description: "La inspección fue liberada del dispositivo offline.", type: "info" });
+     queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
+   },
+   onError: (err: Error) => showAlert({ title: "Error", description: err.message, type: "error" }),
+ });
+
+ const handleReleaseOffline = async () => {
+   const ok = await confirmAction({
+     title: "Liberar inspección offline",
+     description: "Al liberarla, los datos no sincronizados del dispositivo original se perderán. Esta acción no se puede deshacer.",
+     confirmLabel: "Liberar",
+     destructive: true,
+   });
+   if (!ok) return;
+   releaseOfflineMutation.mutate();
+ };
+
  useEffect(() => {
  if (session && session.inspection_type === "remote" && session.status === "active" && !autoVideoOpenedRef.current && !isAccessBlocked) {
  autoVideoOpenedRef.current = true;
@@ -642,19 +664,47 @@ enabled: activeTab === "informe",
  }
 
  if (isAccessBlocked) {
+ const isOfflineBlocked = !!session?.offline_downloaded_by;
+ const isMyOffline = isOfflineBlocked && session?.offline_downloaded_by === profile?.id;
+ const canReleaseOffline = isOfflineBlocked && !isMyOffline && (dataAccess?.is_admin || profile?.role === "internal");
  return (
  <div className="app-page flex items-center justify-center">
  <div className="app-panel max-w-xl w-full p-8 text-center">
  <div className="mx-auto w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mb-4">
  <AlertTriangle className="h-8 w-8 text-amber-600 dark:text-amber-300" />
  </div>
- <h2 className="app-section-title mb-2">Inspección en curso</h2>
+ <h2 className="app-section-title mb-2">
+ {isOfflineBlocked ? "Inspección descargada offline" : "Inspección en curso"}
+ </h2>
  <p className="app-body text-muted-foreground mb-4">
- Esta inspección se encuentra activa y en realización. Solo el inspector asignado puede acceder mientras esté en curso.
+ {isMyOffline
+ ? "Tienes esta inspección descargada en tu dispositivo móvil. Para acceder desde aquí, primero sincronízala o libérala desde el móvil."
+ : isOfflineBlocked
+ ? "Esta inspección está descargada en el dispositivo de un inspector para trabajo sin conexión. No se puede acceder desde el dashboard mientras esté offline."
+ : "Esta inspección se encuentra activa y en realización. Solo el inspector asignado puede acceder mientras esté en curso."}
  </p>
  <p className="app-body text-sm text-muted-foreground">
- Si necesitas intervenir, contacta al supervisor para levantar el bloqueo.
+ {isMyOffline
+ ? "Ve al móvil, abre la inspección y presiona el botón sincronizar."
+ : isOfflineBlocked
+ ? "Para liberarla, ve a Operaciones → Liberar Offline."
+ : "Si necesitas intervenir, contacta al supervisor para levantar el bloqueo."}
  </p>
+ {canReleaseOffline && (
+ <div className="flex justify-center gap-2 mt-6">
+ <Button
+ variant="destructive"
+ disabled={releaseOfflineMutation.isPending}
+ onClick={handleReleaseOffline}
+ >
+ {releaseOfflineMutation.isPending ? (
+ <><Loader2 className="h-4 w-4 animate-spin" /> Liberando...</>
+ ) : (
+ "Liberar"
+ )}
+ </Button>
+ </div>
+ )}
  </div>
  </div>
  );
@@ -1229,14 +1279,14 @@ enabled: activeTab === "informe",
  <>. &ldquo;{session.cancellation_notes}&rdquo;</>
  )}
  {session.cancelled_at && (
- <> - Cancelada el {new Date(session.cancelled_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}</>
+ <> - Cancelada el {new Date(session.cancelled_at).toLocaleString("es-CL", { timeZone: getUserTimeZone(), day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}</>
  )}
  </p>
  </div>
  ) : (
  session.ended_at && (
  <p className="app-body text-muted-foreground mt-1">
- Finalizada el {new Date(session.ended_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
+ Finalizada el {new Date(session.ended_at).toLocaleString("es-CL", { timeZone: getUserTimeZone(), day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
  </p>
  )
  )}

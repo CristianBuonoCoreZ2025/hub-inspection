@@ -1,7 +1,7 @@
 "use client";
 
-import { getOfflineDB, hasPendingChanges, emptyPendingChanges, type OfflineSession, type PendingChanges } from "@/db/offline-db";
-import { updateInspectionSession, createDamage, updateDamage, deleteDamage, type SessionDetail } from "@/services/inspections";
+import { getOfflineDB, hasPendingChanges, type PendingChanges, type OfflineSession } from "@/db/offline-db";
+import { getInspectionSessionById, updateInspectionSession, createDamage, updateDamage, deleteDamage, deleteEvidence, deleteSignature, createThirdParty, updateThirdParty, deleteThirdParty, type SessionDetail } from "@/services/inspections";
 import type { InspectionSession, InspectionDamage, EvidenceSource } from "@/types";
 
 // ─────────────────────────────────────────────────────────────────────
@@ -47,6 +47,21 @@ export async function syncInspection(
   if (!offline) throw new Error("Inspección no encontrada en cache offline");
 
   const pending = offline.pending;
+  const nextSession: SessionDetail = {
+    ...offline.session,
+    inspection_damages: [...(offline.session.inspection_damages ?? [])],
+  };
+  const remaining: PendingChanges = {
+    ...pending,
+    damagesCreated: [...pending.damagesCreated],
+    damagesUpdated: [...pending.damagesUpdated],
+    damagesDeleted: [...pending.damagesDeleted],
+    evidences: [...pending.evidences],
+    evidencesDeleted: [...pending.evidencesDeleted],
+    signatures: [...pending.signatures],
+    signaturesDeleted: [...pending.signaturesDeleted],
+    sketches: [...pending.sketches],
+  };
   const errors: string[] = [];
   const result: SyncResult = {
     success: true,
@@ -74,7 +89,9 @@ export async function syncInspection(
     pending.damagesUpdated.length +
     pending.damagesDeleted.length +
     pending.evidences.length +
+    pending.evidencesDeleted.length +
     pending.signatures.length +
+    pending.signaturesDeleted.length +
     pending.sketches.length;
   let currentItem = 0;
 
@@ -93,6 +110,7 @@ export async function syncInspection(
     if (pending.acta) {
       try {
         await updateInspectionSession(sessionId, pending.acta as Partial<InspectionSession>);
+        remaining.acta = null;
         result.synced.acta = true;
       } catch (e) {
         errors.push(`Acta: ${(e as Error).message}`);
@@ -100,12 +118,57 @@ export async function syncInspection(
       reportProgress("Acta");
     }
 
+    // 1b. Sincronizar terceros (tabla separada)
+    // El acta guarda third_parties como campo JSON, pero la tabla third_parties
+    // tiene registros individuales. Hay que mantenerlos sincronizados.
+    if (pending.acta?.third_parties !== undefined) {
+      try {
+        // Traer terceros actuales del servidor
+        const freshSession = await getInspectionSessionById(sessionId).catch(() => null);
+        const serverThirdParties = (freshSession?.third_parties ?? []) as unknown as Array<{ id: string }>;
+        const serverIds = new Set(serverThirdParties.map((t) => t.id));
+
+        // Eliminar terceros que ya no están en el acta
+        const actaThirdParties = pending.acta.third_parties as unknown as Array<{ id?: string }>;
+        for (const serverTp of serverThirdParties) {
+          const stillExists = actaThirdParties.some((tp) => tp.id === serverTp.id);
+          if (!stillExists) {
+            await deleteThirdParty(serverTp.id);
+          }
+        }
+
+        // Crear o actualizar terceros del acta
+        for (const tp of actaThirdParties) {
+          const { id: _id, created_at: _c, updated_at: _u, ...rest } = tp as Record<string, unknown>;
+          void _c; void _u;
+          if (_id && serverIds.has(_id as string)) {
+            // Ya existe: actualizar
+            await updateThirdParty(_id as string, rest as Partial<import("@/types").ThirdParty>);
+          } else {
+            // No existe: crear
+            void _id;
+            await createThirdParty({
+              ...rest,
+              session_id: sessionId,
+            } as Omit<import("@/types").ThirdParty, "id" | "created_at" | "updated_at">);
+          }
+        }
+      } catch (e) {
+        errors.push(`Terceros: ${(e as Error).message}`);
+      }
+    }
+
     // 2. Sincronizar daños creados
     for (const damage of pending.damagesCreated) {
       try {
         const { id: _id, created_at: _c, updated_at: _u, ...rest } = damage;
         void _id; void _c; void _u;
-        await createDamage(rest as Parameters<typeof createDamage>[0]);
+        const created = await createDamage(rest as Parameters<typeof createDamage>[0]);
+        nextSession.inspection_damages = [
+          ...(nextSession.inspection_damages ?? []).filter((item) => item.id !== damage.id),
+          created,
+        ];
+        remaining.damagesCreated = remaining.damagesCreated.filter((item) => item.id !== damage.id);
         result.synced.damages++;
       } catch (e) {
         errors.push(`Daño creado: ${(e as Error).message}`);
@@ -116,7 +179,11 @@ export async function syncInspection(
     // 3. Sincronizar daños actualizados
     for (const damage of pending.damagesUpdated) {
       try {
-        await updateDamage(damage.id, damage);
+        const updated = await updateDamage(damage.id, damage);
+        nextSession.inspection_damages = (nextSession.inspection_damages ?? []).map((item) =>
+          item.id === damage.id ? updated : item,
+        );
+        remaining.damagesUpdated = remaining.damagesUpdated.filter((item) => item.id !== damage.id);
         result.synced.damages++;
       } catch (e) {
         errors.push(`Daño actualizado: ${(e as Error).message}`);
@@ -128,6 +195,8 @@ export async function syncInspection(
     for (const damageId of pending.damagesDeleted) {
       try {
         await deleteDamage(damageId);
+        nextSession.inspection_damages = (nextSession.inspection_damages ?? []).filter((item) => item.id !== damageId);
+        remaining.damagesDeleted = remaining.damagesDeleted.filter((id) => id !== damageId);
         result.synced.damages++;
       } catch (e) {
         errors.push(`Daño eliminado: ${(e as Error).message}`);
@@ -154,6 +223,7 @@ export async function syncInspection(
           const err = await res.json().catch(() => ({}));
           throw new Error(err.error || `HTTP ${res.status}`);
         }
+        remaining.evidences = remaining.evidences.filter((item) => item.localId !== evidence.localId);
         result.synced.evidences++;
       } catch (e) {
         errors.push(`Evidencia: ${(e as Error).message}`);
@@ -177,6 +247,7 @@ export async function syncInspection(
           const err = await res.json().catch(() => ({}));
           throw new Error(err.error || `HTTP ${res.status}`);
         }
+        remaining.signatures = remaining.signatures.filter((item) => item.localId !== sig.localId);
         result.synced.signatures++;
       } catch (e) {
         errors.push(`Firma: ${(e as Error).message}`);
@@ -200,6 +271,7 @@ export async function syncInspection(
           const err = await res.json().catch(() => ({}));
           throw new Error(err.error || `HTTP ${res.status}`);
         }
+        remaining.sketches = remaining.sketches.filter((item) => item.localId !== sketch.localId);
         result.synced.sketches++;
       } catch (e) {
         errors.push(`Croquis: ${(e as Error).message}`);
@@ -216,16 +288,39 @@ export async function syncInspection(
       // No crítico si falla
     }
 
-    // 9. Limpiar cambios pendientes y marcar como sincronizada
-    const cleared: PendingChanges = emptyPendingChanges();
+    // 8. Sincronizar evidencias eliminadas
+    for (const evidenceId of remaining.evidencesDeleted) {
+      try {
+        await deleteEvidence(evidenceId);
+        remaining.evidencesDeleted = remaining.evidencesDeleted.filter((id) => id !== evidenceId);
+      } catch (e) {
+        errors.push(`Evidencia eliminada: ${(e as Error).message}`);
+      }
+      reportProgress("Evidencia eliminada");
+    }
+
+    // 9. Sincronizar firmas eliminadas
+    for (const signatureId of remaining.signaturesDeleted) {
+      try {
+        await deleteSignature(signatureId);
+        remaining.signaturesDeleted = remaining.signaturesDeleted.filter((id) => id !== signatureId);
+      } catch (e) {
+        errors.push(`Firma eliminada: ${(e as Error).message}`);
+      }
+      reportProgress("Firma eliminada");
+    }
+
+    const success = errors.length === 0 && !hasPendingChanges(remaining);
+    const freshSession = success ? await getInspectionSessionById(sessionId).catch(() => null) : null;
     await db.sessions.update(sessionId, {
-      pending: cleared,
-      syncStatus: errors.length > 0 ? "error" : "synced",
+      session: freshSession ?? nextSession,
+      pending: remaining,
+      syncStatus: success ? "synced" : "error",
       last_synced_at: new Date().toISOString(),
       sync_error: errors.length > 0 ? errors.join("; ") : null,
     });
 
-    result.success = errors.length === 0;
+    result.success = success;
     result.errors = errors;
     return result;
   } catch (e) {
@@ -255,67 +350,96 @@ export async function savePendingActa(sessionId: string, acta: Partial<Inspectio
   });
 }
 
-/** Agrega un daño creado offline */
-export async function addPendingDamageCreated(sessionId: string, damage: InspectionDamage): Promise<void> {
+/** Agrega un daño creado offline y devuelve la sesión actualizada en memoria */
+export async function addPendingDamageCreated(sessionId: string, damage: InspectionDamage): Promise<OfflineSession> {
+  console.log("[addPendingDamageCreated] start", sessionId, damage.id);
   const db = getOfflineDB();
-  const offline = await db.sessions.get(sessionId);
-  if (!offline) throw new Error("Sesión offline no encontrada");
-  await db.sessions.update(sessionId, {
-    pending: {
+  return db.transaction("rw", db.sessions, async () => {
+    console.log("[addPendingDamageCreated] inside transaction");
+    const offline = await db.sessions.get(sessionId);
+    console.log("[addPendingDamageCreated] session read", !!offline);
+    if (!offline) throw new Error("Sesión offline no encontrada");
+    const damagesCreated = offline.pending.damagesCreated.filter((item) => item.id !== damage.id);
+    const nextPending = {
       ...offline.pending,
-      damagesCreated: [...offline.pending.damagesCreated, damage],
-    },
-    syncStatus: "pending",
-  });
-}
-
-/** Agrega un daño actualizado offline */
-export async function addPendingDamageUpdated(sessionId: string, damage: InspectionDamage): Promise<void> {
-  const db = getOfflineDB();
-  const offline = await db.sessions.get(sessionId);
-  if (!offline) throw new Error("Sesión offline no encontrada");
-  // Si el daño ya está en damagesCreated, actualizarlo ahí
-  const createdIdx = offline.pending.damagesCreated.findIndex((d) => d.id === damage.id);
-  if (createdIdx >= 0) {
-    const newCreated = [...offline.pending.damagesCreated];
-    newCreated[createdIdx] = damage;
+      damagesCreated: [...damagesCreated, damage],
+      damagesDeleted: offline.pending.damagesDeleted.filter((id) => id !== damage.id),
+    };
+    const nextOffline: OfflineSession = { ...offline, pending: nextPending, syncStatus: "pending", sync_error: null };
+    console.log("[addPendingDamageCreated] updating DB");
     await db.sessions.update(sessionId, {
-      pending: { ...offline.pending, damagesCreated: newCreated },
+      pending: nextPending,
       syncStatus: "pending",
+      sync_error: null,
     });
-    return;
-  }
-  // Si no, agregar a updated (reemplazando si ya existe)
-  const filtered = offline.pending.damagesUpdated.filter((d) => d.id !== damage.id);
-  await db.sessions.update(sessionId, {
-    pending: {
-      ...offline.pending,
-      damagesUpdated: [...filtered, damage],
-    },
-    syncStatus: "pending",
+    console.log("[addPendingDamageCreated] DB updated");
+    return nextOffline;
   });
 }
 
-/** Agrega un daño eliminado offline */
-export async function addPendingDamageDeleted(sessionId: string, damageId: string): Promise<void> {
+/** Agrega un daño actualizado offline y devuelve la sesión actualizada en memoria */
+export async function addPendingDamageUpdated(sessionId: string, damage: InspectionDamage): Promise<OfflineSession> {
   const db = getOfflineDB();
-  const offline = await db.sessions.get(sessionId);
-  if (!offline) throw new Error("Sesión offline no encontrada");
-  // Si el daño estaba en damagesCreated, sacarlo de ahí (no se sincroniza)
-  const newCreated = offline.pending.damagesCreated.filter((d) => d.id !== damageId);
-  // Si estaba en damagesUpdated, sacarlo de ahí también
-  const newUpdated = offline.pending.damagesUpdated.filter((d) => d.id !== damageId);
-  // Agregar a deleted solo si no era creado offline
-  const wasCreated = offline.pending.damagesCreated.some((d) => d.id === damageId);
-  const newDeleted = wasCreated ? offline.pending.damagesDeleted : [...offline.pending.damagesDeleted, damageId];
-  await db.sessions.update(sessionId, {
-    pending: {
+  return db.transaction("rw", db.sessions, async () => {
+    const offline = await db.sessions.get(sessionId);
+    if (!offline) throw new Error("Sesión offline no encontrada");
+    const created = offline.pending.damagesCreated.find((item) => item.id === damage.id);
+    if (created) {
+      const damagesCreated = offline.pending.damagesCreated
+        .filter((item) => item.id !== damage.id)
+        .concat({ ...created, ...damage });
+      const nextPending = { ...offline.pending, damagesCreated };
+      const nextOffline: OfflineSession = { ...offline, pending: nextPending, syncStatus: "pending", sync_error: null };
+      await db.sessions.update(sessionId, {
+        pending: nextPending,
+        syncStatus: "pending",
+        sync_error: null,
+      });
+      return nextOffline;
+    }
+
+    const pendingUpdate = offline.pending.damagesUpdated.find((item) => item.id === damage.id);
+    const snapshot = offline.session.inspection_damages?.find((item) => item.id === damage.id);
+    const damagesUpdated = offline.pending.damagesUpdated
+      .filter((item) => item.id !== damage.id)
+      .concat({ ...snapshot, ...pendingUpdate, ...damage } as InspectionDamage);
+    const nextPending = {
       ...offline.pending,
-      damagesCreated: newCreated,
-      damagesUpdated: newUpdated,
-      damagesDeleted: newDeleted,
-    },
-    syncStatus: "pending",
+      damagesUpdated,
+      damagesDeleted: offline.pending.damagesDeleted.filter((id) => id !== damage.id),
+    };
+    const nextOffline: OfflineSession = { ...offline, pending: nextPending, syncStatus: "pending", sync_error: null };
+    await db.sessions.update(sessionId, {
+      pending: nextPending,
+      syncStatus: "pending",
+      sync_error: null,
+    });
+    return nextOffline;
+  });
+}
+
+/** Agrega un daño eliminado offline y devuelve la sesión actualizada en memoria */
+export async function addPendingDamageDeleted(sessionId: string, damageId: string): Promise<OfflineSession> {
+  const db = getOfflineDB();
+  return db.transaction("rw", db.sessions, async () => {
+    const offline = await db.sessions.get(sessionId);
+    if (!offline) throw new Error("Sesión offline no encontrada");
+    const wasCreated = offline.pending.damagesCreated.some((damage) => damage.id === damageId);
+    const nextPending = {
+      ...offline.pending,
+      damagesCreated: offline.pending.damagesCreated.filter((damage) => damage.id !== damageId),
+      damagesUpdated: offline.pending.damagesUpdated.filter((damage) => damage.id !== damageId),
+      damagesDeleted: wasCreated
+        ? offline.pending.damagesDeleted
+        : [...new Set([...offline.pending.damagesDeleted, damageId])],
+    };
+    const nextOffline: OfflineSession = { ...offline, pending: nextPending, syncStatus: "pending", sync_error: null };
+    await db.sessions.update(sessionId, {
+      pending: nextPending,
+      syncStatus: "pending",
+      sync_error: null,
+    });
+    return nextOffline;
   });
 }
 
@@ -407,22 +531,28 @@ export async function getOfflineEvidences(sessionId: string): Promise<Array<{
   const activeDownloaded = downloaded.filter((e) => !deletedIds.has(e.id));
 
   // Mapear a formato unificado
-  const result = activeDownloaded.map((e) => ({
-    id: e.id,
-    type: e.type,
-    url: e.url,
-    description: e.description ?? null,
-    created_at: e.created_at,
-    metadata: e.metadata as { originalName?: string; fileSize?: number; mimeType?: string } | null,
-    include_in_report: e.include_in_report,
-    lat: e.metadata?.lat ?? null,
-    lng: e.metadata?.lng ?? null,
-    exif_lat: null,
-    exif_lng: null,
-    ai_summary: null,
-    ai_status: null,
-    source: e.source,
-  }));
+  const result = [];
+  for (const e of activeDownloaded) {
+    // Intentar servir desde blob descargado (offline)
+    const cached = await db.evidenceBlobs.get(e.id);
+    const url = cached ? URL.createObjectURL(cached.blob) : e.url;
+    result.push({
+      id: e.id,
+      type: e.type,
+      url,
+      description: e.description ?? null,
+      created_at: e.created_at,
+      metadata: e.metadata as { originalName?: string; fileSize?: number; mimeType?: string } | null,
+      include_in_report: e.include_in_report,
+      lat: e.metadata?.lat ?? null,
+      lng: e.metadata?.lng ?? null,
+      exif_lat: null,
+      exif_lng: null,
+      ai_summary: null,
+      ai_status: null,
+      source: e.source,
+    });
+  }
 
   // Agregar evidencias pendientes (con blob URL)
   for (const pe of offline.pending.evidences) {
@@ -518,6 +648,46 @@ export async function getOfflineSignatures(sessionId: string): Promise<Array<{
       role: ps.role,
       signer_name: null,
       signature_url: blobUrl,
+      created_at: ps.capturedAt,
+    });
+  }
+
+  return result;
+}
+
+/** Obtiene los croquis offline (descargados + pendientes) con blob URLs */
+export async function getOfflineSketches(sessionId: string): Promise<Array<{
+  id: string;
+  sketch_url: string;
+  label: string;
+  created_at: string;
+}>> {
+  const db = getOfflineDB();
+  const offline = await db.sessions.get(sessionId);
+  if (!offline) return [];
+
+  const downloaded = (offline.session as SessionDetail).damage_sketches || [];
+  const result = [];
+
+  for (const s of downloaded) {
+    // Intentar servir desde blob descargado (offline)
+    const cached = await db.evidenceBlobs.get(`sketch-${s.id}`);
+    const url = cached ? URL.createObjectURL(cached.blob) : s.sketch_url;
+    result.push({
+      id: s.id,
+      sketch_url: url,
+      label: s.label || "",
+      created_at: s.created_at,
+    });
+  }
+
+  // Agregar croquis pendientes (con blob URL)
+  for (const ps of offline.pending.sketches) {
+    const blobUrl = URL.createObjectURL(ps.blob);
+    result.push({
+      id: ps.localId,
+      sketch_url: blobUrl,
+      label: ps.label || "",
       created_at: ps.capturedAt,
     });
   }

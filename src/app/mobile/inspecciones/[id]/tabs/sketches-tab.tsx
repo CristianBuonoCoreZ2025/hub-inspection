@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getDamageSketches,
@@ -34,6 +34,7 @@ export default function MobileSketchesTab({
   const [mode, setMode] = useState<"view" | "draw">("view");
   const [editingSketch, setEditingSketch] = useState<{ id: string; url: string; label: string } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [offlineSketches, setOfflineSketches] = useState<Array<{ id: string; sketch_url: string; label: string; created_at: string }>>([]);
 
   const readOnly = sessionStatus === "completed" || sessionStatus === "cancelled";
 
@@ -42,6 +43,34 @@ export default function MobileSketchesTab({
     queryFn: () => getDamageSketches(sessionId),
     enabled: !!sessionId && !offlineMode,
   });
+
+  const loadOfflineSketches = useCallback(async () => {
+    if (!offlineMode) return;
+    try {
+      const { getOfflineSketches } = await import("@/lib/offline/sync-session");
+      const sks = await getOfflineSketches(sessionId);
+      setOfflineSketches(sks);
+    } catch (e) {
+      console.error("Error loading offline sketches:", e);
+    }
+  }, [sessionId, offlineMode]);
+
+  useEffect(() => {
+    if (!offlineMode) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { getOfflineSketches } = await import("@/lib/offline/sync-session");
+        const sks = await getOfflineSketches(sessionId);
+        if (!cancelled) setOfflineSketches(sks);
+      } catch (e) {
+        console.error("Error loading offline sketches:", e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [offlineMode, sessionId]);
+
+  const displaySketches = offlineMode ? offlineSketches : (sketches || []);
 
   const syncSketches = () => {
     queryClient.invalidateQueries({ queryKey: ["damage-sketches", sessionId] });
@@ -62,6 +91,7 @@ export default function MobileSketchesTab({
           label: null,
         });
         onOfflineSaved?.();
+        loadOfflineSketches();
         toast.success("Croquis guardado offline");
       } else {
         // Subir al servidor
@@ -143,14 +173,14 @@ export default function MobileSketchesTab({
         <div className="mobile-empty">
           <p className="mobile-empty-text">Cargando croquis...</p>
         </div>
-      ) : !sketches || sketches.length === 0 ? (
+      ) : !displaySketches || displaySketches.length === 0 ? (
         <div className="mobile-empty">
           <ImageIcon className="h-10 w-10 mobile-empty-icon" />
           <p className="mobile-empty-text">No hay croquis</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
-          {sketches.map((sketch) => (
+          {displaySketches.map((sketch) => (
             <div key={sketch.id} className="mobile-sketch-card">
               <img
                 src={sketch.sketch_url}

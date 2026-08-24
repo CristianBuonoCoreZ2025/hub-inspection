@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import { useConfirm } from "@/hooks/use-confirm";
 import { useAlert } from "@/components/ui/alert-context";
+import { getUserTimeZone } from "@/lib/timezone";
 
 type UploadStatus = "queued" | "uploading" | "processing" | "done" | "error";
 
@@ -1052,6 +1053,7 @@ function DocumentTable({
                               {aiAnalyzedAt && (
                                 <span className="ai-log-date">
                                   {new Date(aiAnalyzedAt).toLocaleString("es-CL", {
+                                    timeZone: getUserTimeZone(),
                                     day: "2-digit",
                                     month: "2-digit",
                                     year: "numeric",

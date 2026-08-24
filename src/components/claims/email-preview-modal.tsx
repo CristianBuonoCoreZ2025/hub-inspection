@@ -10,6 +10,7 @@ import { wrapHtmlEmail } from "@/services/email-render";
 import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { getUserTimeZone } from "@/lib/timezone";
 
 /** Extrae solo el código de gestión del formato compuesto {liquidation}-{code}.
  *  Ej: "L-000000141-HINS-003" → "HINS-003" */
@@ -108,6 +109,7 @@ export function EmailPreviewModal({ open, onOpenChange, log }: EmailPreviewModal
     if (!printWin) return;
 
     const dateStrPrint = new Date(log.sent_at).toLocaleString("es-CL", {
+      timeZone: getUserTimeZone(),
       day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false,
     });
 
@@ -212,6 +214,7 @@ ${bodyHtml}
   if (!log) return null;
 
   const dateStr = new Date(log.sent_at).toLocaleString("es-CL", {
+    timeZone: getUserTimeZone(),
     day: "2-digit",
     month: "2-digit",
     year: "numeric",

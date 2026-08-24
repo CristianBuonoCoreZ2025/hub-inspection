@@ -28,8 +28,23 @@ export function GlobalLoadingOverlay() {
 
   const [visible, setVisible] = useState(false);
 
+  // No mostrar el overlay cuando estamos offline.
+  // Las mutations offline son a IndexedDB (instantáneas) y las mutations
+  // online colgadas (fetch a Supabase) nunca terminan, dejando el overlay pegado.
+  const [online, setOnline] = useState(true);
   useEffect(() => {
-    if (isPending) {
+    const on = () => setOnline(true);
+    const off = () => setOnline(false);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", off);
+    return () => {
+      window.removeEventListener("online", on);
+      window.removeEventListener("offline", off);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isPending && online) {
       // Retardo corto para no parpadear en operaciones rápidas (<150ms).
       const t = setTimeout(() => setVisible(true), 150);
       return () => clearTimeout(t);
@@ -37,7 +52,7 @@ export function GlobalLoadingOverlay() {
     // Ocultar en el siguiente tick para evitar setState sincrónico en el effect.
     const t = setTimeout(() => setVisible(false), 0);
     return () => clearTimeout(t);
-  }, [isPending]);
+  }, [isPending, online]);
 
   if (!visible) return null;
 

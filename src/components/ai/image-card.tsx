@@ -10,6 +10,7 @@ import { AiProgressOverlay } from "@/components/ai/ai-progress-overlay";
 import { AiCopyButton } from "@/components/ai/ai-copy-button";
 import { cleanMarkdown } from "@/lib/utils";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { getUserTimeZone } from "@/lib/timezone";
 
 /**
  * ImageCard
@@ -102,7 +103,7 @@ function timeAgo(iso: string | null): string | null {
   if (diffMin < 60) return `Hace ${diffMin} min`;
   if (diffH < 24) return `Hace ${diffH}h`;
   if (diffD < 7) return `Hace ${diffD}d`;
-  return d.toLocaleDateString("es-CL", { day: "2-digit", month: "short", year: "numeric" });
+  return d.toLocaleDateString("es-CL", { timeZone: getUserTimeZone(), day: "2-digit", month: "short", year: "numeric" });
 }
 
 function formatFileSize(bytes?: number | null): string {
@@ -279,6 +280,7 @@ export function ImageCard({
                       {aiAnalyzedAt && (
                         <span className="ai-log-date">
                           {new Date(aiAnalyzedAt).toLocaleString("es-CL", {
+                            timeZone: getUserTimeZone(),
                             day: "2-digit",
                             month: "2-digit",
                             year: "numeric",

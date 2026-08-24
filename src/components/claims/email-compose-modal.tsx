@@ -19,6 +19,7 @@ import { getEmailTemplatesForAction } from "@/services/email-template-actions";
 import { fetchClaimContacts, type EmailContact } from "@/services/email-contacts";
 import { getSupabaseClient } from "@/lib/supabase/db";
 import { toast } from "sonner";
+import { getUserTimeZone } from "@/lib/timezone";
 
 interface EmailComposeModalProps {
   open: boolean;
@@ -655,7 +656,7 @@ export function EmailComposeModal({
                         EML-{String(log.correlativo).padStart(3, "0")}: {log.subject}
                       </span>
                       <span className="text-[9px] text-muted-foreground">
-                        {log.to_address.join(", ")} · {new Date(log.sent_at).toLocaleString("es-CL")}
+                        {log.to_address.join(", ")} · {new Date(log.sent_at).toLocaleString("es-CL", { timeZone: getUserTimeZone() })}
                       </span>
                     </div>
                     <span className={`shrink-0 px-1.5 rounded text-[10px] font-medium ${

@@ -17,6 +17,7 @@ import {
  ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
+import { getUserTimeZone } from "@/lib/timezone";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -414,7 +415,7 @@ function EventCard({
 }) {
  const router = useRouter();
  const time = session.scheduled_at
- ? new Date(session.scheduled_at).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit", hour12: false })
+ ? new Date(session.scheduled_at).toLocaleTimeString("es-CL", { timeZone: getUserTimeZone(), hour: "2-digit", minute: "2-digit", hour12: false })
  : "";
  const isRemote = session.inspection_type === "remote";
  const style = isRemote ? typeStyles.remote : typeStyles.onsite;

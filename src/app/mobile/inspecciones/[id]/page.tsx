@@ -12,6 +12,7 @@ import {
   cancelInspectionViaCIN,
   getWorkPeriods,
   canAccessInspectionSession,
+  forceReleaseOfflineSession,
   updateInspectionSession,
   type SessionDetail,
 } from "@/services/inspections";
@@ -20,9 +21,12 @@ import { useAuth } from "@/hooks/use-auth";
 import { useRealtime } from "@/hooks/use-realtime";
 import { toast } from "sonner";
 import { useOnline } from "@/hooks/use-online";
-import { getDownloadedSession } from "@/lib/offline/download-session";
-import { hasPendingChanges, countPendingChanges, type OfflineSession } from "@/db/offline-db";
+import { getDownloadedSession, releaseDownloadedSession } from "@/lib/offline/download-session";
+import { syncInspection } from "@/lib/offline/sync-session";
+import { hasPendingChanges, getGlobalCatalogs, type OfflineSession, type OfflineCatalogs } from "@/db/offline-db";
+import { getUserTimeZone } from "@/lib/timezone";
 import { SyncButton } from "@/components/mobile/sync-button";
+import { useConfirm } from "@/hooks/use-confirm";
 import { useState as useReactState, useEffect as useReactEffect } from "react";
 
 // GeoCapture usa Leaflet (browser-only) — import dinámico
@@ -30,7 +34,7 @@ const GeoCapture = dynamic(() => import("@/components/inspection/geo-capture").t
 import {
   Play, FastForward, Pause, XCircle, Loader2, MapPin,
   FileText, Camera, ShieldCheck, PenTool, FileCheck,
-  ClipboardCheck, Clock, Video, Home, Pencil,
+  ClipboardCheck, Clock, Video, Home, Pencil, CloudOff, Lock, CloudUpload,
 } from "lucide-react";
 
 import MobileEvidencesTab from "./tabs/evidences-tab";
@@ -64,17 +68,38 @@ export default function MobileInspectionDetailPage() {
   const sessionId = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : "";
   const { profile, dataAccess } = useAuth();
   const online = useOnline();
+  const confirm = useConfirm();
   const [offlineSession, setOfflineSession] = useReactState<OfflineSession | null>(null);
+  const [globalCatalogs, setGlobalCatalogs] = useReactState<OfflineCatalogs | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>("resumen");
 
-  // Cargar sesión offline de IndexedDB
+  // Cargar sesión offline + catálogos globales de IndexedDB
   useReactEffect(() => {
     if (!sessionId) return;
-    getDownloadedSession(sessionId).then(setOfflineSession);
+    console.log("[mobile page] loading offline session", sessionId);
+    getDownloadedSession(sessionId).then((s) => {
+      console.log("[mobile page] getDownloadedSession result", !!s, s?.id);
+      setOfflineSession(s);
+    }).catch((err) => {
+      console.error("[mobile page] getDownloadedSession error", err);
+    });
+    getGlobalCatalogs().then(setGlobalCatalogs);
   }, [sessionId]);
 
-  const isOfflineMode = !online && !!offlineSession;
-  const refreshOffline = () => getDownloadedSession(sessionId).then(setOfflineSession);
+  const refreshOffline = () => {
+    getDownloadedSession(sessionId).then(setOfflineSession);
+    // Invalidar cache de React Query para que se recarguen los datos online
+    queryClient.invalidateQueries({ queryKey: ["evidences", sessionId] });
+    queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
+    queryClient.invalidateQueries({ queryKey: ["damages", sessionId] });
+  };
+  const handleOfflineSaved = (updated?: OfflineSession) => {
+    if (updated) {
+      setOfflineSession(updated);
+    } else {
+      refreshOffline();
+    }
+  };
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelReasonId, setCancelReasonId] = useState("");
   const [cancelNotes, setCancelNotes] = useState("");
@@ -85,11 +110,14 @@ export default function MobileInspectionDetailPage() {
   useRealtime("inspection_checklists", [["inspection-session", sessionId]], !!sessionId && online);
   useRealtime("inspection_signatures", [["inspection-session", sessionId], ["signatures", sessionId]], !!sessionId && online);
 
-  const { data: serverSession, isLoading } = useQuery({
+  const { data: serverSession, isLoading, isError } = useQuery({
     queryKey: ["inspection-session", sessionId],
     queryFn: () => getInspectionSessionById(sessionId) as Promise<SessionDetail>,
     enabled: !!sessionId && online,
+    retry: false,
   });
+  // Modo offline si: no hay internet O el query online falló Y tenemos sesión descargada
+  const isOfflineMode = (!online || (online && isError && !!offlineSession)) && !!offlineSession;
   const session = isOfflineMode ? offlineSession?.session ?? null : serverSession ?? null;
 
   const { data: workPeriods } = useQuery({
@@ -112,8 +140,22 @@ export default function MobileInspectionDetailPage() {
   const isAssignedInspector = !!profile?.id && effectiveInspectorId === profile.id;
   const isAccessBlocked = useMemo(() => {
     if (!session || !profile) return false;
+    // Sin conexión y con sesión descargada: acceso permitido (es su dispositivo)
+    if (!online && isOfflineMode) return false;
+    // Online: verificar bloqueo normalmente
     return !canAccessInspectionSession(session, profile, dataAccess);
-  }, [session, profile, dataAccess]);
+  }, [session, profile, dataAccess, isOfflineMode, online]);
+
+  // Si estamos online pero la query falló y usamos la sesión de IndexedDB,
+  // y el usuario actual NO es el que la descargó, bloquear acceso
+  const isOfflineBlockedByOtherOnline = online && isOfflineMode && !!offlineSession && offlineSession.inspectorId !== profile?.id;
+
+  // Bloqueo específico por descarga offline
+  const offlineDownloadedBy = session?.offline_downloaded_by ?? null;
+  const isOfflineBlocked = isAccessBlocked && !!offlineDownloadedBy;
+  const isMyOfflineDownload = isOfflineBlocked && offlineDownloadedBy === profile?.id;
+  const offlineInspectorName = (session as SessionDetail | null)?.offlineInspector?.full_name ?? null;
+  const canForceRelease = isOfflineBlocked && !isMyOfflineDownload && (dataAccess?.is_admin || profile?.role === "internal");
 
   const startMutation = useMutation({
     mutationFn: (id: string) => startInspection(id, true),
@@ -180,6 +222,60 @@ export default function MobileInspectionDetailPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  // Liberar inspección descargada offline (desde el mismo dispositivo o forzado)
+  const releaseMutation = useMutation({
+    mutationFn: async () => {
+      if (offlineSession) {
+        // Mismo dispositivo: sincronizar cambios primero, luego liberar
+        const hasChanges = hasPendingChanges(offlineSession.pending);
+        if (hasChanges) {
+          const result = await syncInspection(sessionId);
+          if (!result.success) {
+            throw new Error(`Sincronización con errores: ${result.errors.length} falla(s)`);
+          }
+        }
+        await releaseDownloadedSession(sessionId);
+      } else {
+        // Si no está en IndexedDB (otro dispositivo), forzar liberación
+        await forceReleaseOfflineSession(sessionId, profile?.user_id);
+      }
+    },
+    onSuccess: () => {
+      toast.success("Inspección liberada");
+      queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
+      queryClient.invalidateQueries({ queryKey: ["inspection-sessions-mobile"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  // Liberar inspección descargada offline con confirmación previa
+  const handleReleaseOffline = async () => {
+    if (isMyOfflineDownload) {
+      // Mismo dispositivo: sincronizar cambios y poner en línea
+      const hasChanges = offlineSession ? hasPendingChanges(offlineSession.pending) : false;
+      const ok = await confirm({
+        title: hasChanges ? "Sincronizar y poner en línea" : "Poner en línea",
+        description: hasChanges
+          ? "Se subirán los cambios pendientes al servidor y la inspección volverá a estar disponible en línea. Ya no podrás editarla sin conexión."
+          : "La inspección volverá a estar disponible en línea. Ya no podrás editarla sin conexión.",
+        confirmLabel: "Sincronizar",
+        destructive: false,
+      });
+      if (!ok) return;
+      releaseMutation.mutate();
+    } else if (canForceRelease) {
+      // Otro dispositivo (admin/internal): forzar liberación, se pierden los datos del dispositivo original
+      const ok = await confirm({
+        title: "Liberar inspección offline",
+        description: `Esta inspección está siendo trabajada offline por ${offlineInspectorName || "otro inspector"}. Al liberarla, los datos no sincronizados del dispositivo original se perderán. Esta acción no se puede deshacer.`,
+        confirmLabel: "Liberar",
+        destructive: true,
+      });
+      if (!ok) return;
+      releaseMutation.mutate();
+    }
+  };
+
   if (!sessionId) {
     return (
       <div className="mobile-empty">
@@ -198,6 +294,20 @@ export default function MobileInspectionDetailPage() {
     );
   }
 
+  if (!online && !offlineSession) {
+    return (
+      <div className="mobile-empty">
+        <CloudOff className="h-10 w-10 mobile-empty-icon" />
+        <p className="mobile-empty-text">Sin conexión</p>
+        <p className="app-body text-muted-foreground text-center px-6 mt-2">
+          Esta inspección no está descargada para uso offline.
+          <br />
+          Conéctate a internet o descárgala desde el listado de inspecciones.
+        </p>
+      </div>
+    );
+  }
+
   if (!session) {
     return (
       <div className="mobile-empty">
@@ -207,7 +317,46 @@ export default function MobileInspectionDetailPage() {
     );
   }
 
-  if (isAccessBlocked) {
+  if (isAccessBlocked || isOfflineBlockedByOtherOnline) {
+    // Bloqueo por descarga offline
+    if (isOfflineBlocked || isOfflineBlockedByOtherOnline) {
+      const hasChanges = offlineSession ? hasPendingChanges(offlineSession.pending) : false;
+      return (
+        <div className="mobile-empty">
+          <Lock className="h-10 w-10 mobile-empty-icon" />
+          <p className="mobile-empty-text">
+            {isMyOfflineDownload
+              ? "Inspección descargada en este dispositivo"
+              : "Inspección en uso offline"}
+          </p>
+          <p className="app-body text-muted-foreground text-center px-6 mt-2">
+            {isMyOfflineDownload
+              ? hasChanges
+                ? "Esta inspección está descargada en este dispositivo y tiene cambios pendientes. Sincroniza para subir los cambios al servidor y volver a tenerla disponible en línea."
+                : "Esta inspección está descargada en este dispositivo. Sincroniza para volver a tenerla disponible en línea. No se perderán datos."
+              : `Esta inspección está siendo trabajada offline por ${offlineInspectorName || "otro inspector"}. No puedes acceder hasta que la libere.`}
+          </p>
+          {(isMyOfflineDownload || canForceRelease) && (
+            <div className="flex gap-2 mt-4">
+              <button
+                className={isMyOfflineDownload ? "mobile-btn" : "mobile-btn mobile-btn-danger"}
+                disabled={releaseMutation.isPending}
+                onClick={handleReleaseOffline}
+              >
+                {releaseMutation.isPending ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Sincronizando...</>
+                ) : isMyOfflineDownload ? (
+                  <><CloudUpload className="h-4 w-4" /> Sincronizar</>
+                ) : (
+                  "Liberar"
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+      );
+    }
+    // Bloqueo genérico (inspección en curso con otro inspector)
     return (
       <div className="mobile-empty">
         <ClipboardCheck className="h-10 w-10 mobile-empty-icon" />
@@ -238,7 +387,7 @@ export default function MobileInspectionDetailPage() {
       <div className="px-4 py-3 border-b bg-background">
         <div className="flex items-center justify-between gap-2 mb-2">
           <span className="mobile-inspection-code">
-            {claim?.liquidation_number || session.inspection_number}
+            {session.inspection_number || "Sin código"}
           </span>
           <div className="flex items-center gap-1.5">
             <span className={`mobile-type-badge ${session.inspection_type === "remote" ? "mobile-type-badge-remote" : "mobile-type-badge-onsite"}`}>
@@ -345,27 +494,29 @@ export default function MobileInspectionDetailPage() {
       )}
 
       {/* Tabs horizontales — enfocadas en campo */}
-      <div className="mobile-tabs sticky top-0 bg-background z-10">
-        {tabs.map((t) => {
-          const Icon = t.icon;
-          return (
-            <button
-              key={t.id}
-              className={`mobile-tab ${activeTab === t.id ? "active" : ""}`}
-              onClick={() => {
-                setActiveTab(t.id);
-                // Auto-reanudar si la inspección está pausada y el inspector
-                // quiere trabajar en ella (clic en cualquier tab de trabajo)
-                if (isPaused && isAssignedInspector && t.id !== "resumen" && !resumeMutation.isPending) {
-                  resumeMutation.mutate(session.id);
-                }
-              }}
-            >
-              <Icon className="h-4 w-4" />
-              {t.label}
-            </button>
-          );
-        })}
+      <div className="mobile-tabs-wrap sticky top-0 bg-background z-10">
+        <div className="mobile-tabs">
+          {tabs.map((t) => {
+            const Icon = t.icon;
+            return (
+              <button
+                key={t.id}
+                className={`mobile-tab ${activeTab === t.id ? "active" : ""}`}
+                onClick={() => {
+                  setActiveTab(t.id);
+                  // Auto-reanudar si la inspección está pausada y el inspector
+                  // quiere trabajar en ella (clic en cualquier tab de trabajo)
+                  if (isPaused && isAssignedInspector && t.id !== "resumen" && !resumeMutation.isPending) {
+                    resumeMutation.mutate(session.id);
+                  }
+                }}
+              >
+                <Icon className="h-4 w-4" />
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Contenido del tab activo */}
@@ -386,15 +537,18 @@ export default function MobileInspectionDetailPage() {
             })}
           />
         )}
-        {activeTab === "acta" && <MobileActaTab sessionId={session.id} onComplete={() => setActiveTab("danos")} offlineMode={isOfflineMode} onOfflineSaved={refreshOffline} />}
+        {activeTab === "acta" && <MobileActaTab sessionId={session.id} offlineMode={isOfflineMode} onOfflineSaved={refreshOffline} />}
         {activeTab === "danos" && (
           <MobileDamagesTab
             sessionId={session.id}
-            propertyClassification={session.property_risk?.risk_class}
+            propertyClassification={offlineSession?.pending.acta?.property_risk?.risk_class ?? session.property_risk?.risk_class ?? offlineSession?.session.property_risk?.risk_class}
             countryId={session.claim?.country_id}
             sessionStatus={session.status}
             offlineMode={isOfflineMode}
-            onOfflineSaved={refreshOffline}
+            offlineCatalogs={globalCatalogs}
+            session={session}
+            offlineSession={offlineSession}
+            onOfflineSaved={handleOfflineSaved}
           />
         )}
         {activeTab === "evidencias" && <MobileEvidencesTab sessionId={session.id} sessionStatus={session.status} offlineMode={isOfflineMode} onOfflineSaved={refreshOffline} />}
@@ -418,7 +572,7 @@ export default function MobileInspectionDetailPage() {
             onOfflineSaved={refreshOffline}
           />
         )}
-        {activeTab === "informe" && <MobileReportTab sessionId={session.id} />}
+        {activeTab === "informe" && <MobileReportTab sessionId={session.id} offlineMode={isOfflineMode} offlineSession={offlineSession} />}
       </div>
 
       {/* Modal de cancelación */}
@@ -536,6 +690,7 @@ function MobileResumenTab({
             <span className="mobile-card-row-label">Programada</span>
             <span className="mobile-card-row-value">
               {new Date(session.scheduled_at).toLocaleString("es-CL", {
+                timeZone: getUserTimeZone(),
                 day: "2-digit", month: "2-digit", year: "numeric",
                 hour: "2-digit", minute: "2-digit", hour12: false,
               })}

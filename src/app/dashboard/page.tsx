@@ -45,6 +45,7 @@ import { BarChartGlass } from "@/components/dashboard/bar-chart";
 import { BarChartQuad } from "@/components/dashboard/bar-chart-quad";
 import { NestedDonutChart } from "@/components/dashboard/nested-donut-chart";
 import { SplineAreaChart } from "@/components/dashboard/spline-area-chart";
+import { getUserTimeZone } from "@/lib/timezone";
 
 const STATUS_LABELS: Record<string, string> = {
   created: "Creado",
@@ -970,9 +971,9 @@ export default function DashboardPage() {
 
     const sessions = sessionList;
 
-    const fmtDate = (d: string) => new Date(d).toLocaleDateString("es-CL");
+    const fmtDate = (d: string) => new Date(d).toLocaleDateString("es-CL", { timeZone: getUserTimeZone() });
     const fmtTime = (d: string) =>
-      new Date(d).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" });
+      new Date(d).toLocaleTimeString("es-CL", { timeZone: getUserTimeZone(), hour: "2-digit", minute: "2-digit" });
     const getBase = (s: (typeof sessions)[number]) => {
       const claim = s.claim_id ? claimMap.get(s.claim_id) : undefined;
       const date = s.scheduled_at || s.started_at || s.ended_at;

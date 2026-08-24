@@ -25,6 +25,7 @@ import { renderEmailTemplate, wrapHtmlEmail } from "@/services/email-render";
 import { getSupabaseClient } from "@/lib/supabase/db";
 import { toast } from "sonner";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { getUserTimeZone } from "@/lib/timezone";
 
 interface SendEmailPanelProps {
   claim: Record<string, unknown> | null;
@@ -418,7 +419,7 @@ export function SendEmailPanel({ claim, action, businessLineId, disabled }: Send
                           <div className="flex flex-col min-w-0">
                             <span className="truncate">{log.to_address.join(", ")}</span>
                             <span className="text-[9px] text-muted-foreground">
-                              {new Date(log.sent_at).toLocaleString("es-CL")}
+                              {new Date(log.sent_at).toLocaleString("es-CL", { timeZone: getUserTimeZone() })}
                             </span>
                           </div>
                           <span

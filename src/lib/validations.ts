@@ -324,6 +324,7 @@ export const actaSchema = z.object({
     incident_duration: z.string().optional(),
   }).optional(),
   third_parties: z.array(z.object({
+    id: z.string().optional(),
     party_type: z.enum(["afectado", "responsable"]),
     full_name: z.string().optional(),
     rut: z.string().optional(),

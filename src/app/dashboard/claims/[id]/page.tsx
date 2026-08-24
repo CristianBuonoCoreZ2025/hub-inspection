@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { formatUserDateTime as formatDateTime, formatUserDate as formatDate } from "@/lib/timezone";
+import { formatUserDateTime as formatDateTime, formatUserDate as formatDate, getUserTimeZone } from "@/lib/timezone";
 import { getClaimById, getClaimParticipants, updateClaimStatus } from "@/services/claims";
 import { canAccessInspectionSession } from "@/services/inspections";
 import { getClaimActions, getActionTemplatesByClaimStatus, createClaimAction, getClaimActionById, updateClaimAction, issueClaimAction, reviewClaimAction, approveClaimAction, rejectClaimAction } from "@/services/claim-actions";
@@ -1627,7 +1627,7 @@ const editingActionId = editingGestion?.id;
                              </Tooltip>
                            )}
                            <span className="text-[10px] text-muted-foreground tabular-nums">
-                             {new Date(log.sent_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
+                             {new Date(log.sent_at).toLocaleString("es-CL", { timeZone: getUserTimeZone(), day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
                            </span>
                          </div>
                        </div>
@@ -2068,7 +2068,7 @@ function ActionHistoryView({ actionId }: { actionId: string }) {
  {history.map((entry) => {
  const evt = EVENT_LABELS[entry.event_type] || { label: entry.event_type, icon: History, color: "text-slate-500" };
  const Icon = evt.icon;
- const date = new Date(entry.created_at).toLocaleString("es-CL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
+ const date = new Date(entry.created_at).toLocaleString("es-CL", { timeZone: getUserTimeZone(), day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
  const userName = entry.performed_by_name || entry.performed_by_profile?.full_name || "Sistema";
  return (
  <div key={entry.id} className="flex items-start gap-2 app-body">

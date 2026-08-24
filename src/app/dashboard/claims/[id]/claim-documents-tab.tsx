@@ -46,6 +46,7 @@ import {
 import { AiProcessingBadge } from "@/components/ai/ai-processing-badge";
 import { AiCopyButton } from "@/components/ai/ai-copy-button";
 import { cleanMarkdown } from "@/lib/utils";
+import { getUserTimeZone } from "@/lib/timezone";
 import { usePermissions } from "@/hooks/use-permissions";
 import { usePagination } from "@/hooks/use-pagination";
 import { Pagination } from "@/components/ui/pagination";
@@ -742,6 +743,7 @@ export default function ClaimDocumentsTab({ claimId, policyId }: ClaimDocumentsT
                                 {doc.aiAnalyzedAt && (
                                   <span className="ai-log-date">
                                     {new Date(doc.aiAnalyzedAt).toLocaleString("es-CL", {
+                                      timeZone: getUserTimeZone(),
                                       day: "2-digit",
                                       month: "2-digit",
                                       year: "numeric",

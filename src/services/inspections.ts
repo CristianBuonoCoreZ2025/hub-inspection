@@ -1,5 +1,5 @@
 import { fetchAll, fetchById, insertRow, updateRow, deleteRow, getSupabaseClient } from "@/lib/supabase/db";
-import { formatUserDateTime, getUserTimeZone } from "@/lib/timezone";
+import { formatUserDateTime, getUserTimeZone, BUSINESS_TIME_ZONE } from "@/lib/timezone";
 import type {
   InspectionSession, PropertyRisk, PropertyMateriality,
   SecurityMeasures, InsuredStatement, ThirdParty, DamageSketch,
@@ -135,6 +135,7 @@ export interface SessionDetail extends Omit<InspectionSession, 'inspection_evide
   inspection_chat_messages?: { id: string; content: string; sender_name: string; sender_role: string; created_at: string }[];
   claim_action?: { id: string; code: string; action_status_id: string | null; action_data?: Record<string, unknown> | null; issuer_id: string | null; issued_on: string | null; issued_by: string | null } | null;
   claim?: SessionClaim;
+  offlineInspector?: { full_name: string | null } | null;
 }
 
 export async function getInspectionSessions(claimId?: string) {
@@ -565,9 +566,11 @@ export async function getInspectionSessionById(id: string) {
     claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, report_date, assignment_date, client_reference, claim_address, claim_latitude, claim_longitude, liquidation_number, broker_executive, company_id, inspector_id, assigned_adjuster_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, insurance_company_id, broker_id, advisor_id, country_id, region_id, city_id, commune_id, claim_cause_id, destination_housing_id, created_at, insurance_company:insurance_companies!claims_insurance_company_id_fkey(name), broker:brokers!claims_broker_id_fkey(name), advisor:advisors!claims_advisor_id_fkey(name), claim_cause:claim_causes!claims_claim_cause_id_fkey(name), country:countries!claims_country_id_fkey(name), region:regions!claims_region_id_fkey(name), city:cities!claims_city_id_fkey(name), commune:communes!claims_commune_id_fkey(name), destination_housing:housing_destinations!claims_destination_housing_id_fkey(name), claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, email, phone, cell_phone, rut, address, person_type, country, region, city, commune)),
     inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, url, type, description, category, damage_id, include_in_report, metadata, created_at),
     inspection_checklists:inspection_checklists!inspection_checklists_session_id_fkey(id, area, item, status),
-    inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id, category, subcategory, description, severity, damage_type, dependency, sector, materiality_type, unit, quantity, length, width, height, damage_length, damage_width, damage_height, damage_quantity, estimated_amount, currency, observations, product, brand_model, purchase_date, created_at),
+    inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id, session_id, category, subcategory, description, severity, damage_type, dependency, sector, materiality_type, unit, quantity, length, width, height, damage_length, damage_width, damage_height, damage_quantity, estimated_amount, currency, observations, product, brand_model, product_id, brand_id, purchase_date, third_party_id, space_id, content_good_type_id, building_damage_category_id, created_at, updated_at),
+    third_parties:third_parties!third_parties_session_id_fkey(id, party_type, full_name, rut, address, commune, phone, email, company_name, has_insurance, insurance_company, claim_number, notes, created_at, updated_at),
     inspection_signatures:inspection_signatures!inspection_signatures_session_id_fkey(id, role, signature_url, signed_at),
-    damage_sketches:damage_sketches!damage_sketches_session_id_fkey(id, sketch_url, label, created_at)
+    damage_sketches:damage_sketches!damage_sketches_session_id_fkey(id, sketch_url, label, created_at),
+    offlineInspector:profiles!offline_downloaded_by(full_name)
   `);
   if (!session) return null;
 
@@ -1024,8 +1027,16 @@ export async function startInspection(sessionId: string, fromMobile?: boolean) {
     throw new Error("Solo se puede iniciar una inspección agendada");
   }
   const now = new Date();
-  const dateStr = now.toISOString().split("T")[0];
-  const timeStr = String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
+  // Usar hora de Chile (BUSINESS_TIME_ZONE) para inspection_date e inspection_time,
+  // sin importar la zona horaria del servidor.
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: BUSINESS_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  });
+  const parts = fmt.formatToParts(now);
+  const p = (type: string) => parts.find((x) => x.type === type)?.value ?? "0";
+  const dateStr = `${p("year")}-${p("month")}-${p("day")}`;
+  const timeStr = `${p("hour") === "24" ? "00" : p("hour")}:${p("minute")}`;
   const companyId = String(session.company_id ?? session.claim?.company_id ?? "");
   await openWorkPeriod(sessionId, companyId);
 
@@ -1314,14 +1325,23 @@ export async function restoreInspectionLock(sessionId: string) {
  * Determina si el usuario puede acceder a una inspección teniendo en cuenta
  * el bloqueo de sesiones activas: solo el inspector asignado puede entrar a
  * una inspección en curso, salvo que un internal haya levantado el bloqueo.
+ * También bloquea si la inspección está descargada offline por otro inspector.
  */
 export function canAccessInspectionSession(
-  session: { status: string; inspector_id: string | null; lock_overridden_by: string | null; claim?: { inspector_id?: string | null } | null },
+  session: { status: string; inspector_id: string | null; lock_overridden_by: string | null; offline_downloaded_by?: string | null; claim?: { inspector_id?: string | null } | null },
   profile: { id: string } | null | undefined,
   dataAccess: { is_admin: boolean; see_all_client_claims: boolean } | null | undefined,
 ): boolean {
   if (!profile) return false;
   const effectiveInspectorId = session.inspector_id ?? session.claim?.inspector_id ?? null;
+
+  // Si está descargada offline por alguien, bloquear acceso online SIEMPRE.
+  // El acceso offline es solo desde el dispositivo que la descargó (mobile).
+  // Nadie puede acceder online hasta que se libere (offline_downloaded_by = null).
+  if (session.offline_downloaded_by) {
+    return false;
+  }
+
   if (session.status !== "active") {
     return !!(dataAccess?.is_admin || dataAccess?.see_all_client_claims || effectiveInspectorId === profile.id);
   }
@@ -1436,7 +1456,7 @@ export async function rescheduleInspectionViaCIN(params: {
     if (overlap) {
       throw new Error(
         `El inspector ya tiene una inspección agendada que se solapa con ese horario ` +
-        `(existente: ${new Date(overlap.scheduled_at).toLocaleString("es-CL", { timeZone: "America/Santiago" })}). ` +
+        `(existente: ${new Date(overlap.scheduled_at).toLocaleString("es-CL", { timeZone: BUSINESS_TIME_ZONE })}). ` +
         `Elija otro horario o cancele primero la inspección en curso.`
       );
     }
@@ -1862,6 +1882,79 @@ export async function deleteThirdParty(id: string) {
   await deleteRow("third_parties", id);
 }
 
+/**
+ * Fuerza la liberación de una inspección descargada offline.
+ * Quita offline_downloaded_by y offline_downloaded_at, invalidando
+ * la sesión offline del dispositivo que la tenía descargada.
+ * El dispositivo no podrá sincronizar cambios.
+ */
+export async function forceReleaseOfflineSession(
+  sessionId: string,
+  userId?: string,
+) {
+  const session = await fetchById<{
+    id: string;
+    status: string;
+    offline_downloaded_by: string | null;
+    offline_downloaded_at: string | null;
+    company_id: string | null;
+  }>(
+    "inspection_sessions",
+    sessionId,
+    "id, status, offline_downloaded_by, offline_downloaded_at, company_id",
+  );
+  if (!session) throw new Error("Inspección no encontrada");
+  if (!session.offline_downloaded_by) {
+    throw new Error("Esta inspección no está descargada offline");
+  }
+
+  const updated = await updateRow<InspectionSession>(
+    "inspection_sessions",
+    sessionId,
+    {
+      offline_downloaded_by: null,
+      offline_downloaded_at: null,
+      offline_synced_at: new Date().toISOString(),
+    },
+    SESSION_SELECT,
+  );
+
+  // Registrar en audit_logs
+  try {
+    await insertRow(
+      "audit_logs",
+      {
+        table_name: "inspection_sessions",
+        record_id: sessionId,
+        action: "UPDATE",
+        old_data: { offline_downloaded_by: session.offline_downloaded_by, offline_downloaded_at: session.offline_downloaded_at },
+        new_data: { offline_downloaded_by: null, offline_downloaded_at: null },
+        performed_by: userId || null,
+        company_id: session.company_id || null,
+      },
+      "id",
+    );
+  } catch (e) {
+    console.error("No se pudo registrar auditoría de liberación offline:", e);
+  }
+
+  return updated;
+}
+
+/**
+ * Obtiene las inspecciones que están descargadas offline.
+ */
+export async function getOfflineDownloadedSessions() {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("inspection_sessions")
+    .select(`${SESSION_SELECT}, inspector:profiles!offline_downloaded_by(full_name), claim:claims(liquidation_number, client_reference)`)
+    .not("offline_downloaded_by", "is", null)
+    .order("offline_downloaded_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data || []) as (InspectionSession & { inspector?: { full_name: string }; claim?: { liquidation_number: string | null; client_reference: string | null } })[];
+}
+
 // ═══════════════════════════════════════════════════════════════
 // DAMAGE SKETCHES
 // ═══════════════════════════════════════════════════════════════
@@ -1904,7 +1997,7 @@ const DAMAGE_SELECT = `
   id, session_id, category, subcategory, description, observations, severity,
   dependency, sector, materiality_type, unit, quantity, length, width, height,
   damage_length, damage_width, damage_height, damage_quantity, damage_type,
-  product, brand_model, purchase_date, estimated_amount, currency,
+  product, brand_model, product_id, brand_id, purchase_date, estimated_amount, currency,
   third_party_id, space_id, content_good_type_id, building_damage_category_id,
   created_at, updated_at
 `;
@@ -2015,6 +2108,10 @@ export async function getSignatures(sessionId: string) {
 
 export async function createSignature(input: Omit<import("@/types").InspectionSignature, "id">) {
   return insertRow<import("@/types").InspectionSignature>("inspection_signatures", input, SIGNATURE_SELECT);
+}
+
+export async function deleteSignature(id: string) {
+  return deleteRow("inspection_signatures", id);
 }
 
 // ═══════════════════════════════════════════════════════════════

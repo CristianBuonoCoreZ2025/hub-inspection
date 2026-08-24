@@ -7,10 +7,10 @@ import { useState, useEffect, useCallback } from "react";
  * Usa navigator.onLine + event listeners para detectar cambios.
  */
 export function useOnline(): boolean {
-  const [online, setOnline] = useState(true);
+  const [online, setOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
 
   useEffect(() => {
-    // Inicializar con el estado real del navegador
+    // Asegurar el estado real del navegador (por si cambió después del primer render)
     setOnline(navigator.onLine);
 
     const handleOnline = () => setOnline(true);

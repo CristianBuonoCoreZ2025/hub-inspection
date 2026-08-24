@@ -114,34 +114,59 @@
 .mobile-status-dot.cancelled { background: var(--st-error); }
 
 /* ── Tabs mobile ── */
+.mobile-tabs-wrap {
+  position: relative;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
 .mobile-tabs {
   display: flex;
-  gap: 4px;
+  gap: 0;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  padding: 0 16px;
-  border-bottom: 1px solid hsl(var(--border));
+  padding: 0 8px;
 }
 
 .mobile-tabs::-webkit-scrollbar {
   display: none;
 }
 
+/* Indicador de scroll a la derecha */
+.mobile-tabs-wrap::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 20px;
+  background: linear-gradient(to left, hsl(var(--background)), transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+
 .mobile-tab {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 10px 10px;
-  font-size: 13px;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 6px;
+  font-size: 9px;
   font-weight: 500;
   color: hsl(var(--muted-foreground));
   border-bottom: 2px solid transparent;
   white-space: nowrap;
   flex-shrink: 0;
+  min-width: 48px;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
   transition: color 0.15s, border-color 0.15s;
+}
+
+.mobile-tab svg {
+  width: 18px;
+  height: 18px;
 }
 
 .mobile-tab.active {
@@ -574,6 +599,15 @@
   .mobile-tabs {
     justify-content: center;
   }
+  .mobile-tabs-wrap::after {
+    display: none;
+  }
+  .mobile-tab {
+    flex-direction: row;
+    min-width: auto;
+    font-size: 13px;
+    padding: 10px 10px;
+  }
   .mobile-inspection-card {
     max-width: 480px;
     margin: 0 auto 8px;
@@ -687,24 +721,88 @@
   background: hsl(var(--amber-2, 30 80% 95%));
 }
 
-/* ── Offline: botón descargar ── */
-.mobile-offline-download-btn {
+/* ── Offline: botón descargar cuadrado ── */
+.mobile-offline-icon-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  font-size: 11px;
-  font-weight: 500;
-  border-radius: 8px;
-  border: 1px solid hsl(var(--primary) / 0.3);
-  background: hsl(var(--primary) / 0.08);
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid hsl(var(--primary) / 0.25);
+  background: hsl(var(--primary) / 0.06);
   color: hsl(var(--primary));
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  flex-shrink: 0;
 }
-.mobile-offline-download-btn:disabled {
+.mobile-offline-icon-btn:hover:not(:disabled) {
+  background: hsl(var(--primary) / 0.12);
+  border-color: hsl(var(--primary) / 0.4);
+}
+.mobile-offline-icon-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+.mobile-offline-icon-btn.done {
+  border-color: hsl(var(--emerald-6, 150 60% 45%) / 0.3);
+  background: hsl(var(--emerald-2, 150 80% 95%));
+  color: hsl(var(--emerald-9, 150 80% 30%));
+}
+
+/* ── Diálogo de PIN offline ── */
+.mobile-pin-dialog {
+  width: min(92vw, 360px) !important;
+  padding: 20px 22px 22px !important;
+  border-radius: 16px !important;
+  background: hsl(var(--popover)) !important;
+  color: hsl(var(--popover-foreground)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  box-shadow:
+    0 24px 48px -12px rgba(0, 0, 0, 0.18),
+    0 12px 24px -8px rgba(0, 0, 0, 0.12),
+    0 0 0 1px rgba(0, 0, 0, 0.04) !important;
+}
+.mobile-pin-dialog [data-slot="dialog-title"] {
+  font-size: 15px;
+  font-weight: 600;
+}
+.mobile-pin-dialog [data-slot="dialog-header"] {
+  padding-bottom: 8px;
+}
+
+/* ── Diálogo de progreso de descarga ── */
+.download-progress-dialog {
+  width: min(92vw, 380px) !important;
+  padding: 20px 22px 22px !important;
+  border-radius: 16px !important;
+  background: hsl(var(--popover)) !important;
+  color: hsl(var(--popover-foreground)) !important;
+  border: none !important;
+  box-shadow:
+    0 24px 48px -12px rgba(0, 0, 0, 0.18),
+    0 12px 24px -8px rgba(0, 0, 0, 0.12),
+    0 0 0 1px rgba(0, 0, 0, 0.04) !important;
+}
+.download-progress-dialog [data-slot="dialog-title"] {
+  font-size: 15px;
+  font-weight: 600;
+}
+.download-progress-dialog [data-slot="dialog-header"] {
+  padding-bottom: 8px;
+}
+.download-progress-bar-track {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: hsl(var(--muted));
+  overflow: hidden;
+}
+.download-progress-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, hsl(38 92% 50%), hsl(38 92% 55%)) !important;
+  transition: width 0.4s ease !important;
 }
 
 /* ── Offline: badge descargada ── */

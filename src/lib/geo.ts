@@ -252,8 +252,19 @@ async function mapboxGeocodeCandidates(q: string, token: string): Promise<Geocod
 async function googleGeocodeCandidates(q: string, token: string): Promise<GeocodeCandidate[]> {
   const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(q)}&key=${encodeURIComponent(token)}&language=es`;
   const res = await fetch(url);
-  if (!res.ok) return [];
+  if (!res.ok) {
+    console.warn(`[geocode] Google HTTP ${res.status}, fallback a siguiente proveedor`);
+    return [];
+  }
   const data = await res.json();
+  if (data.status === "OVER_QUERY_LIMIT" || data.status === "OVER_DAILY_LIMIT") {
+    console.warn(`[geocode] Google quota excedida (${data.status}), fallback a Mapbox/OSM`);
+    return [];
+  }
+  if (data.status === "REQUEST_DENIED") {
+    console.warn(`[geocode] Google request denied: ${data.error_message || data.status}`);
+    return [];
+  }
   if (data.status !== "OK" || !Array.isArray(data.results) || data.results.length === 0) return [];
   return data.results.map((item: { geometry: { location: { lat: number; lng: number } }; formatted_address: string }) => ({
     lat: item.geometry.location.lat,
@@ -331,8 +342,26 @@ export async function geocodeAddress(address: string): Promise<LatLng | null> {
 
 /**
  * Geocodificación inversa: lat/lng → dirección.
+ * Usa Google Maps si hay API key configurada, sino Nominatim como fallback.
  */
 export async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
+  // Intentar Google primero (mejor cobertura en Chile)
+  const googleKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  if (googleKey) {
+    try {
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${encodeURIComponent(googleKey)}&language=es`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status === "OK" && data.results?.length > 0) {
+          return data.results[0].formatted_address as string;
+        }
+      }
+    } catch {
+      // continuar a fallback
+    }
+  }
+  // Fallback: Nominatim (OpenStreetMap)
   try {
     const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`;
     const res = await fetch(url, {

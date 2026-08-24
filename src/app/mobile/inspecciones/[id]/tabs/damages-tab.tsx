@@ -1,6 +1,8 @@
 "use client";
 
 import DamagesTab from "@/app/dashboard/inspecciones/[id]/damages-tab";
+import type { OfflineCatalogs, OfflineSession } from "@/db/offline-db";
+import type { SessionDetail } from "@/services/inspections";
 
 interface MobileDamagesTabProps {
   sessionId: string;
@@ -8,7 +10,10 @@ interface MobileDamagesTabProps {
   countryId?: string | null;
   sessionStatus?: string;
   offlineMode?: boolean;
-  onOfflineSaved?: () => void;
+  onOfflineSaved?: (updated?: OfflineSession) => void | Promise<void>;
+  offlineCatalogs?: OfflineCatalogs | null;
+  session?: SessionDetail | null;
+  offlineSession?: OfflineSession | null;
 }
 
 export default function MobileDamagesTab({
@@ -18,6 +23,9 @@ export default function MobileDamagesTab({
   sessionStatus,
   offlineMode = false,
   onOfflineSaved,
+  offlineCatalogs,
+  session,
+  offlineSession,
 }: MobileDamagesTabProps) {
   return (
     <div className="mobile-damage-form">
@@ -28,6 +36,10 @@ export default function MobileDamagesTab({
         sessionStatus={sessionStatus}
         offlineMode={offlineMode}
         onOfflineSaved={onOfflineSaved}
+        offlineCatalogs={offlineCatalogs}
+        session={session}
+        offlineSession={offlineSession}
+        isMobile
       />
     </div>
   );

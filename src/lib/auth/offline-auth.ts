@@ -4,17 +4,15 @@ import bcrypt from "bcryptjs";
 import { getOfflineDB, type OfflineProfile, getExpirationDate, isExpired } from "@/db/offline-db";
 
 // ─────────────────────────────────────────────────────────────────────
-// Guardar credenciales offline
+// Guardar profile offline (con PIN hash traído de Supabase)
 // ─────────────────────────────────────────────────────────────────────
 
 /**
- * Guarda el profile + password hash en IndexedDB para login offline.
+ * Guarda el profile en IndexedDB para login offline.
+ * El pin_hash viene de Supabase (profiles.offline_pin_hash).
  * Se llama cuando el inspector descarga inspecciones.
- *
- * @param profile  Profile del usuario logueado
- * @param password Password en texto plano (se hashea antes de guardar)
  */
-export async function saveOfflineCredentials(
+export async function saveOfflineProfile(
   profile: {
     id: string;
     user_id: string;
@@ -25,11 +23,9 @@ export async function saveOfflineCredentials(
     company?: { name: string | null; logo_url: string | null } | null;
     mobile_enabled?: boolean;
   },
-  password: string,
+  pin_hash: string,
 ): Promise<void> {
   const db = getOfflineDB();
-  const saltRounds = 10;
-  const password_hash = await bcrypt.hash(password, saltRounds);
 
   const offlineProfile: OfflineProfile = {
     id: profile.id,
@@ -41,7 +37,7 @@ export async function saveOfflineCredentials(
     company_name: profile.company?.name ?? null,
     company_logo_url: profile.company?.logo_url ?? null,
     mobile_enabled: profile.mobile_enabled ?? false,
-    password_hash,
+    pin_hash,
     expires_at: getExpirationDate(10),
     downloaded_at: new Date().toISOString(),
   };
@@ -60,13 +56,12 @@ export interface OfflineAuthResult {
 }
 
 /**
- * Valida email + password contra las credenciales guardadas en IndexedDB.
+ * Valida email + PIN contra las credenciales guardadas en IndexedDB.
  * No requiere conexión a internet.
  */
-export async function loginOffline(email: string, password: string): Promise<OfflineAuthResult> {
+export async function loginOffline(email: string, pin: string): Promise<OfflineAuthResult> {
   const db = getOfflineDB();
 
-  // Buscar profile por email
   const profile = await db.profiles
     .where("email")
     .equals(email.toLowerCase().trim())
@@ -76,7 +71,6 @@ export async function loginOffline(email: string, password: string): Promise<Off
     return { success: false, error: "No hay credenciales offline para este email" };
   }
 
-  // Verificar expiración
   if (isExpired(profile.expires_at)) {
     return {
       success: false,
@@ -84,10 +78,9 @@ export async function loginOffline(email: string, password: string): Promise<Off
     };
   }
 
-  // Validar password
-  const valid = await bcrypt.compare(password, profile.password_hash);
+  const valid = await bcrypt.compare(pin, profile.pin_hash);
   if (!valid) {
-    return { success: false, error: "Contraseña incorrecta" };
+    return { success: false, error: "PIN incorrecto" };
   }
 
   return { success: true, profile };
@@ -97,7 +90,6 @@ export async function loginOffline(email: string, password: string): Promise<Off
 // Obtener profile offline
 // ─────────────────────────────────────────────────────────────────────
 
-/** Obtiene el profile offline guardado (sin validar password) */
 export async function getOfflineProfile(email: string): Promise<OfflineProfile | null> {
   const db = getOfflineDB();
   const profile = await db.profiles
@@ -108,10 +100,43 @@ export async function getOfflineProfile(email: string): Promise<OfflineProfile |
 }
 
 // ─────────────────────────────────────────────────────────────────────
+// Verificar si tiene PIN (consulta Supabase, requiere conexión)
+// ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Verifica si el usuario ya tiene un PIN configurado en Supabase.
+ * Requiere conexión a internet.
+ */
+export async function hasOfflinePinInSupabase(profileId: string): Promise<boolean> {
+  const { getSupabaseClient } = await import("@/lib/supabase/client");
+  const supabase = getSupabaseClient();
+  const { data } = await supabase
+    .from("profiles")
+    .select("offline_pin_hash")
+    .eq("id", profileId)
+    .maybeSingle();
+  return !!data?.offline_pin_hash;
+}
+
+/**
+ * Obtiene el PIN hash de Supabase para sincronizar a IndexedDB.
+ * Requiere conexión a internet.
+ */
+export async function getOfflinePinHashFromSupabase(profileId: string): Promise<string | null> {
+  const { getSupabaseClient } = await import("@/lib/supabase/client");
+  const supabase = getSupabaseClient();
+  const { data } = await supabase
+    .from("profiles")
+    .select("offline_pin_hash")
+    .eq("id", profileId)
+    .maybeSingle();
+  return data?.offline_pin_hash ?? null;
+}
+
+// ─────────────────────────────────────────────────────────────────────
 // Limpiar credenciales
 // ─────────────────────────────────────────────────────────────────────
 
-/** Elimina las credenciales offline de un usuario */
 export async function clearOfflineCredentials(email?: string): Promise<void> {
   const db = getOfflineDB();
   if (email) {
@@ -127,7 +152,6 @@ export async function clearOfflineCredentials(email?: string): Promise<void> {
   }
 }
 
-/** Verifica si hay credenciales offline guardadas */
 export async function hasOfflineCredentials(): Promise<boolean> {
   const db = getOfflineDB();
   const count = await db.profiles.count();

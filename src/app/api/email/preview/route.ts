@@ -3,6 +3,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { buildDocumentDataForClaim } from "@/services/document-data";
 import { buildTemplateData } from "@/lib/document-fields";
 import { renderEmailTemplate } from "@/services/email-render";
+import { BUSINESS_TIME_ZONE } from "@/lib/timezone";
 
 // ──────────────────────────────────────────────────────────────
 // POST /api/email/preview
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
       if (!v) return "";
       const d = new Date(v);
       if (isNaN(d.getTime())) return String(v);
-      return d.toLocaleString("es-CL", { timeZone: "America/Santiago", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
+      return d.toLocaleString("es-CL", { timeZone: BUSINESS_TIME_ZONE, day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
     };
     // Ventana de validez: [scheduled_at - 1h, magic_link_expires_at]
     const windowStart = lastSession?.scheduled_at

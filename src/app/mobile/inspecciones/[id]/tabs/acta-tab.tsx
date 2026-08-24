@@ -1,26 +1,24 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { getInspectionSessionById, type SessionDetail } from "@/services/inspections";
+import { getInspectionSessionById } from "@/services/inspections";
 import ActaForm from "@/app/dashboard/inspecciones/[id]/acta-form";
 import { Loader2, AlertCircle } from "lucide-react";
-import { useOnline } from "@/hooks/use-online";
 import { getDownloadedSession } from "@/lib/offline/download-session";
+import { getGlobalCatalogs, type OfflineSession, type OfflineCatalogs } from "@/db/offline-db";
 import { useState, useEffect } from "react";
-import type { OfflineSession } from "@/db/offline-db";
 
 interface MobileActaTabProps {
   sessionId: string;
-  onComplete?: () => void;
   /** Si está en modo offline, usar datos de IndexedDB */
   offlineMode?: boolean;
   /** Callback al guardar offline */
   onOfflineSaved?: () => void;
 }
 
-export default function MobileActaTab({ sessionId, onComplete, offlineMode = false, onOfflineSaved }: MobileActaTabProps) {
-  const online = useOnline();
+export default function MobileActaTab({ sessionId, offlineMode = false, onOfflineSaved }: MobileActaTabProps) {
   const [offlineSession, setOfflineSession] = useState<OfflineSession | null>(null);
+  const [catalogs, setCatalogs] = useState<OfflineCatalogs | null>(null);
 
   const { data: session, isLoading, isError } = useQuery({
     queryKey: ["inspection-session", sessionId],
@@ -28,10 +26,11 @@ export default function MobileActaTab({ sessionId, onComplete, offlineMode = fal
     enabled: !!sessionId && !offlineMode,
   });
 
-  // Cargar sesión offline de IndexedDB
+  // Cargar sesión offline + catálogos globales de IndexedDB
   useEffect(() => {
     if (!offlineMode) return;
     getDownloadedSession(sessionId).then(setOfflineSession);
+    getGlobalCatalogs().then(setCatalogs);
   }, [sessionId, offlineMode]);
 
   if (offlineMode) {
@@ -47,6 +46,7 @@ export default function MobileActaTab({ sessionId, onComplete, offlineMode = fal
       <ActaForm
         session={offlineSession.session}
         offlineMode
+        offlineCatalogs={catalogs ?? undefined}
         onOfflineSaved={onOfflineSaved}
       />
     );

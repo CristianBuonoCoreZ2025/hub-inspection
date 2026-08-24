@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { deleteEvidence } from "@/services/inspections";
+import { deleteEvidence, type SessionDetail } from "@/services/inspections";
 import { toast } from "sonner";
 import {
   Camera, Upload, SwitchCamera, Trash2, Loader2, CheckCircle2, XCircle,
@@ -208,6 +208,39 @@ export default function MobileEvidencesTab({ sessionId, sessionStatus, offlineMo
         queryClient.invalidateQueries({ queryKey: ["evidences", sessionId] });
         queryClient.invalidateQueries({ queryKey: ["inspection-session", sessionId] });
         toast.success(`${file.name} subido`);
+        // Guardar blob en IndexedDB + actualizar snapshot offline
+        try {
+          const body = JSON.parse(xhr.responseText);
+          const evidenceId = body?.id || body?.evidence?.id;
+          const evidenceUrl = body?.url || body?.evidence?.url;
+          if (evidenceId && evidenceUrl) {
+            // Guardar blob
+            import("@/db/offline-db").then(({ getOfflineDB }) => {
+              const db = getOfflineDB();
+              db.evidenceBlobs.put({ id: evidenceId, blob: file });
+              // Actualizar snapshot offline con la nueva evidencia
+              db.sessions.get(sessionId).then((offline) => {
+                if (!offline) return;
+                const session = offline.session as SessionDetail;
+                const newEvidence = {
+                  id: evidenceId,
+                  session_id: sessionId,
+                  type: file.type.startsWith("image/") ? "photo" : file.type.startsWith("video/") ? "video" : "document",
+                  url: evidenceUrl,
+                  description: file.name,
+                  source: "mobile-online",
+                  include_in_report: false,
+                  created_at: new Date().toISOString(),
+                  metadata: { originalName: file.name, fileSize: file.size, mimeType: file.type },
+                };
+                session.inspection_evidences = [...(session.inspection_evidences || []), newEvidence as never];
+                db.sessions.update(sessionId, { session });
+              });
+            });
+          }
+        } catch (e) {
+          console.warn("No se pudo guardar blob offline:", e);
+        }
       } else {
         let msg = "Error al subir archivo";
         try {

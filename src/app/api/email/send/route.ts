@@ -4,6 +4,7 @@ import { renderEmailTemplate, type EmailBodyFormat } from "@/services/email-rend
 import { sendEmail } from "@/services/email-sender";
 import { buildDocumentDataForClaim } from "@/services/document-data";
 import { buildTemplateData } from "@/lib/document-fields";
+import { BUSINESS_TIME_ZONE } from "@/lib/timezone";
 
 // ──────────────────────────────────────────────────────────────
 // POST /api/email/send
@@ -188,7 +189,7 @@ export async function POST(request: NextRequest) {
       if (!v) return "";
       const d = new Date(v);
       if (isNaN(d.getTime())) return String(v);
-      return d.toLocaleString("es-CL", { timeZone: "America/Santiago", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
+      return d.toLocaleString("es-CL", { timeZone: BUSINESS_TIME_ZONE, day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
     };
     const windowStart = lastSession?.scheduled_at
       ? new Date(new Date(lastSession.scheduled_at).getTime() - 60 * 60 * 1000).toISOString()

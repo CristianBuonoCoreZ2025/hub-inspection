@@ -544,5 +544,3 @@ function IntegracionesTab() {
     </section>
   );
 }
-
-

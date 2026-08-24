@@ -11,6 +11,9 @@ const withSerwist = isDev
       swSrc: "src/app/sw.ts",
       swDest: "public/sw.js",
       disable: false,
+      additionalPrecacheEntries: [
+        { url: "/offline.html", revision: "1" },
+      ],
     });
 
 const nextConfig: NextConfig = {
@@ -42,6 +45,14 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/sw.js",
+        headers: [
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+      },
+      {
+        source: "/sw-dev.js",
         headers: [
           { key: "Content-Type", value: "application/javascript; charset=utf-8" },
           { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },

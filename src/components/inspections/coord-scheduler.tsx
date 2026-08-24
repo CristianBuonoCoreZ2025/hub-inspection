@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { getInspectorSchedule } from "@/services/inspections";
-import { toUserISO, formatUserDateTime } from "@/lib/timezone";
+import { toUserISO, formatUserDateTime, getUserTimeZone } from "@/lib/timezone";
 
 interface CoordSchedulerProps {
   /** ID del inspector */
@@ -155,6 +155,7 @@ export function CoordScheduler({
   // Fecha seleccionada formateada
   const selectedDateLabel = selectedDate
     ? new Date(selectedDate + "T12:00:00").toLocaleDateString("es-CL", {
+        timeZone: getUserTimeZone(),
         weekday: "long",
         day: "numeric",
         month: "long",

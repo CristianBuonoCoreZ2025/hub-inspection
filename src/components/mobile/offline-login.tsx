@@ -2,44 +2,45 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
-import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
-import { ShieldCheck, Loader2, WifiOff } from "lucide-react";
-import { loginSchema, type LoginInput } from "@/lib/validations";
+import { ShieldCheck, Loader2, WifiOff, Lock } from "lucide-react";
 import { loginOffline } from "@/lib/auth/offline-auth";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
+interface OfflineLoginProps {
+  /** Si se pasa, se llama después del login exitoso en vez de navegar */
+  onSuccess?: () => void;
+}
+
 /**
  * Página de login offline.
  * Se muestra cuando no hay conexión y el usuario intenta acceder al mobile.
- * Valida contra credenciales guardadas en IndexedDB.
+ * Valida email + PIN contra credenciales guardadas en IndexedDB.
+ *
+ * Si se pasa `onSuccess`, se usa en modo inline (sin navegación).
+ * Si no, navega a /mobile/inspecciones después del login.
  */
-export function OfflineLogin() {
+export function OfflineLogin({ onSuccess }: OfflineLoginProps) {
   const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginInput>({
-    resolver: standardSchemaResolver(loginSchema),
-    defaultValues: { email: "", password: "", remember: false },
-  });
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || pin.length < 4) return;
 
-  const onSubmit = async (data: LoginInput) => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await loginOffline(data.email, data.password);
+      const result = await loginOffline(email, pin);
       if (!result.success) {
         setError(result.error || "Error de autenticación offline");
         return;
       }
-      // Guardar profile offline en sessionStorage para que useAuth lo pueda leer
+      // Guardar profile offline en sessionStorage
       if (result.profile) {
         sessionStorage.setItem("offline-profile", JSON.stringify({
           id: result.profile.id,
@@ -55,7 +56,11 @@ export function OfflineLogin() {
         }));
         sessionStorage.setItem("offline-mode", "true");
       }
-      router.push("/mobile/inspecciones");
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        router.push("/mobile/inspecciones");
+      }
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -74,41 +79,47 @@ export function OfflineLogin() {
 
         <div className="offline-login-banner">
           <WifiOff className="h-4 w-4 shrink-0" />
-          <span>Sin conexión — Ingresa con tus credenciales descargadas</span>
+          <span>Sin conexión — Ingresa con tu email y PIN</span>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="auth-form">
+        <form onSubmit={onSubmit} className="auth-form">
           <div className="auth-field">
             <Label htmlFor="email">Correo electrónico</Label>
             <Input
               id="email"
               type="email"
               autoComplete="email"
-              {...register("email")}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isLoading}
             />
-            {errors.email && (
-              <p className="auth-error">{errors.email.message}</p>
-            )}
           </div>
 
           <div className="auth-field">
-            <Label htmlFor="password">Contraseña</Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              {...register("password")}
-            />
-            {errors.password && (
-              <p className="auth-error">{errors.password.message}</p>
-            )}
+            <Label htmlFor="pin">PIN offline</Label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="pin"
+                type="password"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                autoComplete="off"
+                placeholder="••••"
+                value={pin}
+                onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+                disabled={isLoading}
+                className="pl-9 text-center text-lg tracking-widest"
+              />
+            </div>
           </div>
 
           {error && <p className="auth-error">{error}</p>}
 
           <Button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || !email.trim() || pin.length < 4}
             className="auth-submit"
           >
             {isLoading ? (
@@ -120,8 +131,8 @@ export function OfflineLogin() {
         </form>
 
         <p className="auth-footer">
-          Las credenciales offline expiran después de 10 días.
-          Conéctate a internet para refrescarlas.
+          El PIN es válido por 10 días desde la descarga.
+          Conéctate a internet para descargar nuevas inspecciones.
         </p>
       </div>
     </div>
