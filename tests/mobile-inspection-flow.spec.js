@@ -95,9 +95,7 @@ test.describe("Flujo completo de inspección móvil", () => {
     } else {
       console.log("⚠ URL actual:", page.url());
       // Navegar directamente a inspecciones
-      await page.evaluate(() => {
-        window.location.href = "/mobile/inspecciones";
-      });
+      await page.goto("/mobile/inspecciones");
       await page.waitForTimeout(3000);
     }
 

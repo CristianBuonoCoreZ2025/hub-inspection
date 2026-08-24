@@ -29,7 +29,7 @@
  * 19.  Informe (finalizar)
  * 20.  Verificar reporte final en BD
  */
-const { test, expect } = require("@playwright/test");
+const { test } = require("@playwright/test");
 const { createClient } = require("@supabase/supabase-js");
 require("dotenv").config({ path: ".env.local" });
 const path = require("path");
