@@ -46,6 +46,9 @@ interface PreviewData {
   remoteThumb: string;
   localThumb: string;
   timestamp: number;
+  inspectorVideoOn: boolean;
+  inspectorAudioOn: boolean;
+  peerConnected: boolean;
 }
 
 const SEVERITY_LABELS: Record<string, string> = {
@@ -105,6 +108,9 @@ export function SupervisorLiveView({ sessionId, userId, onLeave }: SupervisorLiv
           remoteThumb: msg.remoteThumb,
           localThumb: msg.localThumb,
           timestamp: Date.now(),
+          inspectorVideoOn: msg.inspectorVideoOn ?? true,
+          inspectorAudioOn: msg.inspectorAudioOn ?? true,
+          peerConnected: msg.peerConnected ?? false,
         });
         setLastUpdate(Date.now());
       }
@@ -391,17 +397,25 @@ function OverviewPanel({
           {connected && preview && !isStale && preview.remoteThumb ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={preview.remoteThumb} alt="Asegurado" className="w-full rounded-lg border border-zinc-700" />
-          ) : connected && preview && !isStale && !preview.remoteThumb ? (
-            <div className="w-full aspect-video rounded-lg border border-zinc-800 bg-zinc-900 flex items-center justify-center">
-              <VideoOff className="h-8 w-8 text-white/20" />
+          ) : connected && preview && !isStale && !preview.remoteThumb && preview.peerConnected ? (
+            <div className="w-full aspect-video rounded-lg border border-zinc-800 bg-zinc-900 flex flex-col items-center justify-center gap-1 text-white/30">
+              <VideoOff className="h-8 w-8" />
+              <span className="app-body text-xs">Asegurado sin video</span>
+            </div>
+          ) : connected && preview && !isStale && !preview.remoteThumb && !preview.peerConnected ? (
+            <div className="w-full aspect-video rounded-lg border border-zinc-800 bg-zinc-900 flex flex-col items-center justify-center gap-1 text-white/30">
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <span className="app-body text-xs">Esperando asegurado...</span>
             </div>
           ) : connected && !preview ? (
-            <div className="w-full aspect-video rounded-lg border border-zinc-800 bg-zinc-900 flex items-center justify-center text-white/30">
+            <div className="w-full aspect-video rounded-lg border border-zinc-800 bg-zinc-900 flex flex-col items-center justify-center gap-1 text-white/30">
               <Loader2 className="h-6 w-6 animate-spin" />
+              <span className="app-body text-xs">Esperando inspector...</span>
             </div>
           ) : (
-            <div className="w-full aspect-video rounded-lg border border-zinc-800 bg-zinc-900 flex items-center justify-center text-white/30">
+            <div className="w-full aspect-video rounded-lg border border-zinc-800 bg-zinc-900 flex flex-col items-center justify-center gap-1 text-white/30">
               <WifiOff className="h-6 w-6" />
+              <span className="app-body text-xs">Inspector no conectado</span>
             </div>
           )}
         </div>
@@ -415,17 +429,48 @@ function OverviewPanel({
           {connected && preview && !isStale && preview.localThumb ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={preview.localThumb} alt="Inspector" className="w-full max-w-sm rounded-lg border border-zinc-700" />
-          ) : connected && preview && !isStale && !preview.localThumb ? (
-            <div className="w-full max-w-sm aspect-video rounded-lg border border-zinc-800 bg-zinc-900 flex items-center justify-center">
-              <VideoOff className="h-8 w-8 text-white/20" />
+          ) : connected && preview && !isStale && !preview.localThumb && preview.inspectorVideoOn ? (
+            <div className="w-full max-w-sm aspect-video rounded-lg border border-zinc-800 bg-zinc-900 flex flex-col items-center justify-center gap-1 text-white/30">
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <span className="app-body text-xs">Cargando video...</span>
+            </div>
+          ) : connected && preview && !isStale && !preview.localThumb && !preview.inspectorVideoOn ? (
+            <div className="w-full max-w-sm aspect-video rounded-lg border border-zinc-800 bg-zinc-900 flex flex-col items-center justify-center gap-1 text-white/30">
+              <VideoOff className="h-8 w-8" />
+              <span className="app-body text-xs">Cámara apagada</span>
+            </div>
+          ) : connected && !preview ? (
+            <div className="w-full max-w-sm aspect-video rounded-lg border border-zinc-800 bg-zinc-900 flex flex-col items-center justify-center gap-1 text-white/30">
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <span className="app-body text-xs">Esperando inspector...</span>
             </div>
           ) : (
-            <div className="w-full max-w-sm aspect-video rounded-lg border border-zinc-800 bg-zinc-900 flex items-center justify-center text-white/30">
+            <div className="w-full max-w-sm aspect-video rounded-lg border border-zinc-800 bg-zinc-900 flex flex-col items-center justify-center gap-1 text-white/30">
               <VideoOff className="h-6 w-6" />
+              <span className="app-body text-xs">Inspector no conectado</span>
             </div>
           )}
         </div>
       </div>
+
+      {/* Estado de conexión del inspector */}
+      {connected && preview && !isStale && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-white/10 bg-black/30 px-3 py-2">
+          <span className="app-body text-white/50 text-xs font-medium">Estado inspector:</span>
+          <span className={`flex items-center gap-1 px-2 py-0.5 rounded-md app-body text-xs ${preview.inspectorVideoOn ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"}`}>
+            {preview.inspectorVideoOn ? <Video className="h-3 w-3" /> : <VideoOff className="h-3 w-3" />}
+            {preview.inspectorVideoOn ? "Cámara on" : "Cámara off"}
+          </span>
+          <span className={`flex items-center gap-1 px-2 py-0.5 rounded-md app-body text-xs ${preview.inspectorAudioOn ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"}`}>
+            {preview.inspectorAudioOn ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+            {preview.inspectorAudioOn ? "Mic on" : "Mic off"}
+          </span>
+          <span className={`flex items-center gap-1 px-2 py-0.5 rounded-md app-body text-xs ${preview.peerConnected ? "bg-sky-500/15 text-sky-400" : "bg-amber-500/15 text-amber-400"}`}>
+            {preview.peerConnected ? <UserCheck className="h-3 w-3" /> : <UserX className="h-3 w-3" />}
+            {preview.peerConnected ? "Asegurado conectado" : "Sin asegurado"}
+          </span>
+        </div>
+      )}
 
       {/* Stale warning */}
       {connected && preview && isStale && (

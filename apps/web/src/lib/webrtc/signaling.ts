@@ -35,7 +35,16 @@ export type SignalingMessage =
   | { type: "screenshot"; from: string; role: SignalingRole; evidenceId: string; url: string }
   | { type: "busy"; from: string; role: SignalingRole; reason: string }
   | { type: "kick"; from: string; role: SignalingRole; target: string; reason: string }
-  | { type: "preview"; from: string; role: SignalingRole; remoteThumb: string; localThumb: string };
+  | {
+      type: "preview";
+      from: string;
+      role: SignalingRole;
+      remoteThumb: string;
+      localThumb: string;
+      inspectorVideoOn?: boolean;
+      inspectorAudioOn?: boolean;
+      peerConnected?: boolean;
+    };
 
 export interface SignalingChannel {
   send: (msg: SignalingMessage) => void;

@@ -133,6 +133,13 @@ export function LiveVideoCall({
   const [facingMode, setFacingMode] = React.useState<"user" | "environment">("user");
   const facingModeRef = React.useRef<"user" | "environment">("user");
   const [peerJoined, setPeerJoined] = React.useState(false);
+  // Refs para acceder al estado actual dentro del intervalo de preview sin reiniciarlo
+  const videoOnRef = React.useRef(true);
+  const audioOnRef = React.useRef(true);
+  const peerJoinedRef = React.useRef(false);
+  React.useEffect(() => { videoOnRef.current = videoOn; }, [videoOn]);
+  React.useEffect(() => { audioOnRef.current = audioOn; }, [audioOn]);
+  React.useEffect(() => { peerJoinedRef.current = peerJoined; }, [peerJoined]);
   const [screenshotting, setScreenshotting] = React.useState(false);
   const [lastScreenshot, setLastScreenshot] = React.useState<SavedEvidence | null>(null);
   const [screenshotCount, setScreenshotCount] = React.useState(0);
@@ -926,6 +933,8 @@ export function LiveVideoCall({
   // ÔöÇÔöÇ Broadcast de thumbnails al supervisor ÔöÇÔöÇ
   // Cuando el inspector detecta un supervisor, captura thumbnails del video
   // remoto (asegurado) y local (inspector) cada 3 segundos y los env├¡a via signaling.
+  // Incluye estado de c├ímara/micr├│fono y conexi├│n para que el supervisor sepa
+  // si el inspector est├í conectado aunque los thumbnails est├®n vac├¡os.
   React.useEffect(() => {
     if (role !== "inspector") return;
 
@@ -935,13 +944,18 @@ export function LiveVideoCall({
         const localVideo = localVideoRef.current;
         const remoteThumb = captureVideoThumb(remoteVideo, 320, 180);
         const localThumb = captureVideoThumb(localVideo, 160, 90);
-        if ((remoteThumb || localThumb) && channelRef.current) {
+        // Siempre enviar cuando hay supervisor, incluso si los thumbnails est├ín vac├¡os.
+        // El supervisor necesita saber que el inspector est├í activo aunque no haya video.
+        if (channelRef.current) {
           channelRef.current.send({
             type: "preview",
             from: userId,
             role,
             remoteThumb: remoteThumb || "",
             localThumb: localThumb || "",
+            inspectorVideoOn: videoOnRef.current,
+            inspectorAudioOn: audioOnRef.current,
+            peerConnected: peerJoinedRef.current,
           });
         }
       };
