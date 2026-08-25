@@ -960,13 +960,13 @@ const canSaveDamage = isBuildingDamage ? buildingValid : isContentDamage ? conte
        <button
          type="button"
          onClick={() => { if (canSaveDamage && !createMutation.isPending && !updateMutation.isPending) handleSubmit(); else if (!canSaveDamage) { if (isBuildingDamage) toast.error("Falta: espacio, materialidad y categoría (o aclaratoria si es Otros)"); else toast.error("Falta: aclaratoria o tipo de contenido"); } }}
-         className="acta-save-btn"
-         aria-label="Guardar"
+         className={isMobile ? "acta-save-btn" : "pg-btn-platinum"}
+         aria-label="Grabar"
        >
-         {createMutation.isPending || updateMutation.isPending ? (
-           <Loader2 size={18} strokeWidth={2} className="animate-spin" />
-         ) : (
-           <Save size={18} strokeWidth={2} />
+        {createMutation.isPending || updateMutation.isPending ? (
+          isMobile ? <Loader2 size={18} strokeWidth={2} className="animate-spin" /> : <><Loader2 size={14} strokeWidth={2} className="animate-spin mr-1" /> Guardando...</>
+        ) : (
+          isMobile ? <Save size={18} strokeWidth={2} /> : "Grabar"
          )}
        </button>
      </div>

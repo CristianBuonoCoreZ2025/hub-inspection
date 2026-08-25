@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Fragment } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { actaSchema, type ActaInput } from "@/lib/validations";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -25,7 +25,6 @@ import {
  Plus,
 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FormDatePicker } from "@/components/ui/form-date-picker";
@@ -59,9 +58,11 @@ interface ActaFormProps {
  onOfflineSaved?: () => void;
  /** Catálogos descargados para uso offline */
  offlineCatalogs?: OfflineCatalogs;
+ /** Si es mobile, usa botón icono; si es desktop, usa botón de texto */
+ isMobile?: boolean;
 }
 
-export default function ActaForm({ session, readOnly = false, offlineMode = false, onOfflineSaved, offlineCatalogs }: ActaFormProps) {
+export default function ActaForm({ session, readOnly = false, offlineMode = false, onOfflineSaved, offlineCatalogs, isMobile = false }: ActaFormProps) {
  const queryClient = useQueryClient();
  const flash = useFlash();
  const [step, setStep] = useState(1);
@@ -218,6 +219,34 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
    }
  };
 
+ // Botón de guardar: texto "Grabar" en desktop, icono disquete en mobile
+ const SaveButton = () => {
+   const saving = saveMutation.isPending || offlineSaving;
+   const useIconButton = isMobile || offlineMode;
+   if (useIconButton) {
+     return (
+       <button
+         type="submit"
+         disabled={saving || readOnly}
+         className="acta-save-btn"
+         aria-label="Guardar"
+       >
+         {saving ? <Loader2 size={18} strokeWidth={2} className="animate-spin" /> : <Save size={18} strokeWidth={2} />}
+       </button>
+     );
+   }
+   return (
+     <button
+       type="submit"
+       disabled={saving || readOnly}
+       className="pg-btn-platinum"
+       aria-label="Grabar"
+     >
+       {saving ? <><Loader2 size={14} strokeWidth={2} className="animate-spin mr-1" /> Guardando...</> : "Grabar"}
+     </button>
+   );
+ };
+
  const saveMutation = useMutation({
  mutationFn: async (data: ActaInput) => {
    if (offlineMode) {
@@ -322,9 +351,11 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
  }, [currentStepKey, session.id, offlineMode]);
 
  // ── Reset risk_class si no está en las clasificaciones filtradas por destino ──
+ const watchedPropertyType = useWatch({ control: form.control, name: "property_risk.property_type" as never });
+ const watchedRiskClass = useWatch({ control: form.control, name: "property_risk.risk_class" as never });
  useEffect(() => {
-  const propertyType = String(form.watch("property_risk.property_type") ?? "");
-  const riskClass = String(form.watch("property_risk.risk_class") ?? "");
+  const propertyType = String(watchedPropertyType ?? "");
+  const riskClass = String(watchedRiskClass ?? "");
   if (!riskClass || !propertyType) return;
   const filtered = filterClassificationsByDestination(
    propertyClassifications,
@@ -338,7 +369,7 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
   if (!stillValid) {
    form.setValue("property_risk.risk_class" as never, "" as never);
   }
- }, [propertyClassifications, housingDestinations, classificationDestinations, form]);
+ }, [watchedPropertyType, watchedRiskClass, propertyClassifications, housingDestinations, classificationDestinations, form]);
 
  // Helpers sin tipado estricto para evitar conflictos con react-hook-form + paths anidados
  const field = (name: string) => form.register(name as never);
@@ -497,18 +528,7 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
  <h3 className="app-section-title flex items-center justify-between gap-2">
  <span>Dirección del Siniestro</span>
  {!readOnly && (
- <button
- type="submit"
- disabled={saveMutation.isPending || offlineSaving || readOnly}
- className="acta-save-btn"
- aria-label="Guardar"
- >
- {saveMutation.isPending || offlineSaving ? (
- <Loader2 size={18} strokeWidth={2} className="animate-spin" />
- ) : (
- <Save size={18} strokeWidth={2} />
- )}
- </button>
+ <SaveButton />
  )}
  </h3>
  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-2 text-[11px]">
@@ -637,18 +657,7 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
  <h3 className="app-section-title flex items-center justify-between gap-2">
  <span>Descripcion del Riesgo Siniestrado</span>
  {!readOnly && (
- <button
- type="submit"
- disabled={saveMutation.isPending || offlineSaving || readOnly}
- className="acta-save-btn"
- aria-label="Guardar"
- >
- {saveMutation.isPending || offlineSaving ? (
- <Loader2 size={18} strokeWidth={2} className="animate-spin" />
- ) : (
- <Save size={18} strokeWidth={2} />
- )}
- </button>
+ <SaveButton />
  )}
  </h3>
  {(() => {
@@ -741,18 +750,7 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
  <h3 className="app-section-title flex items-center justify-between gap-2">
  <span>Materialidad del Inmueble</span>
  {!readOnly && (
- <button
- type="submit"
- disabled={saveMutation.isPending || offlineSaving || readOnly}
- className="acta-save-btn"
- aria-label="Guardar"
- >
- {saveMutation.isPending || offlineSaving ? (
- <Loader2 size={18} strokeWidth={2} className="animate-spin" />
- ) : (
- <Save size={18} strokeWidth={2} />
- )}
- </button>
+ <SaveButton />
  )}
  </h3>
  <div className="modal-grid-3">
@@ -798,18 +796,7 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
  <h3 className="app-section-title flex items-center justify-between gap-2">
  <span>Medidas de Asegurabilidad</span>
  {!readOnly && (
- <button
- type="submit"
- disabled={saveMutation.isPending || offlineSaving || readOnly}
- className="acta-save-btn"
- aria-label="Guardar"
- >
- {saveMutation.isPending || offlineSaving ? (
- <Loader2 size={18} strokeWidth={2} className="animate-spin" />
- ) : (
- <Save size={18} strokeWidth={2} />
- )}
- </button>
+ <SaveButton />
  )}
  </h3>
  <div className="space-y-2">
@@ -863,18 +850,7 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
  <h3 className="app-section-title flex items-center justify-between gap-2">
  <span>Declaracion del Asegurado</span>
  {!readOnly && (
- <button
- type="submit"
- disabled={saveMutation.isPending || offlineSaving || readOnly}
- className="acta-save-btn"
- aria-label="Guardar"
- >
- {saveMutation.isPending || offlineSaving ? (
- <Loader2 size={18} strokeWidth={2} className="animate-spin" />
- ) : (
- <Save size={18} strokeWidth={2} />
- )}
- </button>
+ <SaveButton />
  )}
  </h3>
  <div className="modal-grid">
@@ -918,18 +894,7 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
  <h3 className="app-section-title flex items-center justify-between gap-2">
  <span>Datos de Terceros</span>
  {!readOnly && (
- <button
- type="submit"
- disabled={saveMutation.isPending || offlineSaving || readOnly}
- className="acta-save-btn"
- aria-label="Guardar"
- >
- {saveMutation.isPending || offlineSaving ? (
- <Loader2 size={18} strokeWidth={2} className="animate-spin" />
- ) : (
- <Save size={18} strokeWidth={2} />
- )}
- </button>
+ <SaveButton />
  )}
  </h3>
  <div className="space-y-3">

@@ -46,6 +46,7 @@ export default function MobileActaTab({ sessionId, offlineMode = false, onOfflin
       <ActaForm
         session={offlineSession.session}
         offlineMode
+        isMobile
         offlineCatalogs={catalogs ?? undefined}
         onOfflineSaved={onOfflineSaved}
       />
@@ -70,5 +71,5 @@ export default function MobileActaTab({ sessionId, offlineMode = false, onOfflin
     );
   }
 
-  return <ActaForm session={session} />;
+  return <ActaForm session={session} isMobile />;
 }
