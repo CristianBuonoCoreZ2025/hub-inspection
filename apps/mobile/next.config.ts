@@ -9,6 +9,12 @@ const nextConfig: NextConfig = {
   },
   // No trailing slash para que las rutas funcionen en Capacitor
   trailingSlash: true,
+  // Transpilar el código del web app que importamos
+  transpilePackages: [],
+  // Permitir importar desde fuera del directorio del app
+  experimental: {
+    externalDir: true,
+  },
 };
 
 export default nextConfig;

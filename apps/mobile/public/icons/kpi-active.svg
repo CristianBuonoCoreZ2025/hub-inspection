@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -15 130 130" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fff1e6" />
+      <stop offset="100%" stop-color="#fbe4d1" />
+    </linearGradient>
+    <filter id="buttonShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#c98a5e" flood-opacity="0.4"/>
+    </filter>
+    <filter id="elementShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#a04d22" flood-opacity="0.3"/>
+    </filter>
+    <filter id="glassGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#ffffff" flood-opacity="0.9"/>
+    </filter>
+    <linearGradient id="ringLight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffb775" />
+      <stop offset="100%" stop-color="#ff994a" />
+    </linearGradient>
+    <linearGradient id="ringDark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f37825" />
+      <stop offset="100%" stop-color="#cc5a16" />
+    </linearGradient>
+  </defs>
+
+  <g filter="url(#buttonShadow)">
+    <rect x="0" y="0" width="100" height="100" rx="25" fill="url(#bgGradient)" />
+    <rect x="1" y="1" width="98" height="98" rx="24" fill="none" stroke="#ffffff" stroke-width="2.5" opacity="0.8" />
+  </g>
+
+  <g filter="url(#elementShadow)">
+    <circle cx="50" cy="50" r="28" fill="none" stroke="url(#ringLight)" stroke-width="14" />
+    <circle cx="50" cy="50" r="28" fill="none" stroke="url(#ringDark)" stroke-width="14" stroke-dasharray="90 180" stroke-dashoffset="-20" />
+    <circle cx="50" cy="50" r="28" fill="none" stroke="#ffffff" stroke-width="14" opacity="0.15" filter="url(#glassGlow)"/>
+    <g stroke="#ffffff" stroke-width="2.5">
+      <line x1="50" y1="14" x2="50" y2="30" transform="rotate(0 50 50)" />
+      <line x1="50" y1="14" x2="50" y2="30" transform="rotate(45 50 50)" />
+      <line x1="50" y1="14" x2="50" y2="30" transform="rotate(90 50 50)" />
+      <line x1="50" y1="14" x2="50" y2="30" transform="rotate(135 50 50)" />
+      <line x1="50" y1="14" x2="50" y2="30" transform="rotate(180 50 50)" />
+      <line x1="50" y1="14" x2="50" y2="30" transform="rotate(225 50 50)" />
+      <line x1="50" y1="14" x2="50" y2="30" transform="rotate(270 50 50)" />
+      <line x1="50" y1="14" x2="50" y2="30" transform="rotate(315 50 50)" />
+    </g>
+  </g>
+
+  <g filter="url(#elementShadow)">
+    <path d="M 50 35 L 38 38 L 38 48 C 38 56, 46 63, 50 66 Z" fill="#ff9d5c" />
+    <path d="M 50 35 L 62 38 L 62 48 C 62 56, 54 63, 50 66 Z" fill="#f37825" />
+    <path d="M 50 35 L 62 38 L 62 48 C 62 56, 54 63, 50 66 C 46 63, 38 56, 38 48 L 38 38 Z" fill="none" stroke="#ffffff" stroke-width="1.5" opacity="0.4" />
+    <path d="M 44 51 L 48 55 L 56 46" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
+</svg>

@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -15 130 130" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGradientPurple" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f7f4fd" />
+      <stop offset="100%" stop-color="#ebe3fa" />
+    </linearGradient>
+    <filter id="buttonShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#693db3" flood-opacity="0.30"/>
+    </filter>
+    <filter id="elementShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#4b2a81" flood-opacity="0.25"/>
+    </filter>
+    <filter id="glassGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#ffffff" flood-opacity="0.9"/>
+    </filter>
+    <linearGradient id="peopleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c6b2f0" />
+      <stop offset="40%" stop-color="#947ce3" />
+      <stop offset="100%" stop-color="#7555d3" />
+    </linearGradient>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#b19dfa" />
+      <stop offset="50%" stop-color="#855ef1" />
+      <stop offset="100%" stop-color="#6341d6" />
+    </linearGradient>
+    <linearGradient id="shieldBorderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#6341d6" stop-opacity="0.4" />
+    </linearGradient>
+  </defs>
+
+  <g filter="url(#buttonShadow)">
+    <rect x="0" y="0" width="100" height="100" rx="25" fill="url(#bgGradientPurple)" />
+    <rect x="1" y="1" width="98" height="98" rx="24" fill="none" stroke="#ffffff" stroke-width="2.5" opacity="0.8" />
+  </g>
+
+  <g filter="url(#elementShadow)">
+    <g>
+      <circle cx="27" cy="44" r="8" fill="url(#peopleGrad)" opacity="0.8" />
+      <path d="M 18 65 C 18 57, 21 55, 27 55 C 33 55, 36 57, 36 65 L 36 78 L 18 78 Z" fill="url(#peopleGrad)" opacity="0.6" />
+    </g>
+    <g>
+      <circle cx="46" cy="30" r="12.5" fill="url(#peopleGrad)" />
+      <path d="M 24 71 C 24 53, 32 46, 46 46 C 60 46, 68 53, 68 71 L 68 88 L 24 88 Z" fill="url(#peopleGrad)" />
+    </g>
+    <g>
+      <circle cx="67" cy="40" r="9.5" fill="url(#peopleGrad)" opacity="0.9" />
+      <path d="M 55 66 C 55 57, 58 54, 67 54 C 76 54, 79 57, 79 66 L 79 82 L 55 82 Z" fill="url(#peopleGrad)" opacity="0.8" />
+    </g>
+    <g>
+      <path d="M 58 63 L 69 63 L 69 74 C 69 81, 63 88, 58 90 C 53 88, 47 81, 47 74 L 47 63 Z" fill="#ffffff" opacity="0.2" filter="url(#glassGlow)" />
+      <path d="M 57 61 L 69 61 L 69 73 C 69 80, 63 87, 57 89 C 51 87, 45 80, 45 73 L 45 61 Z" fill="url(#shieldGrad)" />
+      <path d="M 57 64 L 66 64 L 66 73 C 66 78, 62 84, 57 86 C 52 84, 48 78, 48 73 L 48 64 Z" fill="none" stroke="url(#shieldBorderGrad)" stroke-width="1.5" />
+      <path d="M 52 74 L 57 78 L 63 68" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+  </g>
+</svg>
