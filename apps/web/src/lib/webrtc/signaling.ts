@@ -119,14 +119,53 @@ export function joinSignalingChannel(
 
 /**
  * Configuración de servidores STUN/TURN.
- * STUN público de Google (gratis) — suficiente para la mayoría de conexiones p2p.
- * TURN gratuito de FreeTURN añadido para redes restrictivas / NAT simétrico.
+ *
+ * STUN público de Google como fallback — suficiente para conexiones p2p directas.
+ * Para NAT simétrico / redes restrictivas se requiere TURN.
+ *
+ * Las credenciales TURN de Cloudflare se generan dinámicamente via
+ * fetchIceServers() que llama al API route /api/turn-credentials.
+ * Esto genera credenciales de corta duración (24h) más seguras que
+ * credenciales estáticas.
  */
 export const ICE_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun.l.google.com:19302" },
   { urls: "stun:stun1.l.google.com:19302" },
   { urls: "stun:stun2.l.google.com:19302" },
   { urls: "stun:stun3.l.google.com:19302" },
-  { urls: "stun:freeturn.net:3478" },
-  { urls: "turn:freeturn.net:3478", username: "free", credential: "free" },
 ];
+
+// Cache en memoria de iceServers obtenidos del backend.
+// Evita llamar a /api/turn-credentials en cada creación de PeerConnection.
+let cachedIceServers: RTCIceServer[] | null = null;
+let cacheExpiresAt = 0;
+const ICE_CACHE_TTL_MS = 20 * 60 * 60 * 1000; // 20 horas (las credenciales duran 24h)
+
+/**
+ * Obtiene servidores ICE dinámicos desde el backend (Cloudflare TURN).
+ * Incluye STUN de Cloudflare + TURN sobre UDP/TCP/TLS con credenciales
+ * de corta duración. Si el backend no responde, hace fallback a STUN de Google.
+ *
+ * Debe llamarse antes de crear un RTCPeerConnection.
+ */
+export async function fetchIceServers(): Promise<RTCIceServer[]> {
+  // Si tenemos caché válido, usarlo
+  if (cachedIceServers && Date.now() < cacheExpiresAt) {
+    return cachedIceServers;
+  }
+
+  try {
+    const res = await fetch("/api/turn-credentials", { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = (await res.json()) as { iceServers?: RTCIceServer[] };
+    if (data.iceServers && data.iceServers.length > 0) {
+      cachedIceServers = data.iceServers;
+      cacheExpiresAt = Date.now() + ICE_CACHE_TTL_MS;
+      return data.iceServers;
+    }
+  } catch {
+    // Silencioso — fallback a STUN estático
+  }
+
+  return ICE_SERVERS;
+}

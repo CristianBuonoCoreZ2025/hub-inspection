@@ -21,7 +21,7 @@ import {
   Square,
   UserCheck,
 } from "lucide-react";
-import { joinSignalingChannel, ICE_SERVERS, type SignalingRole, type SignalingMessage } from "@/lib/webrtc/signaling";
+import { joinSignalingChannel, fetchIceServers, type SignalingRole, type SignalingMessage } from "@/lib/webrtc/signaling";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
@@ -216,8 +216,9 @@ export function LiveVideoCall({
   }, [onMediaPermission]);
 
   // ÔöÇÔöÇ Crear peer connection ÔöÇÔöÇ
-  const createPeerConnection = React.useCallback(() => {
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+  const createPeerConnection = React.useCallback(async () => {
+    const iceServers = await fetchIceServers();
+    const pc = new RTCPeerConnection({ iceServers });
     pcRef.current = pc;
 
     // Stream remoto
@@ -532,7 +533,11 @@ export function LiveVideoCall({
       // para que ambos lados se vean conectados en el chat/peers, pero no
       // creamos una conexi├│n WebRTC que falle por SDP sin media.
       if (stream.getTracks().length > 0) {
-        const pc = createPeerConnection();
+        const pc = await createPeerConnection();
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
         // Agregar tracks locales al peer connection en orden audio ÔåÆ video
         [...stream.getAudioTracks(), ...stream.getVideoTracks()].forEach((track) => {
           pc.addTrack(track, stream);
