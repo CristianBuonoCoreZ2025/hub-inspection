@@ -319,6 +319,12 @@ export function LiveVideoCall({
         // Kick: el inspector fuerza la desconexi├│n de este peer
         if (msg.type === "kick") {
           if (msg.target === userId) {
+            // Avisar al inspector que nos desconectamos, para que libere
+            // connectedClientRef y pueda aceptar a un nuevo cliente.
+            if (!hangupSentRef.current && channelRef.current) {
+              channelRef.current.send({ type: "hangup", from: userId, role });
+              hangupSentRef.current = true;
+            }
             setRejectedReason(msg.reason);
             setState("rejected");
             // Liberar c├ímara/micr├│fono local
@@ -697,6 +703,13 @@ export function LiveVideoCall({
       target: targetUserId,
       reason: reason || "El inspector ha finalizado tu conexi├│n a la videollamada.",
     });
+    // Limpiar el cliente conectado si era el kickeado — sin esto,
+    // el inspector rechaza a todos los clientes nuevos con "busy"
+    // porque connectedClientRef queda apuntando al cliente expulsado.
+    if (connectedClientRef.current === targetUserId) {
+      connectedClientRef.current = null;
+      setConnectedClientId(null);
+    }
   };
 
   // ÔöÇÔöÇ Capturar screenshot del video remoto ÔöÇÔöÇ
