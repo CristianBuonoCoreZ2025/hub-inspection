@@ -128,20 +128,31 @@ function isToday(d: string) {
 
 function formatDuration(minutes: number): string {
   const totalMinutes = Math.max(0, Math.round(minutes));
-  const hours = Math.floor(totalMinutes / 60);
-  const days = Math.floor(hours / 24);
-  const months = Math.floor(days / 30);
-  const years = Math.floor(months / 12);
-  const remainderMinutes = totalMinutes % 60;
-  const remainderHours = hours % 24;
-  const remainderDays = days % 30;
-  const remainderMonths = months % 12;
 
-  if (years > 0) return `${years}a ${remainderMonths}m`;
-  if (months > 0) return `${months}m ${remainderDays}d`;
-  if (days > 0) return `${days}d ${remainderHours}h`;
-  if (hours > 0) return `${hours}h ${remainderMinutes}m`;
-  return `${totalMinutes}m`;
+  // Redondear hacia abajo en .5 exacto, hacia arriba si > .5
+  const roundHalfDown = (value: number) => {
+    const floor = Math.floor(value);
+    return value - floor > 0.5 ? floor + 1 : floor;
+  };
+
+  // Mostrar en una sola unidad. Solo sube al orden superior
+  // cuando el valor actual tiene 3+ digitos (>= 100)
+  if (totalMinutes < 100) return `${totalMinutes}m`;
+
+  const hours = totalMinutes / 60;
+  const roundedHours = roundHalfDown(hours);
+  if (roundedHours < 100) return `${roundedHours}h`;
+
+  const days = hours / 24;
+  const roundedDays = roundHalfDown(days);
+  if (roundedDays < 100) return `${roundedDays}d`;
+
+  const months = days / 30;
+  const roundedMonths = roundHalfDown(months);
+  if (roundedMonths < 100) return `${roundedMonths}m`;
+
+  const years = months / 12;
+  return `${roundHalfDown(years)}a`;
 }
 
 /**
