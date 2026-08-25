@@ -6,15 +6,19 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getActiveRemoteSessions, liftInspectionLock, restoreInspectionLock } from "@/services/inspections";
 import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useSessionsPresence } from "@/hooks/use-sessions-presence";
 import { SupervisorLiveView } from "@/components/inspection/supervisor-live-view";
 import {
   Eye,
   Video,
+  VideoOff,
   Unlock,
   Loader2,
   Radio,
   MapPin,
   User,
+  UserCheck,
+  UserX,
   Clock,
   Camera,
   ShieldCheck,
@@ -23,6 +27,8 @@ import {
   Search,
   Lock,
   HardHat,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 import { useFlash } from "@/components/ui/alert-context";
 import {
@@ -135,6 +141,13 @@ export default function SupervisionPage() {
     queryFn: () => getActiveRemoteSessions(inspectionType === "all" ? undefined : inspectionType),
     refetchInterval: selectedSessionId ? false : 5000,
   });
+
+  // Rastrear presencia (online/offline) de inspector y asegurado en tiempo real
+  const sessionIds = useMemo(
+    () => (sessions || []).map((s) => s.id),
+    [sessions],
+  );
+  const presence = useSessionsPresence(selectedSessionId ? [] : sessionIds);
 
   // Opciones de inspector construidas desde las sesiones cargadas (no query extra)
   const inspectorOptions = useMemo(() => {
@@ -274,6 +287,10 @@ export default function SupervisionPage() {
             const damageCount = (session.inspection_damages || []).length;
             const sigCount = (session.inspection_signatures || []).length;
             const hasWaiver = !!session.signature_waiver_reason;
+            const sessionPresence = presence[session.id];
+            const inspectorOnline = sessionPresence?.inspector ?? false;
+            const clientOnline = sessionPresence?.client ?? false;
+            const bothOnline = inspectorOnline && clientOnline;
             return (
               <div
                 key={session.id}
@@ -284,16 +301,52 @@ export default function SupervisionPage() {
                 className="app-panel p-0! text-left hover:ring-2 hover:ring-emerald-500/40 transition-all cursor-pointer overflow-hidden"
               >
                 <div className="px-3 py-1.5 flex items-center gap-2.5">
-                  {/* Indicador en vivo + tipo */}
+                  {/* Indicador de conexión real + tipo */}
                   <div className="flex items-center gap-1.5 shrink-0">
                     <span className="flex h-2 w-2 relative">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                      {bothOnline ? (
+                        <>
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                        </>
+                      ) : inspectorOnline || clientOnline ? (
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                      ) : (
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-zinc-400" />
+                      )}
                     </span>
-                    <span className="text-[11px] font-medium text-emerald-600">EN VIVO</span>
+                    <span className={`text-[11px] font-medium ${bothOnline ? "text-emerald-600" : inspectorOnline || clientOnline ? "text-amber-600" : "text-zinc-500"}`}>
+                      {bothOnline ? "EN VIVO" : inspectorOnline || clientOnline ? "PARCIAL" : "OFFLINE"}
+                    </span>
                     <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${session.inspection_type === "remote" ? "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300" : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"}`}>
                       {session.inspection_type === "remote" ? "Remota" : "Presencial"}
                     </span>
+                  </div>
+
+                  {/* Indicadores individuales inspector/asegurado online */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Tooltip>
+                      <TooltipTrigger className="shrink-0">
+                        <span className={`flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${inspectorOnline ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" : "bg-zinc-100 text-zinc-400 dark:bg-zinc-800/50 dark:text-zinc-500"}`}>
+                          <HardHat className="h-2.5 w-2.5" />
+                          Insp
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        <p>{inspectorOnline ? "Inspector en línea" : "Inspector desconectado"}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger className="shrink-0">
+                        <span className={`flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${clientOnline ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" : "bg-zinc-100 text-zinc-400 dark:bg-zinc-800/50 dark:text-zinc-500"}`}>
+                          <User className="h-2.5 w-2.5" />
+                          Aseg
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        <p>{clientOnline ? "Asegurado en línea" : "Asegurado desconectado"}</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
 
                   {/* Líquidación */}
