@@ -14,12 +14,11 @@ export interface SessionPresence {
  * en múltiples sesiones de inspección remotas en tiempo real.
  *
  * Se suscribe al MISMO canal de signaling `webrtc:{sessionId}` que usan
- * el inspector y el asegurado, pero SIN hacer track (no aparece como
- * participante). Esto permite ver la presencia real sin afectar el flujo.
+ * el inspector y el asegurado, y hace track con role "watcher" para
+ * participar del sistema de presencia de Supabase.
  *
- * Nota: Supabase presence solo funciona dentro del mismo canal. Si te
- * suscribes a un canal con nombre distinto, no verás la presencia de
- * los participantes del canal original.
+ * El role "watcher" no dispara ninguna lógica en LiveVideoCall
+ * (que solo reacciona a "client", "inspector" y "supervisor").
  *
  * @param sessionIds Array de IDs de sesión a monitorear
  * @returns Map de sessionId → SessionPresence
@@ -43,10 +42,11 @@ export function useSessionsPresence(sessionIds: string[]): Record<string, Sessio
       newPresence[sessionId] = { inspector: false, client: false, supervisor: false };
 
       // Usar el MISMO nombre de canal que joinSignalingChannel
+      const watcherId = `watcher-${sessionId}-${Math.random().toString(36).slice(2)}`;
       const channel = supabase.channel(`webrtc:${sessionId}`, {
         config: {
           broadcast: { self: false, ack: false },
-          presence: { key: `watcher-${sessionId}-${Math.random().toString(36).slice(2)}` },
+          presence: { key: watcherId },
         },
       });
 
@@ -65,9 +65,16 @@ export function useSessionsPresence(sessionIds: string[]): Record<string, Sessio
         }));
       });
 
-      // Suscribirse SIN hacer track — somos observadores invisibles.
-      // No enviamos "ready" ni ningún mensaje de signaling.
-      channel.subscribe();
+      // Suscribirse y hacer track con role "watcher".
+      // Es necesario hacer track para que Supabase nos incluya en el
+      // sistema de presencia y recibamos los eventos sync con el estado
+      // completo de todos los peers del canal.
+      // El role "watcher" no dispara ninguna lógica en LiveVideoCall.
+      channel.subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await channel.track({ userId: watcherId, role: "watcher" });
+        }
+      });
 
       channelsRef.current.push({ channel, sessionId });
     }
