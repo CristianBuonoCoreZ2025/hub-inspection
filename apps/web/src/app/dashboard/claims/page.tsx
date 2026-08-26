@@ -1283,6 +1283,9 @@ const allRaw: Claim[] = [];
          dateFrom: dateFrom || undefined,
          dateTo: dateTo || undefined,
          q: search || undefined,
+       }).catch((e) => {
+         console.error(`[export] Error getClaims page ${page}:`, e);
+         return [] as Claim[];
        })
      )
    );
@@ -1295,9 +1298,9 @@ const allRaw: Claim[] = [];
  setExportProgress({ current: allRaw.length, total: allRaw.length });
  const claimIds = allRaw.map((c) => c.id);
 
- // Fetch en paralelo: participants (cliente) + datos auxiliares (API route con service role)
- // Las tablas inspection_sessions y claim_actions tienen RLS que bloquea
- // la lectura desde el navegador con anon key, por eso usamos una API route.
+ // TODO el fetch de datos auxiliares (inspecciones, CIN, participants) se hace
+ // via API route con service role key porque las tablas tienen RLS que bloquea
+ // la lectura desde el navegador con anon key.
  // Procesamos en lotes de 200 IDs para evitar timeout de la serverless function.
  const AUX_BATCH = 200;
  const auxBatches: string[][] = [];
@@ -1310,25 +1313,22 @@ const allRaw: Claim[] = [];
      method: "POST",
      headers: { "Content-Type": "application/json" },
      body: JSON.stringify({ claimIds: batch }),
-   }).then((r) => r.ok ? r.json() : { inspections: {}, coordinations: {} }).catch((e) => {
+   }).then((r) => r.ok ? r.json() : { inspections: {}, coordinations: {}, participants: [] }).catch((e) => {
      console.error("[export] Error en export-claims-aux:", e);
-     return { inspections: {}, coordinations: {} };
+     return { inspections: {}, coordinations: {}, participants: [] };
    })
  );
 
- const participantsPromise = allRaw.length ? getClaimsParticipants(claimIds) : Promise.resolve([]);
-
- const [allParticipants, auxResults] = await Promise.all([
-   participantsPromise,
-   Promise.all(auxPromises),
- ]);
+ const auxResults = await Promise.all(auxPromises);
 
  // Combinar resultados de todos los lotes
  const inspectionByClaim: Record<string, { scheduled_at: string | null; started_at: string | null; ended_at: string | null; status: string; inspection_type: string }> = {};
  const cinByClaim: Record<string, string> = {};
+ const allParticipants: { id: string; claim_id: string; type: string; full_name: string; first_name: string | null; last_name: string | null; rut: string | null; email: string | null; phone: string | null; cell_phone: string | null; address: string | null; country: string | null; region: string | null; city: string | null; commune: string | null }[] = [];
  for (const aux of auxResults) {
    if (aux?.inspections) Object.assign(inspectionByClaim, aux.inspections);
    if (aux?.coordinations) Object.assign(cinByClaim, aux.coordinations);
+   if (aux?.participants && Array.isArray(aux.participants)) allParticipants.push(...aux.participants);
  }
 
  const rows = allRaw.map((claim) => ({ ...claim, claims_participants: allParticipants.filter((p) => p.claim_id === claim.id) }));

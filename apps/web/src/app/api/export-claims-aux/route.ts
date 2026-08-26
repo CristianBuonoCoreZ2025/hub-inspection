@@ -11,12 +11,14 @@ import { logger } from "@/lib/logger";
  *   → Devuelve:
  *       {
  *         inspections: Record<claimId, { scheduled_at, started_at, ended_at, status, inspection_type }>,
- *         coordinations: Record<claimId, issued_on>
+ *         coordinations: Record<claimId, issued_on>,
+ *         participants: Participant[]
  *       }
  *
- * Las tablas inspection_sessions y claim_actions tienen RLS que bloquea
- * la lectura desde el navegador con la anon key. Esta route usa la
- * service role key para traer los datos en una sola llamada.
+ * Las tablas inspection_sessions, claim_actions y claims_participants
+ * tienen RLS que bloquea la lectura desde el navegador con la anon key.
+ * Esta route usa la service role key para traer los datos en una sola
+ * llamada.
  *
  * El cliente debe llamar esta route en lotes de 200 IDs para evitar
  * timeout de la serverless function.
@@ -37,7 +39,7 @@ export async function POST(req: NextRequest) {
     const claimIds: string[] = Array.isArray(body?.claimIds) ? body.claimIds : [];
 
     if (claimIds.length === 0) {
-      return NextResponse.json({ inspections: {}, coordinations: {} });
+      return NextResponse.json({ inspections: {}, coordinations: {}, participants: [] });
     }
 
     // Limitar a 200 IDs por llamada para evitar queries lentas
@@ -54,8 +56,8 @@ export async function POST(req: NextRequest) {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
-    // 2 queries en paralelo (máx 200 IDs cada una)
-    const [sessionsRes, cinRes] = await Promise.all([
+    // 3 queries en paralelo (máx 200 IDs cada una)
+    const [sessionsRes, cinRes, participantsRes] = await Promise.all([
       supabase
         .from("inspection_sessions")
         .select("claim_id, scheduled_at, started_at, ended_at, status, inspection_type, created_at")
@@ -68,6 +70,12 @@ export async function POST(req: NextRequest) {
         .in("action_template_id", CIN_TEMPLATE_IDS)
         .not("issued_on", "is", null)
         .order("issued_on", { ascending: false }),
+      // Participants con paginación: traer hasta 1000 filas (5 páginas de 200)
+      supabase
+        .from("claims_participants")
+        .select("id, claim_id, type, full_name, first_name, last_name, rut, email, phone, cell_phone, address, country, region, city, commune")
+        .in("claim_id", ids)
+        .range(0, 999),
     ]);
 
     // Procesar inspection_sessions — la más reciente por claim
@@ -100,7 +108,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ inspections, coordinations });
+    // Participants — devolver array plano
+    const participants = participantsRes.error ? [] : (participantsRes.data || []);
+
+    return NextResponse.json({ inspections, coordinations, participants });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     logger.error(`[export-claims-aux] Error inesperado: ${msg}`);
