@@ -1295,84 +1295,24 @@ const allRaw: Claim[] = [];
  setExportProgress({ current: allRaw.length, total: allRaw.length });
  const claimIds = allRaw.map((c) => c.id);
 
- // Fetch de sesiones de inspección (última por claim) y gestiones CIN (última emitida por claim)
- const { getSupabaseClient } = await import("@/lib/supabase/client");
- const supabase = getSupabaseClient();
+ // Fetch en paralelo: participants (cliente) + datos auxiliares (API route con service role)
+ // Las tablas inspection_sessions y claim_actions tienen RLS que bloquea
+ // la lectura desde el navegador con anon key, por eso usamos una API route.
+ const auxPromise = fetch("/api/export-claims-aux", {
+   method: "POST",
+   headers: { "Content-Type": "application/json" },
+   body: JSON.stringify({ claimIds }),
+ }).then((r) => r.ok ? r.json() : { inspections: {}, coordinations: {} }).catch(() => ({ inspections: {}, coordinations: {} }));
 
- // IDs de templates CIN conocidos (para filtrar sin join)
- const CIN_TEMPLATE_IDS = [
-   "b2000002-0000-0000-0000-000000000001",
-   "b2000001-0000-0000-0000-000000000001",
- ];
-
- // Procesar en lotes de 200 para no exceder el límite de URL de Supabase
- const BATCH_SIZE = 200;
-
- // Generar los lotes de claim IDs
- const batches: string[][] = [];
- for (let i = 0; i < claimIds.length; i += BATCH_SIZE) {
-   batches.push(claimIds.slice(i, i + BATCH_SIZE));
- }
-
- // Lanzar TODAS las queries en paralelo: participants + inspection_sessions + CIN
  const participantsPromise = allRaw.length ? getClaimsParticipants(claimIds) : Promise.resolve([]);
 
- const sessionPromises = batches.map((batch) =>
-   supabase
-     .from("inspection_sessions")
-     .select("claim_id, scheduled_at, started_at, ended_at, status, inspection_type, created_at")
-     .in("claim_id", batch)
-     .order("created_at", { ascending: false })
- );
-
- const cinPromises = batches.map((batch) =>
-   supabase
-     .from("claim_actions")
-     .select("claim_id, issued_on, action_template_id")
-     .in("claim_id", batch)
-     .in("action_template_id", CIN_TEMPLATE_IDS)
-     .not("issued_on", "is", null)
-     .order("issued_on", { ascending: false })
- );
-
- // Ejecutar todo en paralelo
- const [allParticipants, sessionResults, cinResults] = await Promise.all([
+ const [allParticipants, auxData] = await Promise.all([
    participantsPromise,
-   Promise.all(sessionPromises),
-   Promise.all(cinPromises),
+   auxPromise,
  ]);
 
- // Procesar resultados de inspection_sessions
- const inspectionByClaim: Record<string, { scheduled_at: string | null; started_at: string | null; ended_at: string | null; status: string; inspection_type: string }> = {};
- for (const { data: sessions, error: sErr } of sessionResults) {
-   if (sErr) console.error("[export] Error fetching inspection_sessions:", sErr.message);
-   if (sessions) {
-     for (const s of sessions) {
-       if (!inspectionByClaim[s.claim_id]) {
-         inspectionByClaim[s.claim_id] = {
-           scheduled_at: s.scheduled_at,
-           started_at: s.started_at,
-           ended_at: s.ended_at,
-           status: s.status,
-           inspection_type: s.inspection_type,
-         };
-       }
-     }
-   }
- }
-
- // Procesar resultados de CIN actions
- const cinByClaim: Record<string, string> = {}; // claim_id → issued_on
- for (const { data: cinActions, error: cinErr } of cinResults) {
-   if (cinErr) console.error("[export] Error fetching CIN actions:", cinErr.message);
-   if (cinActions) {
-     for (const a of cinActions) {
-       if (!cinByClaim[a.claim_id]) {
-         cinByClaim[a.claim_id] = a.issued_on;
-       }
-     }
-   }
- }
+ const inspectionByClaim: Record<string, { scheduled_at: string | null; started_at: string | null; ended_at: string | null; status: string; inspection_type: string }> = auxData.inspections || {};
+ const cinByClaim: Record<string, string> = auxData.coordinations || {};
 
  const rows = allRaw.map((claim) => ({ ...claim, claims_participants: allParticipants.filter((p) => p.claim_id === claim.id) }));
 
