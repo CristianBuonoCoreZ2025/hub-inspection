@@ -1290,14 +1290,27 @@ const allRaw: Claim[] = [];
  const { getSupabaseClient } = await import("@/lib/supabase/client");
  const supabase = getSupabaseClient();
 
+ // IDs de templates CIN conocidos (para filtrar sin join)
+ const CIN_TEMPLATE_IDS = [
+   "b2000002-0000-0000-0000-000000000001",
+   "b2000001-0000-0000-0000-000000000001",
+ ];
+
+ // Procesar en lotes de 200 para no exceder el límite de URL de Supabase
+ const BATCH_SIZE = 200;
+
  // 1) Inspection sessions — la más reciente por claim
  const inspectionByClaim: Record<string, { scheduled_at: string | null; started_at: string | null; ended_at: string | null; status: string; inspection_type: string }> = {};
- if (claimIds.length > 0) {
-   const { data: sessions } = await supabase
+ for (let i = 0; i < claimIds.length; i += BATCH_SIZE) {
+   const batch = claimIds.slice(i, i + BATCH_SIZE);
+   const { data: sessions, error: sErr } = await supabase
      .from("inspection_sessions")
      .select("claim_id, scheduled_at, started_at, ended_at, status, inspection_type, created_at")
-     .in("claim_id", claimIds)
+     .in("claim_id", batch)
      .order("created_at", { ascending: false });
+   if (sErr) {
+     console.error("[export] Error fetching inspection_sessions:", sErr.message);
+   }
    if (sessions) {
      for (const s of sessions) {
        // Solo guardar la primera (más reciente) por claim
@@ -1315,21 +1328,23 @@ const allRaw: Claim[] = [];
  }
 
  // 2) CIN actions — la última emitida por claim (coordinación)
+ // Sin join para evitar problemas de RLS — filtramos por action_template_id directamente
  const cinByClaim: Record<string, string> = {}; // claim_id → issued_on
- if (claimIds.length > 0) {
-   const { data: cinActions } = await supabase
+ for (let i = 0; i < claimIds.length; i += BATCH_SIZE) {
+   const batch = claimIds.slice(i, i + BATCH_SIZE);
+   const { data: cinActions, error: cinErr } = await supabase
      .from("claim_actions")
-     .select(`
-       claim_id, issued_on,
-       action_template:action_template(code)
-     `)
-     .in("claim_id", claimIds)
+     .select("claim_id, issued_on, action_template_id")
+     .in("claim_id", batch)
+     .in("action_template_id", CIN_TEMPLATE_IDS)
      .not("issued_on", "is", null)
      .order("issued_on", { ascending: false });
+   if (cinErr) {
+     console.error("[export] Error fetching CIN actions:", cinErr.message);
+   }
    if (cinActions) {
      for (const a of cinActions) {
-       const tpl = a.action_template as unknown as { code: string } | null;
-       if (tpl?.code === "CIN" && !cinByClaim[a.claim_id]) {
+       if (!cinByClaim[a.claim_id]) {
          cinByClaim[a.claim_id] = a.issued_on;
        }
      }
