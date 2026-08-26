@@ -1264,16 +1264,14 @@ try {
 const allRaw: Claim[] = [];
  const pageSize = 100;
  const totalPages = Math.max(1, Math.ceil(total / pageSize));
- // Fetchear páginas en paralelo (5 concurrentes) para acelerar el export
+ // Fetchear páginas en paralelo (5 concurrentes) con reintentos
  const CONCURRENCY = 5;
- for (let startPage = 1; startPage <= totalPages; startPage += CONCURRENCY) {
-   const pagesToFetch: number[] = [];
-   for (let p = startPage; p < startPage + CONCURRENCY && p <= totalPages; p++) {
-     pagesToFetch.push(p);
-   }
-   const batches = await Promise.all(
-     pagesToFetch.map((page) =>
-       getClaims(undefined, {
+ const MAX_RETRIES = 2;
+
+ const fetchPage = async (page: number): Promise<Claim[]> => {
+   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+     try {
+       const batch = await getClaims(undefined, {
          page,
          pageSize,
          statusIds: statusFilter.length ? statusFilter.map((c) => codeToId[c]).filter(Boolean) as string[] : undefined,
@@ -1283,17 +1281,47 @@ const allRaw: Claim[] = [];
          dateFrom: dateFrom || undefined,
          dateTo: dateTo || undefined,
          q: search || undefined,
-       }).catch((e) => {
-         console.error(`[export] Error getClaims page ${page}:`, e);
-         return [] as Claim[];
-       })
-     )
-   );
+       });
+       return batch;
+     } catch (e) {
+       console.error(`[export] Error getClaims page ${page} (intento ${attempt + 1}/${MAX_RETRIES + 1}):`, e);
+       if (attempt < MAX_RETRIES) {
+         await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+       }
+     }
+   }
+   console.error(`[export] Página ${page} falló después de ${MAX_RETRIES + 1} intentos`);
+   return [] as Claim[];
+ };
+
+ for (let startPage = 1; startPage <= totalPages; startPage += CONCURRENCY) {
+   const pagesToFetch: number[] = [];
+   for (let p = startPage; p < startPage + CONCURRENCY && p <= totalPages; p++) {
+     pagesToFetch.push(p);
+   }
+   const batches = await Promise.all(pagesToFetch.map(fetchPage));
    for (const batch of batches) {
      if (batch.length === 0) continue;
      allRaw.push(...batch);
    }
    setExportProgress({ current: allRaw.length, total });
+ }
+ // Si faltan claims, intentar recuperar páginas que fallaron
+ if (allRaw.length < total) {
+   console.warn(`[export] Faltan ${total - allRaw.length} claims. Reintentando páginas faltantes...`);
+   const foundIds = new Set(allRaw.map((c) => c.id));
+   // Reintentar todas las páginas una vez más, secuencialmente
+   for (let page = 1; page <= totalPages; page++) {
+     if (allRaw.length >= total) break;
+     const batch = await fetchPage(page);
+     for (const c of batch) {
+       if (!foundIds.has(c.id)) {
+         allRaw.push(c);
+         foundIds.add(c.id);
+       }
+     }
+     setExportProgress({ current: allRaw.length, total });
+   }
  }
  setExportProgress({ current: allRaw.length, total: allRaw.length });
  const claimIds = allRaw.map((c) => c.id);
