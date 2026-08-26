@@ -1365,6 +1365,18 @@ const allRaw: Claim[] = [];
    if (aux?.participants && Array.isArray(aux.participants)) allParticipants.push(...aux.participants);
  }
 
+ console.log(`[export] Claims fetched: ${allRaw.length}, Participants fetched: ${allParticipants.length}, Inspections: ${Object.keys(inspectionByClaim).length}, CINs: ${Object.keys(cinByClaim).length}`);
+
+ // Verificar cuántos claims tienen insured
+ const claimIdsWithInsured = new Set(allParticipants.filter(p => p.type === "insured").map(p => p.claim_id));
+ const claimsWithoutInsured = allRaw.filter(c => !claimIdsWithInsured.has(c.id));
+ console.log(`[export] Claims con insured: ${claimIdsWithInsured.size}, sin insured: ${claimsWithoutInsured.length}`);
+ if (claimsWithoutInsured.length > 0 && claimsWithoutInsured.length <= 20) {
+   for (const c of claimsWithoutInsured) {
+     console.log(`[export]   Sin insured: ${c.liquidation_number} (id=${c.id.substring(0, 8)}...)`);
+   }
+ }
+
  const rows = allRaw.map((claim) => ({ ...claim, claims_participants: allParticipants.filter((p) => p.claim_id === claim.id) }));
 
  // Mapear estado de inspección a etiqueta legible
