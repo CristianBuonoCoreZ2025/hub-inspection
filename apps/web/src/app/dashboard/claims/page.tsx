@@ -1284,7 +1284,70 @@ const allRaw: Claim[] = [];
  }
  setExportProgress({ current: allRaw.length, total: allRaw.length });
  const allParticipants = allRaw.length ? await getClaimsParticipants(allRaw.map((c) => c.id)) : [];
+ const claimIds = allRaw.map((c) => c.id);
+
+ // Fetch de sesiones de inspección (última por claim) y gestiones CIN (última emitida por claim)
+ const { getSupabaseClient } = await import("@/lib/supabase/client");
+ const supabase = getSupabaseClient();
+
+ // 1) Inspection sessions — la más reciente por claim
+ const inspectionByClaim: Record<string, { scheduled_at: string | null; started_at: string | null; ended_at: string | null; status: string; inspection_type: string }> = {};
+ if (claimIds.length > 0) {
+   const { data: sessions } = await supabase
+     .from("inspection_sessions")
+     .select("claim_id, scheduled_at, started_at, ended_at, status, inspection_type, created_at")
+     .in("claim_id", claimIds)
+     .order("created_at", { ascending: false });
+   if (sessions) {
+     for (const s of sessions) {
+       // Solo guardar la primera (más reciente) por claim
+       if (!inspectionByClaim[s.claim_id]) {
+         inspectionByClaim[s.claim_id] = {
+           scheduled_at: s.scheduled_at,
+           started_at: s.started_at,
+           ended_at: s.ended_at,
+           status: s.status,
+           inspection_type: s.inspection_type,
+         };
+       }
+     }
+   }
+ }
+
+ // 2) CIN actions — la última emitida por claim (coordinación)
+ const cinByClaim: Record<string, string> = {}; // claim_id → issued_on
+ if (claimIds.length > 0) {
+   const { data: cinActions } = await supabase
+     .from("claim_actions")
+     .select(`
+       claim_id, issued_on,
+       action_template:action_template(code)
+     `)
+     .in("claim_id", claimIds)
+     .not("issued_on", "is", null)
+     .order("issued_on", { ascending: false });
+   if (cinActions) {
+     for (const a of cinActions) {
+       const tpl = a.action_template as unknown as { code: string } | null;
+       if (tpl?.code === "CIN" && !cinByClaim[a.claim_id]) {
+         cinByClaim[a.claim_id] = a.issued_on;
+       }
+     }
+   }
+ }
+
  const rows = allRaw.map((claim) => ({ ...claim, claims_participants: allParticipants.filter((p) => p.claim_id === claim.id) }));
+
+ // Mapear estado de inspección a etiqueta legible
+ const inspectionStatusLabels: Record<string, string> = {
+   pending: "Pendiente",
+   scheduled: "Programada",
+   active: "En ejecución",
+   paused: "En pausa",
+   completed: "Completada",
+   cancelled: "Cancelada",
+ };
+
  const headers = [
  "N° Liquidación",
  "N° Ref Cliente",
@@ -1298,6 +1361,10 @@ const allRaw: Claim[] = [];
  "Creación",
  "Tipo de Siniestro",
  "País",
+ "Fecha Coordinación",
+ "Fecha Inspección",
+ "Estado Inspección",
+ "Tipo Inspección",
  ];
  const data = [
  headers,
@@ -1305,6 +1372,12 @@ const allRaw: Claim[] = [];
  const claimType = claimTypes?.find((ct) => ct.id === c.claim_type_id);
  const country = countriesCatalog?.find((co) => co.id === c.country_id);
  const insured = getParticipant(c, "insured");
+ const insp = inspectionByClaim[c.id];
+ const cinDate = cinByClaim[c.id];
+ // Fecha de inspección: priorizar ended_at (completada), luego started_at (en curso), luego scheduled_at (programada)
+ const inspDate = insp?.ended_at || insp?.started_at || insp?.scheduled_at || null;
+ const inspStatus = insp ? (inspectionStatusLabels[insp.status] || insp.status) : "";
+ const inspType = insp ? (insp.inspection_type === "remote" ? "Remota" : insp.inspection_type === "onsite" ? "Presencial" : insp.inspection_type) : "";
  return [
  c.liquidation_number || "",
  c.client_reference || "",
@@ -1318,6 +1391,10 @@ const allRaw: Claim[] = [];
  c.created_at ? new Date(c.created_at).toLocaleDateString("es-CL") : "",
  claimType?.name || "",
  country?.name || "",
+ cinDate ? new Date(cinDate).toLocaleDateString("es-CL") : "",
+ inspDate ? new Date(inspDate).toLocaleDateString("es-CL") : "",
+ inspStatus,
+ inspType,
  ];
  }),
  ];
