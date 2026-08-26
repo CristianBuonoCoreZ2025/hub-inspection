@@ -168,20 +168,39 @@ export async function getClaimsParticipants(claimIds: string[]) {
   // PostgREST limita a 200 filas por defecto y tiene un limite en el
   // numero de valores del filtro `in`. Traer en batches de 100 claim_ids
   // y paginar cada batch hasta traer todos los participantes.
+  // Con reintentos para evitar que un timeout deje claims sin participants.
   const BATCH_SIZE = 100;
+  const MAX_RETRIES = 2;
   const all: Participant[] = [];
   for (let i = 0; i < claimIds.length; i += BATCH_SIZE) {
     const batch = claimIds.slice(i, i + BATCH_SIZE);
     let from = 0;
     while (true) {
-      const rows = await fetchAll<Participant>("claims_participants", {
-        select: "id, claim_id, type, full_name, first_name, last_name, rut, email, phone, cell_phone, address, country, region, city, commune",
-        in: { claim_id: batch },
-        range: { from, to: from + 199 },
-      });
-      all.push(...rows);
-      if (rows.length < 200) break;
-      from += 200;
+      let rows: Participant[] | null = null;
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          rows = await fetchAll<Participant>("claims_participants", {
+            select: "id, claim_id, type, full_name, first_name, last_name, rut, email, phone, cell_phone, address, country, region, city, commune",
+            in: { claim_id: batch },
+            range: { from, to: from + 199 },
+          });
+          break;
+        } catch (e) {
+          console.error(`[getClaimsParticipants] Error batch ${i}-${i + batch.length} from=${from} (intento ${attempt + 1}/${MAX_RETRIES + 1}):`, e);
+          if (attempt < MAX_RETRIES) {
+            await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
+          }
+        }
+      }
+      if (rows) {
+        all.push(...rows);
+        if (rows.length < 200) break;
+        from += 200;
+      } else {
+        // Si el batch falló después de reintentos, continuar con el siguiente
+        console.error(`[getClaimsParticipants] Batch ${i}-${i + batch.length} from=${from} falló después de ${MAX_RETRIES + 1} intentos`);
+        break;
+      }
     }
   }
   return all;
