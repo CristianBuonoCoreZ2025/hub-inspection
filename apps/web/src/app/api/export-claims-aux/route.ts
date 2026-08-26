@@ -6,7 +6,7 @@ import { logger } from "@/lib/logger";
  * API route auxiliar para el export de siniestros.
  *
  * POST /api/export-claims-aux
- *   Body: { claimIds: string[] }
+ *   Body: { claimIds: string[] }  — máx 200 IDs por llamada
  *   → Usa la service role key para evitar RLS
  *   → Devuelve:
  *       {
@@ -17,14 +17,19 @@ import { logger } from "@/lib/logger";
  * Las tablas inspection_sessions y claim_actions tienen RLS que bloquea
  * la lectura desde el navegador con la anon key. Esta route usa la
  * service role key para traer los datos en una sola llamada.
+ *
+ * El cliente debe llamar esta route en lotes de 200 IDs para evitar
+ * timeout de la serverless function.
  */
+
+// Forzar runtime Node.js (no edge) para tener acceso a todas las APIs
+export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const CIN_TEMPLATE_IDS = [
   "b2000002-0000-0000-0000-000000000001",
   "b2000001-0000-0000-0000-000000000001",
 ];
-
-const BATCH_SIZE = 200;
 
 export async function POST(req: NextRequest) {
   try {
@@ -34,6 +39,9 @@ export async function POST(req: NextRequest) {
     if (claimIds.length === 0) {
       return NextResponse.json({ inspections: {}, coordinations: {} });
     }
+
+    // Limitar a 200 IDs por llamada para evitar queries lentas
+    const ids = claimIds.slice(0, 200);
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -46,70 +54,48 @@ export async function POST(req: NextRequest) {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
-    // Generar lotes
-    const batches: string[][] = [];
-    for (let i = 0; i < claimIds.length; i += BATCH_SIZE) {
-      batches.push(claimIds.slice(i, i + BATCH_SIZE));
-    }
-
-    // Lanzar todas las queries en paralelo
-    const sessionPromises = batches.map((batch) =>
+    // 2 queries en paralelo (máx 200 IDs cada una)
+    const [sessionsRes, cinRes] = await Promise.all([
       supabase
         .from("inspection_sessions")
         .select("claim_id, scheduled_at, started_at, ended_at, status, inspection_type, created_at")
-        .in("claim_id", batch)
-        .order("created_at", { ascending: false })
-    );
-
-    const cinPromises = batches.map((batch) =>
+        .in("claim_id", ids)
+        .order("created_at", { ascending: false }),
       supabase
         .from("claim_actions")
         .select("claim_id, issued_on, action_template_id")
-        .in("claim_id", batch)
+        .in("claim_id", ids)
         .in("action_template_id", CIN_TEMPLATE_IDS)
         .not("issued_on", "is", null)
-        .order("issued_on", { ascending: false })
-    );
-
-    const [sessionResults, cinResults] = await Promise.all([
-      Promise.all(sessionPromises),
-      Promise.all(cinPromises),
+        .order("issued_on", { ascending: false }),
     ]);
 
     // Procesar inspection_sessions — la más reciente por claim
     const inspections: Record<string, { scheduled_at: string | null; started_at: string | null; ended_at: string | null; status: string; inspection_type: string }> = {};
-    for (const { data: sessions, error } of sessionResults) {
-      if (error) {
-        logger.error(`[export-claims-aux] Error inspection_sessions: ${error.message}`);
-        continue;
-      }
-      if (sessions) {
-        for (const s of sessions) {
-          if (!inspections[s.claim_id]) {
-            inspections[s.claim_id] = {
-              scheduled_at: s.scheduled_at,
-              started_at: s.started_at,
-              ended_at: s.ended_at,
-              status: s.status,
-              inspection_type: s.inspection_type,
-            };
-          }
+    if (sessionsRes.error) {
+      logger.error(`[export-claims-aux] Error inspection_sessions: ${sessionsRes.error.message}`);
+    } else if (sessionsRes.data) {
+      for (const s of sessionsRes.data) {
+        if (!inspections[s.claim_id]) {
+          inspections[s.claim_id] = {
+            scheduled_at: s.scheduled_at,
+            started_at: s.started_at,
+            ended_at: s.ended_at,
+            status: s.status,
+            inspection_type: s.inspection_type,
+          };
         }
       }
     }
 
     // Procesar CIN actions — la más reciente emitida por claim
     const coordinations: Record<string, string> = {};
-    for (const { data: cinActions, error } of cinResults) {
-      if (error) {
-        logger.error(`[export-claims-aux] Error CIN: ${error.message}`);
-        continue;
-      }
-      if (cinActions) {
-        for (const a of cinActions) {
-          if (!coordinations[a.claim_id]) {
-            coordinations[a.claim_id] = a.issued_on;
-          }
+    if (cinRes.error) {
+      logger.error(`[export-claims-aux] Error CIN: ${cinRes.error.message}`);
+    } else if (cinRes.data) {
+      for (const a of cinRes.data) {
+        if (!coordinations[a.claim_id]) {
+          coordinations[a.claim_id] = a.issued_on;
         }
       }
     }

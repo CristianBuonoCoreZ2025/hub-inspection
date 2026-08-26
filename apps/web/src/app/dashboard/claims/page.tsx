@@ -1298,21 +1298,38 @@ const allRaw: Claim[] = [];
  // Fetch en paralelo: participants (cliente) + datos auxiliares (API route con service role)
  // Las tablas inspection_sessions y claim_actions tienen RLS que bloquea
  // la lectura desde el navegador con anon key, por eso usamos una API route.
- const auxPromise = fetch("/api/export-claims-aux", {
-   method: "POST",
-   headers: { "Content-Type": "application/json" },
-   body: JSON.stringify({ claimIds }),
- }).then((r) => r.ok ? r.json() : { inspections: {}, coordinations: {} }).catch(() => ({ inspections: {}, coordinations: {} }));
+ // Procesamos en lotes de 200 IDs para evitar timeout de la serverless function.
+ const AUX_BATCH = 200;
+ const auxBatches: string[][] = [];
+ for (let i = 0; i < claimIds.length; i += AUX_BATCH) {
+   auxBatches.push(claimIds.slice(i, i + AUX_BATCH));
+ }
+
+ const auxPromises = auxBatches.map((batch) =>
+   fetch("/api/export-claims-aux", {
+     method: "POST",
+     headers: { "Content-Type": "application/json" },
+     body: JSON.stringify({ claimIds: batch }),
+   }).then((r) => r.ok ? r.json() : { inspections: {}, coordinations: {} }).catch((e) => {
+     console.error("[export] Error en export-claims-aux:", e);
+     return { inspections: {}, coordinations: {} };
+   })
+ );
 
  const participantsPromise = allRaw.length ? getClaimsParticipants(claimIds) : Promise.resolve([]);
 
- const [allParticipants, auxData] = await Promise.all([
+ const [allParticipants, auxResults] = await Promise.all([
    participantsPromise,
-   auxPromise,
+   Promise.all(auxPromises),
  ]);
 
- const inspectionByClaim: Record<string, { scheduled_at: string | null; started_at: string | null; ended_at: string | null; status: string; inspection_type: string }> = auxData.inspections || {};
- const cinByClaim: Record<string, string> = auxData.coordinations || {};
+ // Combinar resultados de todos los lotes
+ const inspectionByClaim: Record<string, { scheduled_at: string | null; started_at: string | null; ended_at: string | null; status: string; inspection_type: string }> = {};
+ const cinByClaim: Record<string, string> = {};
+ for (const aux of auxResults) {
+   if (aux?.inspections) Object.assign(inspectionByClaim, aux.inspections);
+   if (aux?.coordinations) Object.assign(cinByClaim, aux.coordinations);
+ }
 
  const rows = allRaw.map((claim) => ({ ...claim, claims_participants: allParticipants.filter((p) => p.claim_id === claim.id) }));
 
