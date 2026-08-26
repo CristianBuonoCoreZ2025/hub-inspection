@@ -1262,36 +1262,43 @@ if (total > 500) {
 setExportProgress({ current: 0, total });
 try {
 const allRaw: Claim[] = [];
- const pageSize = 100;
+ const pageSize = 200;
  const totalPages = Math.max(1, Math.ceil(total / pageSize));
- // Fetchear páginas en paralelo (5 concurrentes) con reintentos
+ // Fetchear claims via API route con service role key (sin joins pesados)
+ // para evitar RLS y timeouts del cliente Supabase.
  const CONCURRENCY = 5;
  const MAX_RETRIES = 2;
 
- const fetchPage = async (page: number): Promise<Claim[]> => {
+ const filterBody = {
+   statusIds: statusFilter.length ? statusFilter.map((c) => codeToId[c]).filter(Boolean) as string[] : undefined,
+   insuranceCompanyIds: insuranceCompanyFilter.length ? insuranceCompanyFilter : undefined,
+   adjusterIds: adjusterFilter.length ? adjusterFilter : undefined,
+   inspectorIds: inspectorFilter.length ? inspectorFilter : undefined,
+   dateFrom: dateFrom || undefined,
+   dateTo: dateTo || undefined,
+   q: search || undefined,
+ };
+
+ const fetchPage = async (page: number): Promise<{ data: Claim[]; total: number }> => {
    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
      try {
-       const batch = await getClaims(undefined, {
-         page,
-         pageSize,
-         statusIds: statusFilter.length ? statusFilter.map((c) => codeToId[c]).filter(Boolean) as string[] : undefined,
-         insuranceCompanyIds: insuranceCompanyFilter.length ? insuranceCompanyFilter : undefined,
-         adjusterIds: adjusterFilter.length ? adjusterFilter : undefined,
-         inspectorIds: inspectorFilter.length ? inspectorFilter : undefined,
-         dateFrom: dateFrom || undefined,
-         dateTo: dateTo || undefined,
-         q: search || undefined,
+       const res = await fetch("/api/export-claims", {
+         method: "POST",
+         headers: { "Content-Type": "application/json" },
+         body: JSON.stringify({ page, pageSize, ...filterBody }),
        });
-       return batch;
+       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+       const json = await res.json();
+       return { data: json.data || [], total: json.total || 0 };
      } catch (e) {
-       console.error(`[export] Error getClaims page ${page} (intento ${attempt + 1}/${MAX_RETRIES + 1}):`, e);
+       console.error(`[export] Error export-claims page ${page} (intento ${attempt + 1}/${MAX_RETRIES + 1}):`, e);
        if (attempt < MAX_RETRIES) {
          await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
        }
      }
    }
    console.error(`[export] Página ${page} falló después de ${MAX_RETRIES + 1} intentos`);
-   return [] as Claim[];
+   return { data: [], total: 0 };
  };
 
  for (let startPage = 1; startPage <= totalPages; startPage += CONCURRENCY) {
@@ -1299,22 +1306,21 @@ const allRaw: Claim[] = [];
    for (let p = startPage; p < startPage + CONCURRENCY && p <= totalPages; p++) {
      pagesToFetch.push(p);
    }
-   const batches = await Promise.all(pagesToFetch.map(fetchPage));
-   for (const batch of batches) {
-     if (batch.length === 0) continue;
-     allRaw.push(...batch);
+   const results = await Promise.all(pagesToFetch.map(fetchPage));
+   for (const { data } of results) {
+     if (data.length === 0) continue;
+     allRaw.push(...(data as Claim[]));
    }
    setExportProgress({ current: allRaw.length, total });
  }
- // Si faltan claims, intentar recuperar páginas que fallaron
+ // Si faltan claims, recuperar páginas que fallaron
  if (allRaw.length < total) {
-   console.warn(`[export] Faltan ${total - allRaw.length} claims. Reintentando páginas faltantes...`);
+   console.warn(`[export] Faltan ${total - allRaw.length} claims. Reintentando...`);
    const foundIds = new Set(allRaw.map((c) => c.id));
-   // Reintentar todas las páginas una vez más, secuencialmente
    for (let page = 1; page <= totalPages; page++) {
      if (allRaw.length >= total) break;
-     const batch = await fetchPage(page);
-     for (const c of batch) {
+     const { data } = await fetchPage(page);
+     for (const c of data as Claim[]) {
        if (!foundIds.has(c.id)) {
          allRaw.push(c);
          foundIds.add(c.id);
