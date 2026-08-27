@@ -509,7 +509,7 @@ const isContentDamage = form.damage_type === "content";
 const buildingValid =
   !!form.space_id &&
   !!form.subcategory &&
-  !!form.materiality_type &&
+  (selectedCategoryRequiresDetail || !!form.materiality_type) &&
   (!selectedCategoryRequiresDetail || !!form.description?.trim());
 const contentValid =
   !!form.description?.trim() ||
