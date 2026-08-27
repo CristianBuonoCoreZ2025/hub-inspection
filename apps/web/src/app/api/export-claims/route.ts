@@ -28,8 +28,8 @@ import { logger } from "@/lib/logger";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-// Select ligero: solo columnas planas + city (un join pequeño)
-const LIGHT_SELECT = "id, liquidation_number, client_reference, claim_number, claim_date, report_date, created_at, status_id, claim_type_id, country_id, city_id, claim_address, disabled, company_id, insurance_company_id, assigned_adjuster_id, adjuster_id, inspector_id, city:cities!claims_city_id_fkey(id, name)";
+// Select ligero: solo columnas planas + city + inspector (joins pequeños)
+const LIGHT_SELECT = "id, liquidation_number, client_reference, claim_number, claim_date, report_date, created_at, status_id, claim_type_id, country_id, city_id, claim_address, disabled, company_id, insurance_company_id, assigned_adjuster_id, adjuster_id, inspector_id, city:cities!claims_city_id_fkey(id, name), inspector:profiles!claims_inspector_id_fkey(id, full_name)";
 
 export async function POST(req: NextRequest) {
   try {

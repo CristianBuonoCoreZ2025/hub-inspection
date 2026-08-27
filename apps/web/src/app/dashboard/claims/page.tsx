@@ -1394,6 +1394,7 @@ const allRaw: Claim[] = [];
  "N° Ref Cliente",
  "N° Siniestro Cía",
  "Asegurado",
+ "Inspector",
  "Dirección",
  "Ciudad",
  "Estado",
@@ -1413,6 +1414,7 @@ const allRaw: Claim[] = [];
  const claimType = claimTypes?.find((ct) => ct.id === c.claim_type_id);
  const country = countriesCatalog?.find((co) => co.id === c.country_id);
  const insured = getParticipant(c, "insured");
+ const inspectorName = (c as { inspector?: { full_name?: string } | null })?.inspector?.full_name || "";
  const insp = inspectionByClaim[c.id];
  const cinDate = cinByClaim[c.id];
  // Fecha de inspección: priorizar ended_at (completada), luego started_at (en curso), luego scheduled_at (programada)
@@ -1424,6 +1426,7 @@ const allRaw: Claim[] = [];
  c.client_reference || "",
  c.claim_number || "",
  insured?.full_name || "",
+ inspectorName,
  c.claim_address || insured?.address || "",
  c.city?.name || insured?.city || "",
  statusLabel(c.status_id) || "",
