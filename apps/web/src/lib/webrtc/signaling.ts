@@ -31,7 +31,10 @@ export type SignalingMessage =
   | { type: "offer"; from: string; role: SignalingRole; sdp: RTCSessionDescriptionInit }
   | { type: "answer"; from: string; role: SignalingRole; sdp: RTCSessionDescriptionInit }
   | { type: "ice"; from: string; role: SignalingRole; candidate: RTCIceCandidateInit }
+  | { type: "ice-batch"; from: string; role: SignalingRole; candidates: RTCIceCandidateInit[] }
   | { type: "hangup"; from: string; role: SignalingRole }
+  | { type: "ping"; from: string; role: SignalingRole }
+  | { type: "pong"; from: string; role: SignalingRole }
   | { type: "screenshot"; from: string; role: SignalingRole; evidenceId: string; url: string }
   | { type: "busy"; from: string; role: SignalingRole; reason: string }
   | { type: "kick"; from: string; role: SignalingRole; target: string; reason: string }
@@ -103,8 +106,50 @@ export function joinSignalingChannel(
       }
     });
 
+  // Buffer para throttling de ICE candidates
+  let iceBatchBuffer: RTCIceCandidateInit[] = [];
+  let iceBatchTimer: ReturnType<typeof setTimeout> | null = null;
+
   return {
     send: (msg: SignalingMessage) => {
+      // Throttling de ICE candidates: agrupar en lotes de 500ms
+      // para reducir el número de mensajes en Supabase Realtime.
+      if (msg.type === "ice") {
+        iceBatchBuffer.push(msg.candidate);
+        if (!iceBatchTimer) {
+          iceBatchTimer = setTimeout(() => {
+            if (iceBatchBuffer.length > 0) {
+              channel.send({
+                type: "broadcast",
+                event: "signal",
+                payload: {
+                  type: "ice-batch",
+                  from: userId,
+                  role,
+                  candidates: iceBatchBuffer.splice(0),
+                } as SignalingMessage,
+              });
+            }
+            iceBatchTimer = null;
+          }, 500);
+        }
+        return;
+      }
+      // Si hay candidates pendientes y se envía otro mensaje, flush inmediato
+      if (iceBatchBuffer.length > 0 && iceBatchTimer) {
+        clearTimeout(iceBatchTimer);
+        iceBatchTimer = null;
+        channel.send({
+          type: "broadcast",
+          event: "signal",
+          payload: {
+            type: "ice-batch",
+            from: userId,
+            role,
+            candidates: iceBatchBuffer.splice(0),
+          } as SignalingMessage,
+        });
+      }
       channel.send({ type: "broadcast", event: "signal", payload: msg });
     },
     onMessage: (handler) => {

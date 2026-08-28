@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import { logger } from "@/lib/logger";
 
 /**
@@ -9,11 +10,14 @@ import { logger } from "@/lib/logger";
  *   → Devuelve { iceServers: [...] } con username + credential temporales (24h)
  *   → El browser usa estos iceServers al instanciar RTCPeerConnection
  *
+ * Cache de dos niveles:
+ *   1. Memoria (por instancia de Vercel) — instantáneo
+ *   2. Supabase (tabla turn_cache) — compartido entre todas las instancias
+ *
  * Si Cloudflare no responde o no está configurado, hace fallback a STUN de Google.
  */
 
-// Cache en memoria para evitar llamar a Cloudflare en cada request.
-// Las credenciales duran 24h, renovamos a las 20h para tener margen.
+// Cache en memoria L1 (por instancia)
 interface CachedIceServers {
   iceServers: RTCIceServer[];
   expiresAt: number;
@@ -80,19 +84,72 @@ async function fetchCloudflareIceServers(): Promise<RTCIceServer[] | null> {
   }
 }
 
+// Cache L2: Supabase (compartido entre instancias)
+async function getSupabaseCache(): Promise<CachedIceServers | null> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceKey) return null;
+
+  try {
+    const supabase = createClient(supabaseUrl, serviceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data, error } = await supabase
+      .from("turn_cache")
+      .select("ice_servers, expires_at")
+      .eq("id", "singleton")
+      .limit(1);
+
+    if (error || !data?.length) return null;
+
+    const row = data[0] as { ice_servers: RTCIceServer[]; expires_at: number };
+    if (Date.now() < row.expires_at) {
+      return { iceServers: row.ice_servers, expiresAt: row.expires_at };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function setSupabaseCache(iceServers: RTCIceServer[], expiresAt: number): Promise<void> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceKey) return;
+
+  try {
+    const supabase = createClient(supabaseUrl, serviceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    await supabase
+      .from("turn_cache")
+      .upsert({ id: "singleton", ice_servers: iceServers, expires_at: expiresAt });
+  } catch {
+    // Silencioso — el cache L1 sigue funcionando
+  }
+}
+
 export async function GET() {
-  // Si tenemos caché válido, devolverlo
+  // L1: cache en memoria
   if (cached && Date.now() < cached.expiresAt) {
     return NextResponse.json({ iceServers: cached.iceServers });
   }
 
+  // L2: cache en Supabase (compartido entre instancias)
+  const supabaseCache = await getSupabaseCache();
+  if (supabaseCache) {
+    cached = supabaseCache;
+    return NextResponse.json({ iceServers: supabaseCache.iceServers });
+  }
+
+  // L3: llamar a Cloudflare
   const iceServers = await fetchCloudflareIceServers();
 
   if (iceServers && iceServers.length > 0) {
-    cached = {
-      iceServers,
-      expiresAt: Date.now() + CACHE_TTL_MS,
-    };
+    const expiresAt = Date.now() + CACHE_TTL_MS;
+    cached = { iceServers, expiresAt };
+    // Guardar en Supabase para otras instancias
+    await setSupabaseCache(iceServers, expiresAt);
     return NextResponse.json({ iceServers });
   }
 

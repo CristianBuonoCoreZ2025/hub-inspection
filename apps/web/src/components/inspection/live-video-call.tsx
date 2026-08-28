@@ -154,6 +154,9 @@ export function LiveVideoCall({
   // Backoff para ICE restart: contador de restarts consecutivos y timer
   const iceRestartCountRef = React.useRef<number>(0);
   const iceRestartTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Ping/keepalive: trackear último pong recibido
+  const lastPongRef = React.useRef<number>(Date.now());
+  const pingIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
   // Refs estables para callbacks que se usan en suscripciones de larga duraci├│n
   const onPeersUpdateRef = React.useRef(onPeersUpdate);
   React.useEffect(() => {
@@ -234,7 +237,13 @@ export function LiveVideoCall({
   // ÔöÇÔöÇ Crear peer connection ÔöÇÔöÇ
   const createPeerConnection = React.useCallback(async () => {
     const iceServers = await fetchIceServers();
-    const pc = new RTCPeerConnection({ iceServers });
+    const pc = new RTCPeerConnection({
+      iceServers,
+      iceTransportPolicy: "all",     // permitir relay (TURN) cuando sea necesario
+      bundlePolicy: "max-bundle",    // multiplexar audio+video en un solo par ICE
+      iceCandidatePoolSize: 10,      // pre-gather candidates para acelerar conexión
+      rtcpMuxPolicy: "require",      // RTCP multiplexado (estándar moderno)
+    });
     pcRef.current = pc;
 
     // Aplicar límite de bitrate asimétrico a los senders locales.
@@ -546,6 +555,28 @@ export function LiveVideoCall({
               (err instanceof Error && err.message?.toLowerCase().includes("remote description"));
             if (!canIgnore && !ignoreOfferRef.current) throw err;
           }
+        } else if (msg.type === "ice-batch") {
+          // Lote de ICE candidates (throttling para reducir mensajes en Realtime)
+          if (role === "inspector" && msg.role === "client" && connectedClientRef.current && connectedClientRef.current !== msg.from) {
+            return;
+          }
+
+          for (const candidate of msg.candidates) {
+            if (!pc.remoteDescription) {
+              iceCandidateBufferRef.current.push(candidate);
+              continue;
+            }
+            try {
+              await pc.addIceCandidate(candidate);
+            } catch (err) {
+              const domErr = err instanceof DOMException ? err : null;
+              const canIgnore =
+                domErr?.name === "InvalidStateError" ||
+                domErr?.name === "OperationError" ||
+                (err instanceof Error && err.message?.toLowerCase().includes("remote description"));
+              if (!canIgnore && !ignoreOfferRef.current) throw err;
+            }
+          }
         } else if (msg.type === "hangup") {
           // Inspector: si cuelga el cliente conectado, liberar el slot
           if (role === "inspector" && msg.role === "client") {
@@ -567,6 +598,12 @@ export function LiveVideoCall({
           if (remoteVideoRef.current) {
             remoteVideoRef.current.srcObject = null;
           }
+        } else if (msg.type === "ping") {
+          // Responder pong para que el otro par sepa que estamos vivos
+          channelRef.current?.send({ type: "pong", from: userId, role });
+        } else if (msg.type === "pong") {
+          // Actualizar último pong recibido
+          lastPongRef.current = Date.now();
         } else if (msg.type === "screenshot") {
           // El otro par captur├│ una foto ÔÇö refrescar para mostrarla en tiempo real
           if (msg.from !== userId) onScreenshotSaved?.();
@@ -595,7 +632,13 @@ export function LiveVideoCall({
     }
   }, [role]);
 
-  // ÔöÇÔöÇ Monitoreo WebRTC: getStats() cada 10s ÔöÇÔöÇ
+  // ÔöÇÔöÇ Monitoreo WebRTC: getStats() cada 10s + degradación adaptativa ÔöÇÔöÇ
+  // Refs para degradación adaptativa: trackear el bitrate actual y tiempo de buena conexión
+  const currentBitrateRef = React.useRef<number>(0);
+  const goodConnectionSinceRef = React.useRef<number>(0);
+  // Contador para enviar stats a Supabase cada 30s (cada 3 iteraciones)
+  const statsUploadCounterRef = React.useRef<number>(0);
+
   React.useEffect(() => {
     const interval = setInterval(async () => {
       const pc = pcRef.current;
@@ -613,8 +656,6 @@ export function LiveVideoCall({
 
         stats.forEach((report) => {
           if (report.type === "outbound-rtp" && report.kind === "video") {
-            outboundBitrate = Math.round((report.bitrate || report.bytesSent ? (report.bytesSent || 0) : 0) / 1024);
-            // bitrate puede venir como report.bitrate (bytes/seg) o calcularlo
             if (report.bitrate) outboundBitrate = Math.round(report.bitrate / 1024);
           }
           if (report.type === "inbound-rtp" && report.kind === "video") {
@@ -632,16 +673,93 @@ export function LiveVideoCall({
         });
 
         const lossPct = packetsReceived > 0 ? Math.round((packetsLost / (packetsLost + packetsReceived)) * 100) : 0;
+        const jitterMs = Math.round(jitter * 1000);
         console.log(
-          `[WebRTC Stats] out=${outboundBitrate}kb/s in=${inboundBitrate}kb/s loss=${lossPct}% jitter=${Math.round(jitter * 1000)}ms rtt=${rtt}ms ice=${iceCandidateType}`
+          `[WebRTC Stats] out=${outboundBitrate}kb/s in=${inboundBitrate}kb/s loss=${lossPct}% jitter=${jitterMs}ms rtt=${rtt}ms ice=${iceCandidateType}`
         );
+
+        // ── Enviar stats a Supabase cada 30s (cada 3 iteraciones) ──
+        statsUploadCounterRef.current++;
+        if (statsUploadCounterRef.current >= 3) {
+          statsUploadCounterRef.current = 0;
+          fetch("/api/webrtc-stats", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sessionId,
+              userId,
+              role,
+              outboundBitrate,
+              inboundBitrate,
+              packetLossPct: lossPct,
+              jitterMs,
+              rttMs: rtt,
+              iceCandidateType,
+              connectionState: pc.connectionState,
+            }),
+          }).catch(() => {
+            // Silencioso — no interrumpir la llamada por error de telemetría
+          });
+        }
+
+        // ── Degradación adaptativa de video ──
+        // Si la conexión se degrada, reducir bitrate automáticamente.
+        // Si la conexión es buena por 30s, subir bitrate gradualmente.
+        const baseBitrate = role === "inspector" ? 200_000 : 800_000;
+        const minBitrate = 50_000; // mínimo absoluto
+        const currentBitrate = currentBitrateRef.current || baseBitrate;
+
+        let newBitrate = currentBitrate;
+
+        if (lossPct > 25 || rtt > 2000) {
+          // Degradación severa: bajar al mínimo
+          newBitrate = Math.max(minBitrate, Math.round(currentBitrate * 0.3));
+          console.warn(`[WebRTC Adapt] Degradación severa (loss=${lossPct}% rtt=${rtt}ms) → ${newBitrate}bps`);
+          goodConnectionSinceRef.current = 0;
+        } else if (lossPct > 10 || rtt > 1000) {
+          // Degradación moderada: bajar 50%
+          newBitrate = Math.max(minBitrate, Math.round(currentBitrate * 0.5));
+          console.warn(`[WebRTC Adapt] Degradación moderada (loss=${lossPct}% rtt=${rtt}ms) → ${newBitrate}bps`);
+          goodConnectionSinceRef.current = 0;
+        } else if (lossPct < 5 && rtt < 500) {
+          // Conexión buena — si dura 30s, subir bitrate gradualmente
+          if (goodConnectionSinceRef.current === 0) {
+            goodConnectionSinceRef.current = Date.now();
+          } else if (Date.now() - goodConnectionSinceRef.current > 30_000) {
+            if (currentBitrate < baseBitrate) {
+              newBitrate = Math.min(baseBitrate, Math.round(currentBitrate * 1.3));
+              console.log(`[WebRTC Adapt] Recuperando bitrate → ${newBitrate}bps`);
+              goodConnectionSinceRef.current = Date.now(); // reset para próxima subida
+            }
+          }
+        } else {
+          // Conexión regular — no cambiar
+          goodConnectionSinceRef.current = 0;
+        }
+
+        // Aplicar nuevo bitrate si cambió
+        if (newBitrate !== currentBitrate) {
+          currentBitrateRef.current = newBitrate;
+          for (const sender of pc.getSenders()) {
+            if (sender.track?.kind === "video") {
+              const params = sender.getParameters();
+              if (!params.encodings) params.encodings = [{}];
+              if (params.encodings[0]) {
+                params.encodings[0].maxBitrate = newBitrate;
+                sender.setParameters(params).catch((e) => {
+                  console.warn("[WebRTC Adapt] No se pudo aplicar nuevo bitrate:", e);
+                });
+              }
+            }
+          }
+        }
       } catch (e) {
         console.warn("[WebRTC Stats] Error obteniendo stats:", e);
       }
     }, 10_000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [role, sessionId, userId]);
 
   // ÔöÇÔöÇ Inicializar todo al montar ÔöÇÔöÇ
   React.useEffect(() => {
@@ -681,6 +799,21 @@ export function LiveVideoCall({
         setPeers(newPeers);
         onPeersUpdateRef.current?.(newPeers);
       });
+
+      // Ping/keepalive: enviar ping cada 15s, si no hay pong en 30s, mostrar "Reconectando..."
+      lastPongRef.current = Date.now();
+      pingIntervalRef.current = setInterval(() => {
+        if (channelRef.current) {
+          channelRef.current.send({ type: "ping", from: userId, role });
+          // Verificar si el peer responde
+          if (Date.now() - lastPongRef.current > 30_000) {
+            console.warn("[LiveVideoCall] Sin pong del peer en 30s — canal signaling posiblemente caído");
+            setState("disconnected");
+          } else if (pcRef.current?.connectionState === "connected") {
+            setState("connected");
+          }
+        }
+      }, 15_000);
     })();
 
     return () => {
@@ -713,6 +846,10 @@ export function LiveVideoCall({
       if (iceRestartTimerRef.current) {
         clearTimeout(iceRestartTimerRef.current);
         iceRestartTimerRef.current = null;
+      }
+      if (pingIntervalRef.current) {
+        clearInterval(pingIntervalRef.current);
+        pingIntervalRef.current = null;
       }
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
         mediaRecorderRef.current.stop();
