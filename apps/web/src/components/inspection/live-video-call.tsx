@@ -145,6 +145,7 @@ export function LiveVideoCall({
   const [screenshotCount, setScreenshotCount] = React.useState(0);
   const [recording, setRecording] = React.useState(false);
   const [recordingTime, setRecordingTime] = React.useState(0);
+  const [hasLocalMedia, setHasLocalMedia] = React.useState(false);
   const [peers, setPeers] = React.useState<ConnectedPeer[]>([]);
   const [connectedClientId, setConnectedClientId] = React.useState<string | null>(null);
   const peerJoinedNotifiedRef = React.useRef(false);
@@ -221,6 +222,7 @@ export function LiveVideoCall({
     if (localVideoRef.current) {
       localVideoRef.current.srcObject = stream;
     }
+    setHasLocalMedia(stream.getTracks().length > 0);
 
     onMediaPermission?.({
       camera: cameraPerm,
@@ -885,6 +887,7 @@ export function LiveVideoCall({
           localVideoRef.current.srcObject = newStream;
         }
         setVideoOn(true);
+        setHasLocalMedia(true);
         // Agregar tracks al peer connection existente
         if (pcRef.current) {
           newStream.getVideoTracks().forEach((track) => {
@@ -1055,11 +1058,19 @@ export function LiveVideoCall({
 
   // ÔöÇÔöÇ Grabaci├│n de sesi├│n (solo inspector) ÔöÇÔöÇ
   const startRecording = () => {
-    if (!remoteStreamRef.current) return;
+    // Grabar video remoto (asegurado) si est├í disponible, sino video local (inspector)
+    const sourceStream = remoteStreamRef.current?.getTracks().length
+      ? remoteStreamRef.current
+      : localStreamRef.current;
+    if (!sourceStream || sourceStream.getTracks().length === 0) {
+      setError("No hay c├ímara disponible para grabar.");
+      return;
+    }
     recordedChunksRef.current = [];
     const combined = new MediaStream();
-    remoteStreamRef.current.getTracks().forEach((track) => combined.addTrack(track));
-    if (localStreamRef.current) {
+    sourceStream.getTracks().forEach((track) => combined.addTrack(track));
+    // Agregar audio local del inspector si no est├í ya incluido
+    if (localStreamRef.current && sourceStream !== localStreamRef.current) {
       localStreamRef.current.getAudioTracks().forEach((track) => combined.addTrack(track));
     }
     const mimeType = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm", ""].find((t) =>
@@ -1560,7 +1571,7 @@ export function LiveVideoCall({
               <button
                 type="button"
                 onClick={recording ? stopRecording : startRecording}
-                disabled={!peerJoined}
+                disabled={!hasLocalMedia && !recording}
                 className={`${ctrlBtn} rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                   recording ? "bg-rose-600 hover:bg-rose-700 text-white" : "bg-red-600 hover:bg-red-700 text-white"
                 }`}
@@ -1569,7 +1580,7 @@ export function LiveVideoCall({
               </button>
             </TooltipTrigger>
             <TooltipContent side="top">
-              <p>{recording ? "Detener grabaci├│n" : "Grabar sesi├│n"}</p>
+              <p>{recording ? "Detener grabaci├│n" : peerJoined ? "Grabar video en vivo" : "Grabar c├ímara local"}</p>
             </TooltipContent>
           </Tooltip>
         )}
