@@ -137,7 +137,12 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
  const participants = claim?.claims_participants || [];
  const insuredParticipant = participants.find((p) => p.type === "insured");
  const preInsuredName = insuredParticipant?.full_name || "";
- const preInsuredEmail = insuredParticipant?.email || "";
+ // Solo precargar el email si es un email válido — algunos claims tienen
+ // el nombre del asegurado en el campo email, lo que bloquea el submit
+ // porque Zod valida el formato y rechaza silenciosamente el formulario.
+ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+ const rawEmail = insuredParticipant?.email || "";
+ const preInsuredEmail = emailRegex.test(rawEmail) ? rawEmail : "";
 
  const form = useForm<ActaInput>({
  resolver: standardSchemaResolver(actaSchema),
@@ -304,7 +309,8 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
  onError: (err: Error) => flash({ description: err.message, type: "error" }),
  });
 
- const onSubmit = form.handleSubmit(async (data) => {
+ const onSubmit = form.handleSubmit(
+ async (data) => {
    if (offlineMode) {
      // En modo offline, llamar directamente sin useMutation
      // (useMutation puede colgarse si hay mutations online pendientes en el cache)
@@ -341,7 +347,16 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
      return;
    }
    saveMutation.mutate(data);
- });
+  },
+  (errors) => {
+   // Zod rechazó el formulario — mostrar el primer error para que el
+   // inspector sepa por qué no se guarda. Sin esto, el submit falla
+   // silenciosamente y el botón parece no funcionar.
+   const firstError = Object.entries(errors).find(([, v]) => v?.message);
+   const msg = firstError?.[1]?.message || "Hay campos inválidos en el acta.";
+   flash({ description: msg, type: "error" });
+  },
+ );
 
  // Sincronizar el step del acta con el cliente (piloto automático)
  const currentStepKey = steps.find((s) => s.id === step)?.key || "datos";
