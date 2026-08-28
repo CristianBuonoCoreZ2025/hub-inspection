@@ -4,13 +4,10 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
-  Wifi,
-  WifiOff,
   Clock,
   Smartphone,
   Tablet,
   Monitor,
-  User,
   RefreshCw,
   MapPin,
   Camera,
@@ -18,8 +15,6 @@ import {
   AlertTriangle,
   Users,
   Zap,
-  ArrowRight,
-  ArrowLeft,
   Ban,
   PhoneOff,
   Video,
@@ -89,7 +84,6 @@ export default function MonitoringPanel({ sessionId }: MonitoringPanelProps) {
   });
 
   const insuredLogs = useMemo(() => logs.filter((l) => l.role === "insured"), [logs]);
-  const adjusterLogs = useMemo(() => logs.filter((l) => l.role === "adjuster"), [logs]);
 
   // Detectar IPs únicas del asegurado
   const insuredIps = useMemo(() => {
