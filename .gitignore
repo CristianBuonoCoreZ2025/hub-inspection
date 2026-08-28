@@ -2,6 +2,11 @@
 
 # dependencies (monorepo — todos los workspaces)
 node_modules/
+
+# Keystore de la app móvil (SECRETO — nunca commitear)
+*.keystore
+*.jks
+apps/mobile/android/claims-hub.keystore
 /.pnp
 .pnp.*
 .yarn/*

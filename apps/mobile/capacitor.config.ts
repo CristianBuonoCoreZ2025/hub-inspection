@@ -3,17 +3,18 @@ import type { CapacitorConfig } from "@capacitor/cli";
 const config: CapacitorConfig = {
   appId: "com.hubinspection.app",
   appName: "Claims Hub",
-  // Carga la web app deployada. El SW maneja offline.
   webDir: "out",
   server: {
     // URL de producción — la app nativa carga esta URL en el WebView
     url: "https://claims.fdpchile.com",
+    // Abrir directo en la ruta móvil de inspecciones
+    initialRoute: "/mobile/inspecciones",
     androidScheme: "https",
     cleartext: true,
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 2000,
+      launchShowDuration: 3000,
       backgroundColor: "#0a0a0a",
       showSpinner: false,
     },

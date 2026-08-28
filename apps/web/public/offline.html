@@ -2,79 +2,68 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#0f172a" />
-  <title>Sin conexión</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Claims Hub — Sin conexión</title>
   <style>
-    * { box-sizing: border-box; }
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: #0f172a;
-      color: #e2e8f0;
-      -webkit-font-smoothing: antialiased;
-    }
-    .container {
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a0a;
+      color: #fafafa;
+      min-height: 100vh;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-height: 100%;
-      padding: 24px;
+      padding: 2rem;
+    }
+    .container {
+      max-width: 400px;
       text-align: center;
     }
     .icon {
-      width: 64px;
-      height: 64px;
-      margin-bottom: 20px;
-      color: #94a3b8;
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 1.5rem;
+      border-radius: 50%;
+      background: rgba(245, 158, 11, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
     }
     h1 {
-      margin: 0 0 12px;
       font-size: 1.5rem;
       font-weight: 600;
-      color: #f8fafc;
+      margin-bottom: 0.75rem;
     }
     p {
-      margin: 0 0 28px;
-      font-size: 1rem;
+      font-size: 0.95rem;
+      color: #a1a1aa;
       line-height: 1.5;
-      color: #94a3b8;
-      max-width: 320px;
+      margin-bottom: 1.5rem;
     }
-    button {
-      padding: 12px 24px;
-      border: 1px solid #334155;
-      border-radius: 9999px;
-      background: #1e293b;
-      color: #f8fafc;
-      font-size: 1rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: background 0.15s ease;
-    }
-    button:hover { background: #334155; }
     .hint {
-      margin-top: 16px;
-      font-size: 0.875rem;
-      color: #64748b;
+      font-size: 0.85rem;
+      color: #71717a;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 0.5rem;
+      border: 1px solid rgba(255, 255, 255, 0.06);
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="M5 18H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h17.078c1.044 0 2.004.608 2.432 1.55l1.49 3.348A6 6 0 0 1 20.852 19H5Z"/>
-      <line x1="2" y1="8" x2="22" y2="8"/>
-      <line x1="3" y1="18" x2="17" y2="18"/>
-      <path d="m19 8-2 2.5h4L19 13" transform="scale(-1,1) translate(-38,0)" style="display:none"/>
-    </svg>
-    <h1>Sin conexión</h1>
-    <p>No pudimos cargar la página. Revisa tu conexión a internet e intenta de nuevo.</p>
-    <button onclick="window.location.reload()">Reintentar</button>
-    <p class="hint">Si tienes inspecciones descargadas para uso offline, accede a ellas desde el listado.</p>
+    <div class="icon">📡</div>
+    <h1>Sin conexión a internet</h1>
+    <p>
+      No hay conexión a internet. Si ya descargaste inspecciones,
+      puedes seguir trabajando offline y sincronizar cuando vuelva la conexión.
+    </p>
+    <div class="hint">
+      Las inspecciones descargadas están disponibles sin conexión.
+      Tus cambios se guardan localmente y se sincronizan automáticamente.
+    </div>
   </div>
 </body>
 </html>
