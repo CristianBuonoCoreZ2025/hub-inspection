@@ -107,7 +107,7 @@ export function joinSignalingChannel(
     });
 
   // Buffer para throttling de ICE candidates
-  let iceBatchBuffer: RTCIceCandidateInit[] = [];
+  const iceBatchBuffer: RTCIceCandidateInit[] = [];
   let iceBatchTimer: ReturnType<typeof setTimeout> | null = null;
 
   return {

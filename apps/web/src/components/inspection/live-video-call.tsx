@@ -155,7 +155,7 @@ export function LiveVideoCall({
   const iceRestartCountRef = React.useRef<number>(0);
   const iceRestartTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   // Ping/keepalive: trackear último pong recibido
-  const lastPongRef = React.useRef<number>(Date.now());
+  const lastPongRef = React.useRef<number>(0);
   const pingIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
   // Refs estables para callbacks que se usan en suscripciones de larga duraci├│n
   const onPeersUpdateRef = React.useRef(onPeersUpdate);
@@ -232,7 +232,7 @@ export function LiveVideoCall({
     }
 
     return stream;
-  }, [onMediaPermission]);
+  }, [onMediaPermission, role]);
 
   // ÔöÇÔöÇ Crear peer connection ÔöÇÔöÇ
   const createPeerConnection = React.useCallback(async () => {

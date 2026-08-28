@@ -1,4 +1,4 @@
-import { test, expect, type Page, type BrowserContext } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 
 /**
  * Test de integración WebRTC — dos pestañas simulando inspector + asegurado.
@@ -13,34 +13,6 @@ import { test, expect, type Page, type BrowserContext } from "@playwright/test";
  * verifica que el código de signaling, ICE gathering y PeerConnection
  * no crashea.
  */
-
-async function setupPage(page: Page, context: BrowserContext, sessionId: string) {
-  // Conceder permisos de cámara y micrófono
-  await context.grantPermissions(["camera", "microphone"]);
-
-  const consoleErrors: string[] = [];
-  page.on("console", (msg) => {
-    if (msg.type() === "error") {
-      consoleErrors.push(msg.text());
-    }
-  });
-
-  // Interceptar getUserMedia con un stream fake si no hay cámara real
-  await page.addInitScript(() => {
-    // Crear un stream fake si getUserMedia falla
-    const originalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
-    navigator.mediaDevices.getUserMedia = async (constraints: MediaStreamConstraints) => {
-      try {
-        return await originalGetUserMedia(constraints);
-      } catch {
-        // Fallback: stream vacío
-        return new MediaStream();
-      }
-    };
-  });
-
-  return { consoleErrors };
-}
 
 test.describe("WebRTC two-page integration", () => {
   test("dos pestañas pueden unirse al mismo canal de signaling", async ({ browser }) => {
