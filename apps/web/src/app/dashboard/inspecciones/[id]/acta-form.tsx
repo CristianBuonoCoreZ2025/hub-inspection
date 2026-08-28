@@ -137,7 +137,12 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
  const participants = claim?.claims_participants || [];
  const insuredParticipant = participants.find((p) => p.type === "insured");
  const preInsuredName = insuredParticipant?.full_name || "";
- const preInsuredEmail = insuredParticipant?.email || "";
+ // Solo precargar el email si es un email válido — algunos claims tienen
+ // el nombre del asegurado en el campo email, lo que bloquea el submit
+ // porque Zod valida el formato y rechaza silenciosamente el formulario.
+ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+ const rawEmail = insuredParticipant?.email || "";
+ const preInsuredEmail = emailRegex.test(rawEmail) ? rawEmail : "";
 
  const form = useForm<ActaInput>({
  resolver: standardSchemaResolver(actaSchema),
