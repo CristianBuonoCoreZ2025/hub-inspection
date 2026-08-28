@@ -151,6 +151,9 @@ export function LiveVideoCall({
   const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
   const recordedChunksRef = React.useRef<Blob[]>([]);
   const recordingTimerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+  // Backoff para ICE restart: contador de restarts consecutivos y timer
+  const iceRestartCountRef = React.useRef<number>(0);
+  const iceRestartTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   // Refs estables para callbacks que se usan en suscripciones de larga duraci├│n
   const onPeersUpdateRef = React.useRef(onPeersUpdate);
   React.useEffect(() => {
@@ -174,8 +177,14 @@ export function LiveVideoCall({
     let userMessage: string | null = null;
 
     try {
+      // Bitrate asimétrico: el inspector envía video de baja resolución (su cara
+      // no necesita HD), el asegurado envía resolución media (necesita mostrar
+      // el daño/propiedad). Esto reduce ~75% el bandwidth total.
+      const videoConstraints = role === "inspector"
+        ? { width: { ideal: 320 }, height: { ideal: 240 }, facingMode: facingModeRef.current }
+        : { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: facingModeRef.current };
       stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: facingModeRef.current },
+        video: videoConstraints,
         audio: { echoCancellation: true, noiseSuppression: true },
       });
       cameraPerm = "granted";
@@ -227,6 +236,23 @@ export function LiveVideoCall({
     const iceServers = await fetchIceServers();
     const pc = new RTCPeerConnection({ iceServers });
     pcRef.current = pc;
+
+    // Aplicar límite de bitrate asimétrico a los senders locales.
+    // Inspector: 200 kbps (su cara no necesita HD).
+    // Asegurado: 800 kbps (necesita mostrar el daño/propiedad).
+    const maxBitrate = role === "inspector" ? 200_000 : 800_000;
+    for (const sender of pc.getSenders()) {
+      if (sender.track?.kind === "video") {
+        const params = sender.getParameters();
+        if (!params.encodings) params.encodings = [{}];
+        if (params.encodings[0]) {
+          params.encodings[0].maxBitrate = maxBitrate;
+          sender.setParameters(params).catch((e) => {
+            console.warn("[LiveVideoCall] No se pudo aplicar maxBitrate:", e);
+          });
+        }
+      }
+    }
 
     // Stream remoto
     const remoteStream = new MediaStream();
@@ -292,9 +318,31 @@ export function LiveVideoCall({
 
     pc.oniceconnectionstatechange = () => {
       if (pc.iceConnectionState === "failed") {
-        pc.restartIce();
+        // Backoff exponencial: 2s, 4s, 8s, 16s — máximo 3 restarts
+        const restartCount = iceRestartCountRef.current;
+        if (restartCount >= 3) {
+          console.error("[LiveVideoCall] ICE restart falló 3 veces consecutivas — conexión inestable");
+          setState("failed");
+          setError("Conexión inestable. Verifica tu conexión a internet e intenta nuevamente.");
+          return;
+        }
+        const delay = Math.min(2000 * Math.pow(2, restartCount), 16000);
+        console.warn(`[LiveVideoCall] ICE failed — restart en ${delay}ms (intento ${restartCount + 1}/3)`);
+        iceRestartCountRef.current = restartCount + 1;
+        // Limpiar timer anterior si existe
+        if (iceRestartTimerRef.current) clearTimeout(iceRestartTimerRef.current);
+        iceRestartTimerRef.current = setTimeout(() => {
+          if (pcRef.current && pcRef.current.iceConnectionState === "failed") {
+            pcRef.current.restartIce();
+          }
+        }, delay);
       } else if (pc.iceConnectionState === "connected") {
-        // ICE se recuper├│ ÔÇö limpiar estado de error
+        // ICE se recuper├│ ÔÇö resetear contador de restarts y limpiar estado de error
+        iceRestartCountRef.current = 0;
+        if (iceRestartTimerRef.current) {
+          clearTimeout(iceRestartTimerRef.current);
+          iceRestartTimerRef.current = null;
+        }
         setState("connected");
         setError(null);
       }
@@ -530,6 +578,71 @@ export function LiveVideoCall({
     [role, userId, onPeerJoined, onPeerRejected, onKicked, onScreenshotSaved],
   );
 
+  // Función helper para aplicar límite de bitrate a todos los video senders
+  const applyMaxBitrate = React.useCallback((pc: RTCPeerConnection) => {
+    const maxBitrate = role === "inspector" ? 200_000 : 800_000;
+    for (const sender of pc.getSenders()) {
+      if (sender.track?.kind === "video") {
+        const params = sender.getParameters();
+        if (!params.encodings) params.encodings = [{}];
+        if (params.encodings[0]) {
+          params.encodings[0].maxBitrate = maxBitrate;
+          sender.setParameters(params).catch((e) => {
+            console.warn("[LiveVideoCall] No se pudo aplicar maxBitrate:", e);
+          });
+        }
+      }
+    }
+  }, [role]);
+
+  // ÔöÇÔöÇ Monitoreo WebRTC: getStats() cada 10s ÔöÇÔöÇ
+  React.useEffect(() => {
+    const interval = setInterval(async () => {
+      const pc = pcRef.current;
+      if (!pc || pc.connectionState !== "connected") return;
+
+      try {
+        const stats = await pc.getStats();
+        let outboundBitrate = 0;
+        let inboundBitrate = 0;
+        let packetsLost = 0;
+        let packetsReceived = 0;
+        let jitter = 0;
+        let rtt = 0;
+        let iceCandidateType = "unknown";
+
+        stats.forEach((report) => {
+          if (report.type === "outbound-rtp" && report.kind === "video") {
+            outboundBitrate = Math.round((report.bitrate || report.bytesSent ? (report.bytesSent || 0) : 0) / 1024);
+            // bitrate puede venir como report.bitrate (bytes/seg) o calcularlo
+            if (report.bitrate) outboundBitrate = Math.round(report.bitrate / 1024);
+          }
+          if (report.type === "inbound-rtp" && report.kind === "video") {
+            if (report.bitrate) inboundBitrate = Math.round(report.bitrate / 1024);
+            packetsLost = report.packetsLost || 0;
+            packetsReceived = report.packetsReceived || 0;
+            jitter = report.jitter || 0;
+          }
+          if (report.type === "candidate-pair" && report.state === "succeeded" && report.currentRoundTripTime) {
+            rtt = Math.round(report.currentRoundTripTime * 1000);
+          }
+          if (report.type === "local-candidate" && report.candidateType) {
+            iceCandidateType = report.candidateType;
+          }
+        });
+
+        const lossPct = packetsReceived > 0 ? Math.round((packetsLost / (packetsLost + packetsReceived)) * 100) : 0;
+        console.log(
+          `[WebRTC Stats] out=${outboundBitrate}kb/s in=${inboundBitrate}kb/s loss=${lossPct}% jitter=${Math.round(jitter * 1000)}ms rtt=${rtt}ms ice=${iceCandidateType}`
+        );
+      } catch (e) {
+        console.warn("[WebRTC Stats] Error obteniendo stats:", e);
+      }
+    }, 10_000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   // ÔöÇÔöÇ Inicializar todo al montar ÔöÇÔöÇ
   React.useEffect(() => {
     let cancelled = false;
@@ -555,6 +668,8 @@ export function LiveVideoCall({
         [...stream.getAudioTracks(), ...stream.getVideoTracks()].forEach((track) => {
           pc.addTrack(track, stream);
         });
+        // Aplicar límite de bitrate a los video senders después de agregar tracks
+        applyMaxBitrate(pc);
       }
 
       // Unirse al canal de signaling
@@ -595,6 +710,10 @@ export function LiveVideoCall({
         clearInterval(recordingTimerRef.current);
         recordingTimerRef.current = null;
       }
+      if (iceRestartTimerRef.current) {
+        clearTimeout(iceRestartTimerRef.current);
+        iceRestartTimerRef.current = null;
+      }
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
         mediaRecorderRef.current.stop();
       }
@@ -617,8 +736,11 @@ export function LiveVideoCall({
       localStreamRef.current = null;
       setVideoOn(false);
       // Re-intentar obtener c├ímara
+      const videoConstraints = role === "inspector"
+        ? { width: { ideal: 320 }, height: { ideal: 240 }, facingMode: facingModeRef.current }
+        : { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: facingModeRef.current };
       navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: facingModeRef.current },
+        video: videoConstraints,
         audio: { echoCancellation: true, noiseSuppression: true },
       }).then((newStream) => {
         localStreamRef.current = newStream;
@@ -631,6 +753,7 @@ export function LiveVideoCall({
           newStream.getVideoTracks().forEach((track) => {
             pcRef.current!.addTrack(track, newStream);
           });
+          applyMaxBitrate(pcRef.current);
         }
       }).catch(() => {
         setError("No se pudo acceder a la c├ímara. Puede estar en uso por otra aplicaci├│n.");
@@ -662,8 +785,11 @@ export function LiveVideoCall({
     const nextFacing: "user" | "environment" = facingModeRef.current === "user" ? "environment" : "user";
 
     try {
+      const videoConstraints = role === "inspector"
+        ? { width: { ideal: 320 }, height: { ideal: 240 }, facingMode: nextFacing }
+        : { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: nextFacing };
       const newStream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: nextFacing },
+        video: videoConstraints,
         audio: false,
       });
       const newVideoTrack = newStream.getVideoTracks()[0];
