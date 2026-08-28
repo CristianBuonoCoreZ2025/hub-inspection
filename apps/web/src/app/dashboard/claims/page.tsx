@@ -2936,7 +2936,7 @@ disabled={!!exportProgress}
  const flagUrl = flagImgUrl(country?.code ?? null);
  const BlIcon = getClaimTypeIcon(claimType?.icon ?? null);
  const openClaim = canOpenClaim(claim);
- const matchLabels = getSearchMatchLabels(claim, search);
+ const matchLabels = getSearchMatchLabels(claim, search.trim().length >= 4 ? search : "");
  return (
  <tr
  key={claim.id}

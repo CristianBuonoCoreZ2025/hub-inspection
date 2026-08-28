@@ -138,12 +138,14 @@ export function DownloadButton({ sessionId, inspectorId, onDownloaded, disabled 
         throw new Error(body.error || "Error al guardar PIN");
       }
 
-      // 2. Descargar la inspección (trae el PIN hash de Supabase a IndexedDB)
+      // 2. Cerrar el diálogo de PIN antes de descargar
+      setShowPinDialog(false);
+      setPin("");
+
+      // 3. Descargar la inspección (trae el PIN hash de Supabase a IndexedDB)
       await doDownload();
 
       setState("done");
-      setShowPinDialog(false);
-      setPin("");
       flash({ description: "PIN configurado. Inspección descargada.", type: "success", duration: 3000 });
       onDownloaded?.();
       setTimeout(() => setState("idle"), 3000);
@@ -227,7 +229,7 @@ export function DownloadButton({ sessionId, inspectorId, onDownloaded, disabled 
 
       {/* Modal de progreso de descarga */}
       <Dialog open={showProgressDialog} onOpenChange={(v) => { if (!v && state !== "downloading") setShowProgressDialog(false); }}>
-        <DialogContent className="mobile-pin-dialog bg-popover!" showCloseButton={false}>
+        <DialogContent className="mobile-pin-dialog bg-popover!" showCloseButton={state !== "downloading"}>
           <DialogHeader className="pb-2">
             <DialogTitle className="flex items-center gap-2 text-base">
               {state === "done" ? (
@@ -302,6 +304,19 @@ export function DownloadButton({ sessionId, inspectorId, onDownloaded, disabled 
               </p>
             )}
           </div>
+          {(state === "done" || state === "error") && (
+            <DialogFooter className="pt-2">
+              <Button
+                variant={state === "error" ? "destructive" : "default"}
+                onClick={() => {
+                  setShowProgressDialog(false);
+                  setState("idle");
+                }}
+              >
+                Cerrar
+              </Button>
+            </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
     </>
