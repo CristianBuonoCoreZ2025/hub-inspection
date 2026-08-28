@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
 
     // Si hay búsqueda, resolver IDs primero
     let searchClaimIds: string[] | null = null;
-    if (q) {
+    if (q && q.trim().length >= 4) {
       const { data: searchData, error: searchErr } = await supabase.rpc("search_claims_unaccent", { p_q: q });
       if (searchErr) {
         logger.error(`[export-claims] Error search: ${searchErr.message}`);

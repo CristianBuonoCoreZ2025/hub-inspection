@@ -471,7 +471,7 @@ function ClaimsPageContent() {
    dateTo: dateTo || undefined,
    sortKey,
    sortDir,
-   q: search || undefined,
+   q: search.trim().length >= 4 ? search : undefined,
  }),
  staleTime: 60_000,
  gcTime: 5 * 60_000,
@@ -486,7 +486,7 @@ function ClaimsPageContent() {
    inspectorIds: inspectorFilter.length ? inspectorFilter : undefined,
    dateFrom: dateFrom || undefined,
    dateTo: dateTo || undefined,
-   q: search || undefined,
+   q: search.trim().length >= 4 ? search : undefined,
  }),
  staleTime: 60_000,
  gcTime: 5 * 60_000,
@@ -1276,7 +1276,7 @@ const allRaw: Claim[] = [];
    inspectorIds: inspectorFilter.length ? inspectorFilter : undefined,
    dateFrom: dateFrom || undefined,
    dateTo: dateTo || undefined,
-   q: search || undefined,
+   q: search.trim().length >= 4 ? search : undefined,
  };
 
  const fetchPage = async (page: number): Promise<{ data: Claim[]; total: number }> => {

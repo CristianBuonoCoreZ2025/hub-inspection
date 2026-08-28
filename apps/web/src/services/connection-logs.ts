@@ -73,3 +73,23 @@ export async function getConnectionLogs(sessionId: string): Promise<ConnectionLo
     return [];
   }
 }
+
+/**
+ * Obtiene un set de session_ids que tienen connection logs o webrtc events.
+ * Usado para saber qué inspecciones tienen datos de monitoreo sin fetchear todos los logs.
+ */
+export async function getSessionsWithMonitoringData(sessionIds: string[]): Promise<Set<string>> {
+  if (sessionIds.length === 0) return new Set();
+  try {
+    const res = await fetch("/api/inspection/monitoring-sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionIds }),
+    });
+    if (!res.ok) return new Set();
+    const data = await res.json();
+    return new Set(data.sessionIds || []);
+  } catch {
+    return new Set();
+  }
+}

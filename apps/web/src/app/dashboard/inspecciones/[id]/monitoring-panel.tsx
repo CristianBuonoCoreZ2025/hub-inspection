@@ -178,7 +178,7 @@ export default function MonitoringPanel({ sessionId }: MonitoringPanelProps) {
               <AlertTriangle className={`h-4 w-4 shrink-0 mt-0.5 ${
                 alert.severity === "high" ? "text-rose-500" : "text-amber-500"
               }`} />
-              <p className="text-sm text-slate-700 dark:text-slate-300">{alert.message}</p>
+              <p className="text-xs text-slate-700 dark:text-slate-300">{alert.message}</p>
             </div>
           ))}
         </div>
@@ -187,33 +187,33 @@ export default function MonitoringPanel({ sessionId }: MonitoringPanelProps) {
       {/* Resumen */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="app-panel px-3 py-2">
-          <p className="text-xs text-slate-500">Conexiones</p>
-          <p className="text-lg font-semibold">{logs.length}</p>
+          <p className="text-[11px] text-slate-500">Conexiones</p>
+          <p className="text-base font-semibold">{logs.length}</p>
         </div>
         <div className="app-panel px-3 py-2">
-          <p className="text-xs text-slate-500">Eventos WebRTC</p>
-          <p className="text-lg font-semibold">{events.length}</p>
+          <p className="text-[11px] text-slate-500">Eventos WebRTC</p>
+          <p className="text-base font-semibold">{events.length}</p>
         </div>
         <div className="app-panel px-3 py-2">
-          <p className="text-xs text-slate-500">IPs del asegurado</p>
-          <p className={`text-lg font-semibold ${insuredIps.length > 1 ? "text-rose-500" : ""}`}>{insuredIps.length}</p>
+          <p className="text-[11px] text-slate-500">IPs del asegurado</p>
+          <p className={`text-base font-semibold ${insuredIps.length > 1 ? "text-rose-500" : ""}`}>{insuredIps.length}</p>
         </div>
         <div className="app-panel px-3 py-2">
-          <p className="text-xs text-slate-500">Dispositivos</p>
-          <p className={`text-lg font-semibold ${insuredDevices.length > 1 ? "text-amber-500" : ""}`}>{insuredDevices.length}</p>
+          <p className="text-[11px] text-slate-500">Dispositivos</p>
+          <p className={`text-base font-semibold ${insuredDevices.length > 1 ? "text-amber-500" : ""}`}>{insuredDevices.length}</p>
         </div>
       </div>
 
       {/* IPs y dispositivos del asegurado */}
       {insuredIps.length > 0 && (
         <div className="app-panel px-4 py-3">
-          <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+          <h4 className="text-xs font-medium mb-2 flex items-center gap-2">
             <MapPin className="h-4 w-4 text-slate-400" />
             Accesos del asegurado
           </h4>
           <div className="space-y-1.5">
             {insuredLogs.slice(0, 10).map((log) => (
-              <div key={log.id} className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+              <div key={log.id} className="flex flex-wrap items-center gap-3 text-[11px] text-slate-500">
                 <span className="flex items-center gap-1">
                   <DeviceIcon type={log.device_type} />
                   {log.browser || "—"} / {log.os || "—"}
@@ -240,15 +240,15 @@ export default function MonitoringPanel({ sessionId }: MonitoringPanelProps) {
         <div className="flex items-center justify-between px-4 py-3">
           <button
             onClick={() => setShowHistory((v) => !v)}
-            className="text-sm font-medium flex items-center gap-2"
+            className="text-xs font-medium flex items-center gap-2"
           >
             <Activity className="h-4 w-4 text-sky-500" />
             Timeline de eventos
-            <span className="text-xs text-slate-400">({timeline.length})</span>
+            <span className="text-[11px] text-slate-400">({timeline.length})</span>
           </button>
           <button
             onClick={refetchAll}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
             Actualizar
@@ -258,9 +258,9 @@ export default function MonitoringPanel({ sessionId }: MonitoringPanelProps) {
         {showHistory && (
           <div className="border-t border-slate-200 dark:border-slate-700 px-4 py-3 max-h-96 overflow-y-auto">
             {logsLoading && eventsLoading ? (
-              <p className="text-sm text-slate-500">Cargando...</p>
+              <p className="text-xs text-slate-500">Cargando...</p>
             ) : timeline.length === 0 ? (
-              <p className="text-sm text-slate-500">No hay eventos registrados.</p>
+              <p className="text-xs text-slate-500">No hay eventos registrados.</p>
             ) : (
               <div className="space-y-2">
                 {timeline.slice(0, 100).map((item, i) => {
@@ -273,15 +273,15 @@ export default function MonitoringPanel({ sessionId }: MonitoringPanelProps) {
                         <Icon className={`h-4 w-4 shrink-0 mt-0.5 ${cfg.color}`} />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className={`text-xs font-medium ${cfg.color}`}>{cfg.label}</span>
-                            <span className="text-xs text-slate-400">{roleLabels[evt.role] || evt.role}</span>
+                            <span className={`text-[11px] font-medium ${cfg.color}`}>{cfg.label}</span>
+                            <span className="text-[11px] text-slate-400">{roleLabels[evt.role] || evt.role}</span>
                           </div>
-                          <p className="text-xs text-slate-500 mt-0.5">
+                          <p className="text-[11px] text-slate-500 mt-0.5">
                             {formatUserTime(evt.created_at)}
                             {evt.ip_address && ` · ${evt.ip_address}`}
                           </p>
                           {evt.details && Object.keys(evt.details).length > 0 && (
-                            <p className="text-xs text-slate-400 mt-0.5 font-mono">
+                            <p className="text-[11px] text-slate-400 mt-0.5 font-mono">
                               {JSON.stringify(evt.details).substring(0, 120)}
                             </p>
                           )}
@@ -296,10 +296,10 @@ export default function MonitoringPanel({ sessionId }: MonitoringPanelProps) {
                     return (
                       <div key={`log-${i}`} className="flex flex-col sm:flex-row sm:items-center gap-2 p-2 rounded-md border border-slate-200 dark:border-slate-700">
                         <div className="flex items-center gap-2 sm:w-40">
-                          <span className={`text-xs font-medium ${status.color}`}>{status.label}</span>
-                          <span className="text-xs text-slate-500">{roleLabels[log.role] || log.role}</span>
+                          <span className={`text-[11px] font-medium ${status.color}`}>{status.label}</span>
+                          <span className="text-[11px] text-slate-500">{roleLabels[log.role] || log.role}</span>
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-slate-500 sm:ml-auto flex-wrap">
+                        <div className="flex items-center gap-3 text-[11px] text-slate-500 sm:ml-auto flex-wrap">
                           <span className="flex items-center gap-1">
                             <DeviceIcon type={log.device_type} />
                             {log.browser || "—"} / {log.os || "—"}

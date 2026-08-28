@@ -38,7 +38,7 @@ export async function getClaims(
 
   let searchClaimIds: string[] = [];
   const q = options?.q?.trim();
-  if (q) {
+  if (q && q.length >= 4) {
     const { data: searchData, error: searchErr } = await supabase.rpc("search_claims_unaccent", { p_q: q });
     if (searchErr) throw new Error(searchErr.message);
     searchClaimIds = (searchData || []).map((r: { claim_id: string }) => r.claim_id);
@@ -86,7 +86,7 @@ export async function getClaims(
   if (options?.dateFrom) query = query.gte("claim_date", options.dateFrom);
   if (options?.dateTo) query = query.lte("claim_date", options.dateTo);
 
-  if (q) {
+  if (q && q.length >= 4) {
     if (searchClaimIds.length) {
       query = query.in("id", searchClaimIds);
     } else {
@@ -228,7 +228,7 @@ export async function getClaimsCount(
 
   let searchClaimIds: string[] = [];
   const q = options?.q?.trim();
-  if (q) {
+  if (q && q.length >= 4) {
     const { data: searchData, error: searchErr } = await supabase.rpc("search_claims_unaccent", { p_q: q });
     if (searchErr) throw new Error(searchErr.message);
     searchClaimIds = (searchData || []).map((r: { claim_id: string }) => r.claim_id);
@@ -248,7 +248,7 @@ export async function getClaimsCount(
   if (options?.dateFrom) query = query.gte("claim_date", options.dateFrom);
   if (options?.dateTo) query = query.lte("claim_date", options.dateTo);
 
-  if (q) {
+  if (q && q.length >= 4) {
     if (searchClaimIds.length) {
       query = query.in("id", searchClaimIds);
     } else {

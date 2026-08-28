@@ -60,6 +60,7 @@ import type { InspectionSession } from "@/types";
 import * as XLSX from "xlsx";
 import { useConfirm } from "@/hooks/use-confirm";
 import MonitoringPanel from "./[id]/monitoring-panel";
+import { getSessionsWithMonitoringData } from "@/services/connection-logs";
 
 const sessionStatusLabels: Record<string, string> = {
   scheduled: "Agendada",
@@ -115,6 +116,19 @@ function InspectionsPageContent() {
     }),
     staleTime: 60_000,
     gcTime: 5 * 60_000,
+  });
+
+  // Fetchear qué sesiones tienen datos de monitoreo (connection logs o webrtc events)
+  const sessionIdsForMonitoring = useMemo(
+    () => sessions?.map((s) => s.id) ?? [],
+    [sessions]
+  );
+  const { data: sessionsWithMonitoring } = useQuery<Set<string>>({
+    queryKey: ["monitoring-sessions", sessionIdsForMonitoring],
+    queryFn: () => getSessionsWithMonitoringData(sessionIdsForMonitoring),
+    enabled: sessionIdsForMonitoring.length > 0,
+    staleTime: 30_000,
+    gcTime: 60_000,
   });
 
   const fkSortColumns = ["internal_number", "inspection", "client_reference", "address"];
@@ -588,6 +602,7 @@ function InspectionsPageContent() {
                             <p>Ver log de inicios y términos</p>
                           </TooltipContent>
                         </Tooltip>
+                        {sessionsWithMonitoring?.has(session.id) && (
                         <Tooltip>
                           <TooltipTrigger className="inline-flex">
                             <Button
@@ -603,6 +618,7 @@ function InspectionsPageContent() {
                             <p>Monitoreo de conexión</p>
                           </TooltipContent>
                         </Tooltip>
+                        )}
                         <Tooltip>
                           <TooltipTrigger className="inline-flex">
                             <Button
@@ -749,7 +765,7 @@ function InspectionsPageContent() {
           </DialogContent>
         </Dialog>
         <Dialog open={!!monitoringSessionId} onOpenChange={(open) => !open && setMonitoringSessionId(null)}>
-          <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto" showCloseButton>
+          <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto" showCloseButton>
             <div className="modal-header">
               <DialogTitle className="modal-title">
                 <span className="modal-title-icon">
