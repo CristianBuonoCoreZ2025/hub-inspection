@@ -170,22 +170,22 @@ export async function POST(request: NextRequest) {
     const userAgent = request.headers.get("user-agent") || "";
     const { deviceType, browser, browserVersion, os, osVersion } = parseUserAgent(userAgent);
 
-    // Geolocalización por IP (usando ipapi.co, sin API key)
+    // Geolocalización por IP (usando ip-api.com, sin API key, más confiable que ipapi.co)
     let geoData: { country?: string; region?: string; city?: string; latitude?: number; longitude?: number } = {};
     if (ipAddress && ipAddress !== "127.0.0.1" && ipAddress !== "::1") {
       try {
-        const geoRes = await fetch(`https://ipapi.co/${ipAddress}/json/`, {
+        const geoRes = await fetch(`http://ip-api.com/json/${ipAddress}?fields=status,country,regionName,city,lat,lon`, {
           signal: AbortSignal.timeout(3000),
         });
         if (geoRes.ok) {
           const geo = await geoRes.json();
-          if (!geo.error) {
+          if (geo.status === "success") {
             geoData = {
-              country: geo.country_name || null,
-              region: geo.region || null,
+              country: geo.country || null,
+              region: geo.regionName || null,
               city: geo.city || null,
-              latitude: geo.latitude || null,
-              longitude: geo.longitude || null,
+              latitude: geo.lat || null,
+              longitude: geo.lon || null,
             };
           }
         }
@@ -262,6 +262,49 @@ export async function POST(request: NextRequest) {
       })
       .select("id")
       .single();
+
+    // Detectar magic link compartido: si el asegurado se conecta desde una IP
+    // diferente a logs anteriores de la misma sesión, registrar evento
+    if (role === "insured" && ipAddress) {
+      try {
+        const { data: prevLogs } = await supabase
+          .from("magic_link_connection_logs")
+          .select("ip_address, city, country, device_type, browser, os, connected_at")
+          .eq("session_id", sessionId)
+          .eq("role", "insured")
+          .neq("ip_address", ipAddress)
+          .order("connected_at", { ascending: false })
+          .limit(5);
+
+        if (prevLogs && prevLogs.length > 0) {
+          // Hay accesos desde IPs diferentes — registrar evento
+          await supabase.from("webrtc_events").insert({
+            session_id: sessionId,
+            claim_id: session?.claim_id || null,
+            role: "insured",
+            event_type: "duplicate_access",
+            details: {
+              currentIp: ipAddress,
+              currentCity: geoData.city,
+              currentCountry: geoData.country,
+              previousAccess: prevLogs.map((l) => ({
+                ip: l.ip_address,
+                city: l.city,
+                country: l.country,
+                device: l.device_type,
+                browser: l.browser,
+                os: l.os,
+                at: l.connected_at,
+              })),
+            },
+            ip_address: ipAddress,
+            user_agent: userAgent,
+          });
+        }
+      } catch {
+        // Silencioso: no afecta el flujo principal
+      }
+    }
 
     if (error) throw new Error(error.message);
     return NextResponse.json({ id: data.id });

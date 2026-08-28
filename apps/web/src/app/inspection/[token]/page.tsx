@@ -14,6 +14,7 @@ import {
 import { useClaimsAppPresence } from "@/hooks/use-claims-app-presence";
 import { convertHeicToJpeg } from "@/lib/heic-convert";
 import { logConnectionEvent, type ConnectionLogEntry } from "@/services/connection-logs";
+import { logWebrtcEvent } from "@/services/webrtc-events";
 import { logInspectionEvent } from "@/services/inspection-events";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { getUserTimeZone } from "@/lib/timezone";
@@ -691,6 +692,15 @@ export default function MagicLinkPage() {
                       }
                     }}
                     onScreenshotSaved={() => refetch()}
+                    onWebrtcEvent={(eventType, details) => {
+                      logWebrtcEvent({
+                        sessionId: session.id,
+                        role: "insured",
+                        eventType,
+                        details,
+                        magicLinkToken: token,
+                      });
+                    }}
                   />
                 </div>
               )}

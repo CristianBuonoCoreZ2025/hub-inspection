@@ -39,6 +39,8 @@ interface LiveVideoCallProps {
   onKicked?: (reason: string) => void;
   onPeersUpdate?: (peers: ConnectedPeer[]) => void;
   onMediaPermission?: (result: { camera: "granted" | "denied" | "error"; microphone: "granted" | "denied" | "error" }) => void;
+  /** Logear eventos de WebRTC para trazabilidad (peer_join, peer_leave, ice_restart, etc.) */
+  onWebrtcEvent?: (eventType: string, details?: Record<string, unknown>) => void;
 }
 
 interface SavedEvidence {
@@ -107,6 +109,7 @@ export function LiveVideoCall({
   onKicked,
   onPeersUpdate,
   onMediaPermission,
+  onWebrtcEvent,
 }: LiveVideoCallProps) {
   const localVideoRef = React.useRef<HTMLVideoElement>(null);
   const remoteVideoRef = React.useRef<HTMLVideoElement>(null);
@@ -163,6 +166,15 @@ export function LiveVideoCall({
   React.useEffect(() => {
     onPeersUpdateRef.current = onPeersUpdate;
   }, [onPeersUpdate]);
+
+  // Ref estable para logear eventos WebRTC
+  const onWebrtcEventRef = React.useRef(onWebrtcEvent);
+  React.useEffect(() => {
+    onWebrtcEventRef.current = onWebrtcEvent;
+  }, [onWebrtcEvent]);
+  const logWebrtcEvent = React.useCallback((eventType: string, details?: Record<string, unknown>) => {
+    onWebrtcEventRef.current?.(eventType, details);
+  }, []);
 
   // Ordenamos siempre audio primero, video después, para mantener m-lines consistentes
   const getOrderedLocalTracks = () => {
@@ -340,6 +352,7 @@ export function LiveVideoCall({
         const delay = Math.min(2000 * Math.pow(2, restartCount), 16000);
         console.warn(`[LiveVideoCall] ICE failed — restart en ${delay}ms (intento ${restartCount + 1}/3)`);
         iceRestartCountRef.current = restartCount + 1;
+        logWebrtcEvent("ice_restart", { attempt: restartCount + 1, delay, iceState: pc.iceConnectionState });
         // Limpiar timer anterior si existe
         if (iceRestartTimerRef.current) clearTimeout(iceRestartTimerRef.current);
         iceRestartTimerRef.current = setTimeout(() => {
@@ -373,7 +386,7 @@ export function LiveVideoCall({
     };
 
     return pc;
-  }, [userId, role]);
+  }, [userId, role, logWebrtcEvent]);
 
   // ── Manejar mensaje de signaling ──
   const handleSignalingMessage = React.useCallback(
@@ -433,6 +446,7 @@ export function LiveVideoCall({
               if (!rejectedPeersRef.current.has(msg.from)) {
                 rejectedPeersRef.current.add(msg.from);
                 onPeerRejected?.();
+                logWebrtcEvent("peer_rejected", { peerId: msg.from, peerRole: msg.role, reason: "busy" });
               }
               return;
             }
@@ -443,6 +457,7 @@ export function LiveVideoCall({
           if (msg.role !== role && !peerJoinedNotifiedRef.current) {
             peerJoinedNotifiedRef.current = true;
             onPeerJoined?.();
+            logWebrtcEvent("peer_join", { peerId: msg.from, peerRole: msg.role });
           }
           // El inspector (impolite) inicia la oferta cuando el cliente se une
           if (role === "inspector" && localStreamRef.current) {
@@ -469,6 +484,7 @@ export function LiveVideoCall({
               if (!rejectedPeersRef.current.has(msg.from)) {
                 rejectedPeersRef.current.add(msg.from);
                 onPeerRejected?.();
+                logWebrtcEvent("peer_rejected", { peerId: msg.from, peerRole: msg.role, reason: "busy" });
               }
               return;
             }
@@ -479,6 +495,7 @@ export function LiveVideoCall({
           if (msg.role !== role && !peerJoinedNotifiedRef.current) {
             peerJoinedNotifiedRef.current = true;
             onPeerJoined?.();
+            logWebrtcEvent("peer_join", { peerId: msg.from, peerRole: msg.role });
           }
           const offerCollision = makingOfferRef.current;
           ignoreOfferRef.current = !politeRef.current && offerCollision;
@@ -590,6 +607,7 @@ export function LiveVideoCall({
               return;
             }
           }
+          logWebrtcEvent("peer_leave", { peerId: msg.from, peerRole: msg.role, reason: "hangup" });
           setPeerJoined(false);
           setState("disconnected");
           // Limpiar stream remoto
@@ -614,7 +632,7 @@ export function LiveVideoCall({
         console.error("[LiveVideoCall] Error procesando signaling:", msg.type, err);
       }
     },
-    [role, userId, onPeerJoined, onPeerRejected, onKicked, onScreenshotSaved],
+    [role, userId, onPeerJoined, onPeerRejected, onKicked, onScreenshotSaved, logWebrtcEvent],
   );
 
   // Función helper para aplicar límite de bitrate a todos los video senders
@@ -955,10 +973,11 @@ export function LiveVideoCall({
     } catch {
       setError("No se pudo cambiar la cámara. El dispositivo puede no tener otra cámara disponible.");
     }
-  }, []);
+  }, [role]);
 
   // ── Colgar ──
   const handleHangup = () => {
+    logWebrtcEvent("call_end", { reason: "hangup" });
     if (channelRef.current && !hangupSentRef.current) {
       channelRef.current.send({ type: "hangup", from: userId, role });
       hangupSentRef.current = true;
@@ -969,6 +988,7 @@ export function LiveVideoCall({
   // ── Forzar desconexión de un peer (solo inspector) ──
   const kickPeer = (targetUserId: string, reason?: string) => {
     if (role !== "inspector" || !channelRef.current) return;
+    logWebrtcEvent("kick", { target: targetUserId, reason });
     channelRef.current.send({
       type: "kick",
       from: userId,

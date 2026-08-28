@@ -37,6 +37,7 @@ import {
   Ban,
   Clock,
   Download,
+  Activity,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -58,6 +59,7 @@ import {
 import type { InspectionSession } from "@/types";
 import * as XLSX from "xlsx";
 import { useConfirm } from "@/hooks/use-confirm";
+import MonitoringPanel from "./[id]/monitoring-panel";
 
 const sessionStatusLabels: Record<string, string> = {
   scheduled: "Agendada",
@@ -86,6 +88,7 @@ function InspectionsPageContent() {
   const [inspectorFilter, setInspectorFilter] = useState<string[]>([]);
   const [internalNumberFilter, setInternalNumberFilter] = useState("");
   const [logSessionId, setLogSessionId] = useState<string | null>(null);
+  const [monitoringSessionId, setMonitoringSessionId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [sortKey, setSortKey] = useState<string | null>(null);
@@ -590,6 +593,21 @@ function InspectionsPageContent() {
                             <Button
                               variant="ghost"
                               size="icon"
+                              className="btn-icon-sm text-sky-600 hover:text-sky-700"
+                              onClick={() => setMonitoringSessionId(session.id)}
+                            >
+                              <Activity className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            <p>Monitoreo de conexión</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger className="inline-flex">
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               className="btn-icon-sm"
                               disabled={!canOpenSession(session)}
                               onClick={() => canOpenSession(session) && router.push(`/dashboard/inspecciones/${session.id}`)}
@@ -728,6 +746,19 @@ function InspectionsPageContent() {
                 )}
               </div>
             </div>
+          </DialogContent>
+        </Dialog>
+        <Dialog open={!!monitoringSessionId} onOpenChange={(open) => !open && setMonitoringSessionId(null)}>
+          <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto" showCloseButton>
+            <div className="modal-header">
+              <DialogTitle className="modal-title">
+                <span className="modal-title-icon">
+                  <Activity className="h-4 w-4" />
+                </span>
+                Monitoreo de conexión
+              </DialogTitle>
+            </div>
+            {monitoringSessionId && <MonitoringPanel sessionId={monitoringSessionId} />}
           </DialogContent>
         </Dialog>
       </div>

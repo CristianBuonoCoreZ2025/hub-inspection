@@ -98,6 +98,7 @@ import ConnectionLogsTab from "./connection-logs-tab";
 import EventLogsTab from "./event-logs-tab";
 import { LiveVideoCall } from "@/components/inspection/live-video-call";
 import { logConnectionEvent } from "@/services/connection-logs";
+import { logWebrtcEvent } from "@/services/webrtc-events";
 
 // Fix iconos de Leaflet en Next.js (CDN)
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
@@ -1583,6 +1584,14 @@ enabled: activeTab === "informe",
  queryClient.invalidateQueries({ queryKey: ["inspection-session", session.id] });
  if (session.magic_link_token) queryClient.invalidateQueries({ queryKey: ["magic-link-live", session.magic_link_token] });
  showAlert({ title: "Grabación guardada", description: "La grabación de sesión se guardó como evidencia.", type: "info" });
+ }}
+ onWebrtcEvent={(eventType, details) => {
+ logWebrtcEvent({
+ sessionId: session.id,
+ role: "adjuster",
+ eventType,
+ details,
+ });
  }}
  />
  </div>
