@@ -765,7 +765,7 @@ function InspectionsPageContent() {
           </DialogContent>
         </Dialog>
         <Dialog open={!!monitoringSessionId} onOpenChange={(open) => !open && setMonitoringSessionId(null)}>
-          <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto" showCloseButton>
+          <DialogContent className="sm:max-w-3xl p-1 pb-2 rounded-lg" showCloseButton>
             <div className="modal-header">
               <DialogTitle className="modal-title">
                 <span className="modal-title-icon">

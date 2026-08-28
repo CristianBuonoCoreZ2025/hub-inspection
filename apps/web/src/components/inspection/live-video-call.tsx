@@ -9,6 +9,7 @@ import {
   PhoneOff,
   Camera,
   SwitchCamera,
+  Repeat,
   Loader2,
   Wifi,
   WifiOff,
@@ -176,6 +177,9 @@ export function LiveVideoCall({
     onWebrtcEventRef.current?.(eventType, details);
   }, []);
 
+  // Ref estable para switchCamera (usado por el handler de signaling cuando el inspector lo pide)
+  const switchCameraRef = React.useRef<() => void>(() => {});
+
   // Ordenamos siempre audio primero, video después, para mantener m-lines consistentes
   const getOrderedLocalTracks = () => {
     const s = localStreamRef.current;
@@ -216,6 +220,14 @@ export function LiveVideoCall({
         microphonePerm = "denied";
       }
 
+      // Logear el error de media para trazabilidad
+      logWebrtcEvent("media_error", {
+        error: domErr?.name || "Unknown",
+        message: raw,
+        cameraPerm,
+        microphonePerm,
+      });
+
       // Fallback a audio solo — no pedir video para no bloquear la cámara
       // del asegurado si están en el mismo equipo
       try {
@@ -246,7 +258,7 @@ export function LiveVideoCall({
     }
 
     return stream;
-  }, [onMediaPermission, role]);
+  }, [onMediaPermission, role, logWebrtcEvent]);
 
   // ── Crear peer connection ──
   const createPeerConnection = React.useCallback(async () => {
@@ -627,6 +639,11 @@ export function LiveVideoCall({
         } else if (msg.type === "screenshot") {
           // El otro par capturó una foto — refrescar para mostrarla en tiempo real
           if (msg.from !== userId) onScreenshotSaved?.();
+        } else if (msg.type === "switch_camera") {
+          // El inspector pide al asegurado que voltee su cámara
+          if (msg.from !== userId && msg.role === "inspector") {
+            switchCameraRef.current();
+          }
         }
       } catch (err) {
         console.error("[LiveVideoCall] Error procesando signaling:", msg.type, err);
@@ -937,6 +954,7 @@ export function LiveVideoCall({
     const videoTrack = stream.getVideoTracks()[0];
     if (!videoTrack) {
       setError("No hay cámara activa para cambiar.");
+      logWebrtcEvent("camera_switch_error", { reason: "no_video_track" });
       return;
     }
 
@@ -970,10 +988,22 @@ export function LiveVideoCall({
 
       facingModeRef.current = nextFacing;
       setFacingMode(nextFacing);
-    } catch {
+      logWebrtcEvent("camera_switch", { from: facingModeRef.current === "user" ? "environment" : "user", to: nextFacing });
+    } catch (err) {
+      const domErr = err instanceof DOMException ? err : null;
       setError("No se pudo cambiar la cámara. El dispositivo puede no tener otra cámara disponible.");
+      logWebrtcEvent("camera_switch_error", {
+        reason: domErr?.name || "unknown",
+        message: err instanceof Error ? err.message : "",
+        attemptedFacing: nextFacing,
+      });
     }
-  }, [role]);
+  }, [role, logWebrtcEvent]);
+
+  // Mantener la ref de switchCamera actualizada para que el handler de signaling la pueda llamar
+  React.useEffect(() => {
+    switchCameraRef.current = switchCamera;
+  }, [switchCamera]);
 
   // ── Colgar ──
   const handleHangup = () => {
@@ -1601,6 +1631,26 @@ export function LiveVideoCall({
             </TooltipTrigger>
             <TooltipContent side="top">
               <p>{recording ? "Detener grabación" : peerJoined ? "Grabar video en vivo" : "Grabar cámara local"}</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+
+        {role === "inspector" && peerJoined && (
+          <Tooltip>
+            <TooltipTrigger className="inline-flex">
+              <button
+                type="button"
+                onClick={() => {
+                  channelRef.current?.send({ type: "switch_camera", from: userId, role });
+                  logWebrtcEvent("camera_switch_remote", { targetRole: "client" });
+                }}
+                className={`${ctrlBtn} rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors`}
+              >
+                <Repeat className={ctrlIcon} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p>Voltear cámara del asegurado</p>
             </TooltipContent>
           </Tooltip>
         )}

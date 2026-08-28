@@ -339,16 +339,26 @@ export function GeoCapture({
         })();
       },
       (err) => {
-        setError(
-          err.code === 1
-            ? "Permiso de geolocalización denegado. Debes permitir el acceso a tu ubicación."
-            : err.code === 2
-              ? "No se pudo obtener tu ubicación. Verifica tu GPS o conexión."
-              : err.code === 3
-                ? "Tiempo de espera agotado al obtener ubicación."
-                : "Error al obtener geolocalización.",
-        );
+        const geoErrors: Record<number, string> = {
+          1: "Permiso de geolocalización denegado. Debes permitir el acceso a tu ubicación.",
+          2: "No se pudo obtener tu ubicación. Verifica tu GPS o conexión.",
+          3: "Tiempo de espera agotado al obtener ubicación.",
+        };
+        setError(geoErrors[err.code] || "Error al obtener geolocalización.");
         setLoading(false);
+        // Logear error de geolocalización para trazabilidad
+        if (sessionId) {
+          fetch("/api/inspection/webrtc-event", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sessionId,
+              eventType: "geo_error",
+              role: inspectionType === "onsite" ? "inspector" : "insured",
+              details: { code: err.code, message: geoErrors[err.code] || err.message },
+            }),
+          }).catch(() => {});
+        }
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     );

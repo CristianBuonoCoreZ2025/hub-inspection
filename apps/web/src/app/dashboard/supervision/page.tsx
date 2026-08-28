@@ -11,14 +11,11 @@ import { SupervisorLiveView } from "@/components/inspection/supervisor-live-view
 import {
   Eye,
   Video,
-  VideoOff,
   Unlock,
   Loader2,
   Radio,
   MapPin,
   User,
-  UserCheck,
-  UserX,
   Clock,
   Camera,
   ShieldCheck,
@@ -27,8 +24,7 @@ import {
   Search,
   Lock,
   HardHat,
-  Wifi,
-  WifiOff,
+  Activity,
 } from "lucide-react";
 import { useFlash } from "@/components/ui/alert-context";
 import {
@@ -40,6 +36,9 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import MonitoringPanel from "../inspecciones/[id]/monitoring-panel";
+import { getSessionsWithMonitoringData } from "@/services/connection-logs";
 
 const TAB_LABELS: Record<string, string> = {
   resumen: "Resumen",
@@ -112,6 +111,7 @@ export default function SupervisionPage() {
   const queryClient = useQueryClient();
   const flash = useFlash();
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [monitoringSessionId, setMonitoringSessionId] = useState<string | null>(null);
   const [inspectionType, setInspectionType] = useState<"remote" | "onsite" | "all">("all");
   const [search, setSearch] = useState("");
   const [inspectorFilter, setInspectorFilter] = useState<string[]>([]);
@@ -148,6 +148,15 @@ export default function SupervisionPage() {
     [sessions],
   );
   const presence = useSessionsPresence(selectedSessionId ? [] : sessionIds);
+
+  // Fetchear qué sesiones tienen datos de monitoreo
+  const { data: sessionsWithMonitoring } = useQuery<Set<string>>({
+    queryKey: ["monitoring-sessions", sessionIds],
+    queryFn: () => getSessionsWithMonitoringData(sessionIds),
+    enabled: sessionIds.length > 0,
+    staleTime: 30_000,
+    gcTime: 60_000,
+  });
 
   // Opciones de inspector construidas desde las sesiones cargadas (no query extra)
   const inspectorOptions = useMemo(() => {
@@ -425,6 +434,22 @@ export default function SupervisionPage() {
 
                   {/* Controles */}
                   <div className="app-row-actions flex items-center gap-1.5 shrink-0 ml-auto">
+                    {sessionsWithMonitoring?.has(session.id) && (
+                      <Tooltip>
+                        <TooltipTrigger render={
+                          <button
+                            type="button"
+                            className="btn-icon-sm text-sky-600 hover:text-sky-700"
+                            onClick={(e) => { e.stopPropagation(); setMonitoringSessionId(session.id); }}
+                          />
+                        }>
+                          <Activity className="h-4 w-4" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          <p>Monitoreo de conexión</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
                     {session.lock_overridden_by ? (
                       <>
                         <Tooltip>
@@ -481,6 +506,19 @@ export default function SupervisionPage() {
           })}
         </div>
       )}
+      <Dialog open={!!monitoringSessionId} onOpenChange={(open) => !open && setMonitoringSessionId(null)}>
+        <DialogContent className="sm:max-w-3xl p-1 pb-2 rounded-lg" showCloseButton>
+          <div className="modal-header">
+            <DialogTitle className="modal-title">
+              <span className="modal-title-icon">
+                <Activity className="h-4 w-4" />
+              </span>
+              Monitoreo de conexión
+            </DialogTitle>
+          </div>
+          {monitoringSessionId && <MonitoringPanel sessionId={monitoringSessionId} />}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

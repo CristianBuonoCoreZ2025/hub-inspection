@@ -21,6 +21,7 @@ import { createClient } from "@/lib/supabase/client";
  *   { type: "screenshot", from, role, blobUrl } // aviso al otro par
  *   { type: "busy",      from, role, reason }   // rechazo: ya hay una sesión en curso
  *   { type: "kick",      from, role, target, reason } // inspector/supervisor fuerza desconexión de un peer
+ *   { type: "switch_camera", from, role } // inspector pide al asegurado que voltee su cámara
  *   { type: "preview",   from, role, remoteThumb, localThumb } // inspector envía thumbnails al supervisor
  */
 
@@ -38,6 +39,7 @@ export type SignalingMessage =
   | { type: "screenshot"; from: string; role: SignalingRole; evidenceId: string; url: string }
   | { type: "busy"; from: string; role: SignalingRole; reason: string }
   | { type: "kick"; from: string; role: SignalingRole; target: string; reason: string }
+  | { type: "switch_camera"; from: string; role: SignalingRole }
   | {
       type: "preview";
       from: string;
