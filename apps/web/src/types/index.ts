@@ -793,6 +793,7 @@ export interface DamageSpace {
   name: string;
   description: string | null;
   is_active: boolean;
+  is_wildcard: boolean;
   applicable_classifications: string[] | null;
   created_at: string;
   updated_at: string;

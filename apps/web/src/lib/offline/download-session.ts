@@ -109,6 +109,7 @@ async function downloadCatalogs(): Promise<OfflineCatalogs> {
     damage_spaces: damageSpaces.map((d) => ({
       id: d.id,
       name: d.name,
+      is_wildcard: d.is_wildcard,
       applicable_classifications: d.applicable_classifications,
     })),
     content_good_types: contentGoodTypes.map((c) => ({

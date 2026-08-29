@@ -983,7 +983,32 @@ const canSaveDamage = isBuildingDamage ? buildingValid : isContentDamage ? conte
  items={filteredSpaces.map((s) => ({ value: s.id, label: s.name }))}
  onValueChange={(v) => {
  const space = effectiveSpaces.find((s) => s.id === v);
- setForm({ ...form, space_id: v || "", dependency: space?.name || "", sector: space?.name || "" });
+ // No precargar medidas si el espacio es comodín (ej: "Otro")
+ const isWildcard = space?.is_wildcard ?? false;
+ const existing = !isWildcard ? damages.find((d) => d.space_id === v && d.unit && (d.length != null || d.width != null || d.height != null || (d.quantity != null && d.quantity > 0))) : undefined;
+ if (existing) {
+   const unit = existing.unit || form.unit;
+   const length = existing.length ?? null;
+   const width = existing.width ?? null;
+   const height = existing.height ?? null;
+   const quantity = unit === "M2" || unit === "M3" || unit === "MT"
+     ? computeQuantity(unit, length, width, height)
+     : (existing.quantity ?? 0);
+   setForm({
+     ...form,
+     space_id: v || "",
+     dependency: space?.name || "",
+     sector: space?.name || "",
+     unit,
+     length,
+     width,
+     height,
+     quantity,
+   });
+   toast.info("Medidas totales precargadas desde registro anterior");
+ } else {
+   setForm({ ...form, space_id: v || "", dependency: space?.name || "", sector: space?.name || "" });
+ }
  }}
  >
  <SelectTrigger className="app-input w-full" disabled={!propertyClassification}>

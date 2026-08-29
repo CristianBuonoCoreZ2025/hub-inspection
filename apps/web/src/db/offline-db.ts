@@ -63,7 +63,7 @@ export interface OfflineCatalogs {
     created_at?: string;
     updated_at?: string;
   }[];
-  damage_spaces: { id: string; name: string; applicable_classifications: string[] | null }[];
+  damage_spaces: { id: string; name: string; is_wildcard: boolean; applicable_classifications: string[] | null }[];
   content_good_types: { id: string; name: string; requires_detail: boolean }[];
   content_good_products: { id: string; name: string; content_good_type_id: string }[];
   content_good_brands: { id: string; name: string }[];
