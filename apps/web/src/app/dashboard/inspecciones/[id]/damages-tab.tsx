@@ -985,7 +985,8 @@ const canSaveDamage = isBuildingDamage ? buildingValid : isContentDamage ? conte
  const space = effectiveSpaces.find((s) => s.id === v);
  // No precargar medidas si el espacio es comodín (ej: "Otro")
  const isWildcard = space?.is_wildcard ?? false;
- const existing = !isWildcard ? damages.find((d) => d.space_id === v && d.unit && (d.length != null || d.width != null || d.height != null || (d.quantity != null && d.quantity > 0))) : undefined;
+ const candidates = !isWildcard ? damages.filter((d) => d.space_id === v && d.unit && (d.length != null || d.width != null || d.height != null || (d.quantity != null && d.quantity > 0))) : [];
+ const existing = candidates.length > 0 ? candidates.reduce((latest, d) => (d.created_at > latest.created_at ? d : latest)) : undefined;
  if (existing) {
    const unit = existing.unit || form.unit;
    const length = existing.length ?? null;
