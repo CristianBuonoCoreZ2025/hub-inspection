@@ -52,6 +52,7 @@ import {
   LayersArrowUp,
   Import,
   Smartphone,
+  Receipt,
   type LucideIcon,
 } from "lucide-react";
 
@@ -174,6 +175,7 @@ export const operationLinks: NavLink[] = [
   { href: "/dashboard/operaciones/reabrir-inspecciones", label: "Reabrir Inspecciones", icon: LockOpen },
   { href: "/dashboard/operaciones/reasignar-inspecciones", label: "Reasignar Inspecciones", icon: Users },
   { href: "/dashboard/operaciones/liberar-offline", label: "Liberar Offline", icon: Smartphone },
+  { href: "/dashboard/operaciones/facturacion", label: "Facturación", icon: Receipt },
 ];
 
 // ── Administración ──
