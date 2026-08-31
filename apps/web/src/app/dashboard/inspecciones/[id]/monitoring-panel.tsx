@@ -18,6 +18,10 @@ import {
   Ban,
   PhoneOff,
   Video,
+  ChevronDown,
+  Shield,
+  ShieldAlert,
+  ShieldX,
 } from "lucide-react";
 import { getConnectionLogs, type ConnectionLog } from "@/services/connection-logs";
 import { getWebrtcEvents, type WebrtcEvent } from "@/services/webrtc-events";
@@ -119,6 +123,7 @@ function EventIcon({ eventType }: { eventType: string }) {
 
 export default function MonitoringPanel({ sessionId }: MonitoringPanelProps) {
   const [showHistory, setShowHistory] = useState(true);
+  const [showAllAlerts, setShowAllAlerts] = useState(false);
 
   const { data: logs = [], isLoading: logsLoading, refetch: refetchLogs, isFetching: logsFetching } = useQuery<ConnectionLog[]>({
     queryKey: ["connection-logs", sessionId],
@@ -163,6 +168,15 @@ export default function MonitoringPanel({ sessionId }: MonitoringPanelProps) {
     if (mediaErrors.length > 0) list.push({ type: "media_error", message: `${mediaErrors.length} error(es) de cámara/micrófono`, severity: "medium" });
     return list;
   }, [insuredIps, insuredDevices, events]);
+
+  const alertSummary = useMemo(() => {
+    const high = alerts.filter(a => a.severity === "high").length;
+    const medium = alerts.filter(a => a.severity === "medium").length;
+    const low = alerts.filter(a => a.severity === "low").length;
+    return { high, medium, low, total: alerts.length };
+  }, [alerts]);
+
+  const visibleAlerts = showAllAlerts ? alerts : alerts.slice(0, 3);
 
   const timeline = useMemo(() => {
     const items: { timestamp: string; type: "log" | "event"; data: ConnectionLog | WebrtcEvent }[] = [
@@ -238,103 +252,144 @@ export default function MonitoringPanel({ sessionId }: MonitoringPanelProps) {
   };
 
   return (
-    <div className="space-y-2">
-      {alerts.length > 0 && (
-        <div className="space-y-1.5">
-          {alerts.map((alert, i) => (
-            <div
-              key={i}
-              className={`flex items-start gap-1.5 p-2 rounded-md border ${
-                alert.severity === "high"
-                  ? "border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/30"
-                  : alert.severity === "medium"
-                  ? "border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30"
-                  : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50"
-              }`}
-            >
-              <AlertTriangle className={`h-3 w-3 shrink-0 mt-0.5 ${alert.severity === "high" ? "text-rose-500" : "text-amber-500"}`} />
-              <p className="text-[10px] text-slate-700 dark:text-slate-300">{alert.message}</p>
+    <div className="flex flex-col max-h-[calc(85vh-3rem)]">
+      <div className="flex-1 overflow-y-auto space-y-2 pr-1 pb-2">
+        {alerts.length > 0 && (
+          <div className="app-panel p-2 rounded-md">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="h-3.5 w-3.5 text-rose-500" />
+                <h4 className="text-[11px] font-medium">Resumen de alertas</h4>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {alertSummary.high > 0 && (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
+                    <ShieldX className="h-3 w-3" />
+                    {alertSummary.high}
+                  </span>
+                )}
+                {alertSummary.medium > 0 && (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+                    <Shield className="h-3 w-3" />
+                    {alertSummary.medium}
+                  </span>
+                )}
+                {alertSummary.low > 0 && (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                    {alertSummary.low}
+                  </span>
+                )}
+              </div>
             </div>
-          ))}
-        </div>
-      )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
-        <div className="app-panel px-2 py-2 rounded-md flex items-center justify-between h-9">
-          <p className="text-[10px] text-slate-500">Conexiones</p>
-          <p className="text-sm font-semibold">{logs.length}</p>
-        </div>
-        <div className="app-panel px-2 py-2 rounded-md flex items-center justify-between h-9">
-          <p className="text-[10px] text-slate-500">WebRTC</p>
-          <p className="text-sm font-semibold">{events.length}</p>
-        </div>
-        <div className="app-panel px-2 py-2 rounded-md flex items-center justify-between h-9">
-          <p className="text-[10px] text-slate-500">IPs</p>
-          <p className={`text-sm font-semibold ${insuredIps.length > 1 ? "text-rose-500" : ""}`}>{insuredIps.length}</p>
-        </div>
-        <div className="app-panel px-2 py-2 rounded-md flex items-center justify-between h-9">
-          <p className="text-[10px] text-slate-500">Dispositivos</p>
-          <p className={`text-sm font-semibold ${insuredDevices.length > 1 ? "text-amber-500" : ""}`}>{insuredDevices.length}</p>
-        </div>
-      </div>
-
-      <div className="app-panel p-1 pb-2 rounded-md">
-        <h4 className="text-[11px] font-medium mb-1 flex items-center gap-2">
-          <MapPin className="h-3.5 w-3.5 text-slate-400" />
-          Accesos del asegurado
-        </h4>
-        <table className="w-full border-collapse table-fixed">
-          <thead>{headRow}</thead>
-        </table>
-        <div className="max-h-40 overflow-y-auto pr-1">
-          <table className="w-full border-collapse table-fixed">
-            <tbody>
-              {insuredLogs.slice(0, 10).sort((a, b) => new Date(b.connected_at).getTime() - new Date(a.connected_at).getTime()).map(renderLogRow)}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="app-panel p-0 overflow-hidden rounded-md">
-        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-700">
-          <button
-            onClick={() => setShowHistory((v) => !v)}
-            className="text-[11px] font-medium flex items-center gap-2"
-          >
-            <Activity className="h-3.5 w-3.5 text-sky-500" />
-            Timeline de eventos
-            <span className="text-[10px] text-slate-400">({timeline.length})</span>
-          </button>
-          <button
-            onClick={refetchAll}
-            className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
-          >
-            <RefreshCw className={`h-3 w-3 ${isFetching ? "animate-spin" : ""}`} />
-            Actualizar
-          </button>
-        </div>
-        {showHistory && (
-          <div className="p-1 pb-2">
-            {logsLoading && eventsLoading ? (
-              <p className="text-xs text-slate-500">Cargando...</p>
-            ) : timeline.length === 0 ? (
-              <p className="text-xs text-slate-500">No hay eventos registrados.</p>
-            ) : (
-              <>
-                <table className="w-full border-collapse table-fixed">
-                  <thead>{headRow}</thead>
-                </table>
-                <div className="max-h-64 overflow-y-auto pr-1">
-                  <table className="w-full border-collapse table-fixed">
-                    <tbody>
-                      {timeline.slice(0, 100).map((item, i) => item.type === "event" ? renderEventRow(item.data as WebrtcEvent, i) : renderLogRow(item.data as ConnectionLog))}
-                    </tbody>
-                  </table>
+            <div className="space-y-1">
+              {visibleAlerts.map((alert, i) => (
+                <div
+                  key={i}
+                  className={`flex items-start gap-1.5 p-1.5 rounded border ${
+                    alert.severity === "high"
+                      ? "border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/30"
+                      : alert.severity === "medium"
+                      ? "border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30"
+                      : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50"
+                  }`}
+                >
+                  <AlertTriangle className={`h-3 w-3 shrink-0 mt-0.5 ${alert.severity === "high" ? "text-rose-500" : "text-amber-500"}`} />
+                  <p className="text-[10px] leading-tight text-slate-700 dark:text-slate-300">{alert.message}</p>
                 </div>
-              </>
+              ))}
+            </div>
+
+            {alerts.length > 3 && (
+              <button
+                onClick={() => setShowAllAlerts(v => !v)}
+                className="mt-2 w-full flex items-center justify-center gap-1 text-[10px] text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 py-1"
+              >
+                {showAllAlerts ? "Ver menos" : `Ver ${alerts.length - 3} más`}
+                <ChevronDown className={`h-3 w-3 transition-transform ${showAllAlerts ? "rotate-180" : ""}`} />
+              </button>
             )}
           </div>
         )}
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
+          <div className="app-panel px-2 py-2 rounded-md flex items-center justify-between h-9">
+            <p className="text-[10px] text-slate-500">Conexiones</p>
+            <p className="text-sm font-semibold">{logs.length}</p>
+          </div>
+          <div className="app-panel px-2 py-2 rounded-md flex items-center justify-between h-9">
+            <p className="text-[10px] text-slate-500">WebRTC</p>
+            <p className="text-sm font-semibold">{events.length}</p>
+          </div>
+          <div className="app-panel px-2 py-2 rounded-md flex items-center justify-between h-9">
+            <p className="text-[10px] text-slate-500">IPs</p>
+            <p className={`text-sm font-semibold ${insuredIps.length > 1 ? "text-rose-500" : ""}`}>{insuredIps.length}</p>
+          </div>
+          <div className="app-panel px-2 py-2 rounded-md flex items-center justify-between h-9">
+            <p className="text-[10px] text-slate-500">Dispositivos</p>
+            <p className={`text-sm font-semibold ${insuredDevices.length > 1 ? "text-amber-500" : ""}`}>{insuredDevices.length}</p>
+          </div>
+        </div>
+
+        <div className="app-panel p-2 rounded-md">
+          <h4 className="text-[11px] font-medium mb-1.5 flex items-center gap-2">
+            <MapPin className="h-3.5 w-3.5 text-slate-400" />
+            Accesos del asegurado
+            <span className="text-[10px] text-slate-400">({insuredLogs.length})</span>
+          </h4>
+          <table className="w-full border-collapse table-fixed">
+            <thead>{headRow}</thead>
+          </table>
+          <div className="max-h-40 overflow-y-auto pr-1">
+            <table className="w-full border-collapse table-fixed">
+              <tbody>
+                {insuredLogs.slice(0, 20).sort((a, b) => new Date(b.connected_at).getTime() - new Date(a.connected_at).getTime()).map(renderLogRow)}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="app-panel p-0 overflow-hidden rounded-md">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-700">
+            <button
+              onClick={() => setShowHistory((v) => !v)}
+              className="text-[11px] font-medium flex items-center gap-2"
+            >
+              <Activity className="h-3.5 w-3.5 text-sky-500" />
+              Timeline de eventos
+              <span className="text-[10px] text-slate-400">({timeline.length})</span>
+            </button>
+            <button
+              onClick={refetchAll}
+              className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+            >
+              <RefreshCw className={`h-3 w-3 ${isFetching ? "animate-spin" : ""}`} />
+              Actualizar
+            </button>
+          </div>
+          {showHistory && (
+            <div className="p-2 pb-2">
+              {logsLoading && eventsLoading ? (
+                <p className="text-xs text-slate-500">Cargando...</p>
+              ) : timeline.length === 0 ? (
+                <p className="text-xs text-slate-500">No hay eventos registrados.</p>
+              ) : (
+                <>
+                  <table className="w-full border-collapse table-fixed">
+                    <thead>{headRow}</thead>
+                  </table>
+                  <div className="max-h-64 overflow-y-auto pr-1">
+                    <table className="w-full border-collapse table-fixed">
+                      <tbody>
+                        {timeline.slice(0, 100).map((item, i) => item.type === "event" ? renderEventRow(item.data as WebrtcEvent, i) : renderLogRow(item.data as ConnectionLog))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
