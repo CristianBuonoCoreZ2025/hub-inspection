@@ -1,0 +1,120 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import { logger } from "@/lib/logger";
+
+/**
+ * API route auxiliar para el export de siniestros.
+ *
+ * POST /api/export-claims-aux
+ *   Body: { claimIds: string[] }  — máx 200 IDs por llamada
+ *   → Usa la service role key para evitar RLS
+ *   → Devuelve:
+ *       {
+ *         inspections: Record<claimId, { scheduled_at, started_at, ended_at, status, inspection_type }>,
+ *         coordinations: Record<claimId, issued_on>,
+ *         participants: Participant[]
+ *       }
+ *
+ * Las tablas inspection_sessions, claim_actions y claims_participants
+ * tienen RLS que bloquea la lectura desde el navegador con la anon key.
+ * Esta route usa la service role key para traer los datos en una sola
+ * llamada.
+ *
+ * El cliente debe llamar esta route en lotes de 200 IDs para evitar
+ * timeout de la serverless function.
+ */
+
+// Forzar runtime Node.js (no edge) para tener acceso a todas las APIs
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
+const CIN_TEMPLATE_IDS = [
+  "b2000002-0000-0000-0000-000000000001",
+  "b2000001-0000-0000-0000-000000000001",
+];
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const claimIds: string[] = Array.isArray(body?.claimIds) ? body.claimIds : [];
+
+    if (claimIds.length === 0) {
+      return NextResponse.json({ inspections: {}, coordinations: {}, participants: [] });
+    }
+
+    // Limitar a 200 IDs por llamada para evitar queries lentas
+    const ids = claimIds.slice(0, 200);
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !serviceKey) {
+      logger.error("[export-claims-aux] Faltan variables de entorno de Supabase");
+      return NextResponse.json({ error: "Server config error" }, { status: 500 });
+    }
+
+    const supabase = createClient(supabaseUrl, serviceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    // 3 queries en paralelo (máx 200 IDs cada una)
+    const [sessionsRes, cinRes, participantsRes] = await Promise.all([
+      supabase
+        .from("inspection_sessions")
+        .select("claim_id, scheduled_at, started_at, ended_at, status, inspection_type, created_at")
+        .in("claim_id", ids)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("claim_actions")
+        .select("claim_id, issued_on, action_template_id")
+        .in("claim_id", ids)
+        .in("action_template_id", CIN_TEMPLATE_IDS)
+        .not("issued_on", "is", null)
+        .order("issued_on", { ascending: false }),
+      // Participants con paginación: traer hasta 1000 filas (5 páginas de 200)
+      supabase
+        .from("claims_participants")
+        .select("id, claim_id, type, full_name, first_name, last_name, rut, email, phone, cell_phone, address, country, region, city, commune")
+        .in("claim_id", ids)
+        .range(0, 999),
+    ]);
+
+    // Procesar inspection_sessions — la más reciente por claim
+    const inspections: Record<string, { scheduled_at: string | null; started_at: string | null; ended_at: string | null; status: string; inspection_type: string }> = {};
+    if (sessionsRes.error) {
+      logger.error(`[export-claims-aux] Error inspection_sessions: ${sessionsRes.error.message}`);
+    } else if (sessionsRes.data) {
+      for (const s of sessionsRes.data) {
+        if (!inspections[s.claim_id]) {
+          inspections[s.claim_id] = {
+            scheduled_at: s.scheduled_at,
+            started_at: s.started_at,
+            ended_at: s.ended_at,
+            status: s.status,
+            inspection_type: s.inspection_type,
+          };
+        }
+      }
+    }
+
+    // Procesar CIN actions — la más reciente emitida por claim
+    const coordinations: Record<string, string> = {};
+    if (cinRes.error) {
+      logger.error(`[export-claims-aux] Error CIN: ${cinRes.error.message}`);
+    } else if (cinRes.data) {
+      for (const a of cinRes.data) {
+        if (!coordinations[a.claim_id]) {
+          coordinations[a.claim_id] = a.issued_on;
+        }
+      }
+    }
+
+    // Participants — devolver array plano
+    const participants = participantsRes.error ? [] : (participantsRes.data || []);
+
+    return NextResponse.json({ inspections, coordinations, participants });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.error(`[export-claims-aux] Error inesperado: ${msg}`);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}

@@ -1,0 +1,2156 @@
+import { fetchAll, fetchById, insertRow, updateRow, deleteRow, getSupabaseClient } from "@/lib/supabase/db";
+import { formatUserDateTime, getUserTimeZone, BUSINESS_TIME_ZONE } from "@/lib/timezone";
+import type {
+  InspectionSession, PropertyRisk, PropertyMateriality,
+  SecurityMeasures, InsuredStatement, ThirdParty, DamageSketch,
+  InspectionDamage, InspectionEvidence, InspectionSignature,
+} from "@/types";
+
+const SESSION_SELECT = "id, company_id, claim_id, claim_action_id, action_template_id, inspector_id, inspection_number, scheduled_at, started_at, ended_at, magic_link_token, magic_link_expires_at, magic_link_extended, status, substate, inspection_type, inspection_date, inspection_time, interviewed_name, interviewed_email, interviewed_relationship, police_report_number, police_report_name, police_report_rut, firefighters_company, other_insurances, other_insurance_company, inspector_observations, cancellation_reason_id, cancellation_notes, cancelled_at, cancelled_by, active_tab, acta_step, property_risk, property_materiality, security_measures, insured_statement, third_parties, geo_latitude, geo_longitude, geo_captured_at, geo_captured_by, geo_distance_meters, geo_status, geo_map_url, geo_recapture_enabled, signature_waiver_reason, signature_captured_at, started_from_mobile, lock_overridden_by, lock_overridden_at, reopened_at, reopened_by, reopened_reason, offline_downloaded_at, offline_downloaded_by, offline_synced_at, created_at, updated_at";
+
+// ═══════════════════════════════════════════════════════════════
+// SESSIONS
+// ═══════════════════════════════════════════════════════════════
+
+export interface SessionClaim {
+  claim_number?: string;
+  policy_number?: string;
+  claim_date?: string;
+  report_date?: string | null;
+  assignment_date?: string | null;
+  client_reference?: string;
+  claim_address?: string;
+  claim_latitude?: number | null;
+  claim_longitude?: number | null;
+  liquidation_number?: string;
+  company_id?: string;
+  inspector_id?: string;
+  assigned_adjuster_id?: string;
+  broker_executive?: string;
+  adjuster_id?: string;
+  auditor_id?: string;
+  dispatcher_id?: string;
+  assistant_id?: string;
+  insurance_company_id?: string;
+  broker_id?: string;
+  advisor_id?: string;
+  country_id?: string;
+  claim_cause_id?: string;
+  commune_id?: string;
+  claims_participants?: { type: string; full_name?: string; first_name?: string; last_name?: string; email?: string; phone?: string; cell_phone?: string; rut?: string; address?: string | null; person_type?: string | null; country?: string | null; region?: string | null; city?: string | null; commune?: string | null }[];
+  insurance_company?: { name: string } | null;
+  broker?: { name: string } | null;
+  advisor?: { name: string } | null;
+  claim_cause?: { name: string } | null;
+  commune?: { name: string } | null;
+  country?: { name: string } | null;
+  region?: { name: string } | null;
+  city?: { name: string } | null;
+  destination_housing?: { name: string } | null;
+  created_at?: string;
+}
+
+export type SessionWithRelations = InspectionSession & { created_at: string; claim_action?: { code: string | null } | null; action_template?: { code: string | null } | null; inspector?: { id: string; full_name: string | null; email: string | null } | null; claim?: SessionClaim; inspection_reports?: { report_url: string | null; status: string; generated_at: string }[] | null };
+
+// Los JOINs con claims_participants duplican filas de inspection_sessions.
+// Agrupamos por id y fusionamos los participantes para no perder datos.
+function dedupeSessions(sessions: SessionWithRelations[]): SessionWithRelations[] {
+  const seen = new Map<string, SessionWithRelations>();
+  for (const s of sessions) {
+    const existing = seen.get(s.id);
+    if (!existing) {
+      seen.set(s.id, s);
+      continue;
+    }
+    if (s.claim?.claims_participants?.length) {
+      if (!existing.claim) {
+        (existing as { claim: SessionClaim }).claim = s.claim;
+      } else if (!existing.claim.claims_participants) {
+        existing.claim.claims_participants = s.claim.claims_participants;
+      } else {
+        existing.claim.claims_participants.push(...s.claim.claims_participants);
+      }
+    }
+  }
+  return Array.from(seen.values());
+}
+
+interface LiveSession {
+  id: string;
+  claim_id: string;
+  status: string;
+  inspection_type: string;
+  scheduled_at: string;
+  started_at: string;
+  ended_at: string;
+  magic_link_token: string;
+  magic_link_expires_at: string;
+  created_at: string;
+  inspection_date: string;
+  inspection_time: string;
+  interviewed_name: string;
+  interviewed_email: string;
+  interviewed_relationship: string;
+  police_report_number: string;
+  police_report_name: string;
+  police_report_rut: string;
+  firefighters_company: string;
+  other_insurances: string;
+  other_insurance_company: string;
+  active_tab: string;
+  acta_step: string;
+  inspector_observations: string;
+  property_risk: PropertyRisk;
+  property_materiality: PropertyMateriality;
+  security_measures: SecurityMeasures;
+  insured_statement: InsuredStatement;
+  third_parties: ThirdParty[];
+  action_template?: { code: string } | null;
+  claim_action?: { code: string } | null;
+  inspection_evidences?: { id: string; url: string; type: string; description: string; category: string; damage_id: string | null; metadata: { originalName?: string; fileCode?: string; fileSize?: number; mimeType?: string; pdfSummary?: string; pdfPageCount?: number; source?: string; lat?: number; lng?: number; capturedBy?: string } | null; created_at: string }[];
+  inspection_notes?: { id: string; content: string; created_at: string }[];
+  inspection_checklists?: { id: string; area: string; item: string; status: string; notes: string; created_at: string }[];
+  inspection_damages?: { id: string; category: string; subcategory: string; description: string; observations: string; severity: string; dependency: string; sector: string; materiality_type: string; unit: string; quantity: string; damage_type: string; product: string; brand_model: string; purchase_date: string; estimated_amount: string; created_at: string }[];
+  inspection_chat_messages?: { id: string; content: string; sender_name: string; sender_role: string; created_at: string }[];
+  inspection_signatures?: { id: string; role: string; signature_url: string; signed_at: string }[];
+  damage_sketches?: { id: string; sketch_url: string; sketch_data: Record<string, unknown> | null; label: string; created_at: string }[];
+  claim?: SessionClaim;
+  inspection_number?: string;
+  geo_latitude: number | null;
+  geo_longitude: number | null;
+  geo_captured_at: string | null;
+  geo_captured_by: string | null;
+  geo_distance_meters: number | null;
+  geo_status: string | null;
+  geo_map_url: string | null;
+  geo_recapture_enabled: boolean;
+}
+
+export interface SessionDetail extends Omit<InspectionSession, 'inspection_evidences' | 'inspection_checklists' | 'inspection_damages' | 'inspection_signatures' | 'damage_sketches'> {
+  inspection_evidences?: InspectionEvidence[];
+  inspection_checklists?: { id: string; area: string; item: string; status: string }[];
+  inspection_damages?: InspectionDamage[];
+  inspection_signatures?: InspectionSignature[];
+  damage_sketches?: DamageSketch[];
+  inspection_chat_messages?: { id: string; content: string; sender_name: string; sender_role: string; created_at: string }[];
+  claim_action?: { id: string; code: string; action_status_id: string | null; action_data?: Record<string, unknown> | null; issuer_id: string | null; issued_on: string | null; issued_by: string | null } | null;
+  claim?: SessionClaim;
+  offlineInspector?: { full_name: string | null } | null;
+}
+
+export async function getInspectionSessions(claimId?: string) {
+  let sessions = await fetchAll<SessionWithRelations>("inspection_sessions", {
+    select: `${SESSION_SELECT}, claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, client_reference, claim_address, claim_latitude, claim_longitude, liquidation_number, inspector_id, assigned_adjuster_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name), insurance_company:insurance_companies!claims_insurance_company_id_fkey(name))`,
+    ...(claimId ? { eq: { claim_id: claimId } } : {}),
+    order: { column: "created_at", ascending: false },
+  });
+
+  sessions = dedupeSessions(sessions);
+
+  // Filtrar claims_participants client-side: solo insured, limit 1
+  for (const s of sessions) {
+    if (s.claim?.claims_participants) {
+      s.claim.claims_participants = s.claim.claims_participants.filter((p: { type: string }) => p.type === "insured").slice(0, 1);
+    }
+  }
+
+  // Usar el code del claim_action como inspection_number (estándar de gestiones)
+  for (const s of sessions) {
+    const ca = s as InspectionSession & { claim_action?: { code: string | null } | null; inspection_number: string };
+    if (ca.claim_action?.code) {
+      ca.inspection_number = ca.claim_action.code;
+    }
+  }
+
+  return sessions;
+}
+
+export async function getInspectionSessionsLight(
+  claimId?: string,
+  options?: {
+    page?: number;
+    pageSize?: number;
+    statusFilter?: string[];
+    inspectorFilter?: string[];
+    sortKey?: string | null;
+    sortDir?: "asc" | "desc";
+    q?: string;
+    internalNumber?: string;
+    inspectionType?: string;
+  }
+) {
+  const supabase = getSupabaseClient();
+
+  const hasPagination = options?.page !== undefined || options?.pageSize !== undefined;
+  const effectivePageSize = hasPagination
+    ? Math.max(1, Math.min(options?.pageSize ?? 50, 200))
+    : 200;
+  const effectivePage = hasPagination ? Math.max(1, options?.page ?? 1) : 1;
+
+  // Columnas que requieren RPC (PostgREST no puede ordenar parent por FK)
+  const fkSortColumns = new Set(["internal_number", "inspection", "client_reference", "address"]);
+  // Tambien requiere RPC cuando hay filtro por internalNumber (ilike con notacion de punto no funciona)
+  const useRpc = (options?.sortKey && fkSortColumns.has(options.sortKey)) || !!options?.internalNumber;
+
+  let orderedIds: string[] = [];
+  let totalCount: number | null = null;
+
+  if (useRpc) {
+    // Mapear sortKey a columna que la RPC entiende
+    const rpcSortMap: Record<string, string> = {
+      scheduled: "scheduled",
+      status: "status",
+      created_at: "created_at",
+      internal_number: "internal_number",
+      inspection: "inspection",
+      client_reference: "client_reference",
+      inspector: "inspector",
+      address: "address",
+    };
+    const rpcSortColumn = options?.sortKey ? (rpcSortMap[options.sortKey] || "created_at") : "created_at";
+    // 1. RPC: obtener IDs ordenados + total
+    const { data: rpcData, error: rpcError } = await supabase.rpc(
+      "get_inspection_sessions_ordered_v3",
+      {
+        p_page: effectivePage,
+        p_page_size: effectivePageSize,
+        p_status_filter: options?.statusFilter?.length ? options.statusFilter : null,
+        p_inspector_filter: options?.inspectorFilter?.length ? options.inspectorFilter : null,
+        p_internal_number: options?.internalNumber || null,
+        p_sort_column: rpcSortColumn,
+        p_sort_dir: options?.sortDir || "desc",
+      }
+    );
+    if (rpcError) throw new Error(rpcError.message);
+    const rpcRows = (rpcData as { id: string; total_count: number }[]) ?? [];
+    orderedIds = rpcRows.map((r) => r.id);
+    totalCount = rpcRows[0]?.total_count ?? 0;
+    if (orderedIds.length === 0) return [];
+  }
+
+  // 2. Query principal: traer datos completos
+  let query = supabase
+    .from("inspection_sessions")
+    .select(`${SESSION_SELECT}, created_at, inspector:profiles!inspection_sessions_inspector_id_fkey(id, full_name, email), claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, liquidation_number, client_reference, claim_address, company_id, inspector_id, assigned_adjuster_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name))`);
+
+  if (useRpc) {
+    // Traer solo los IDs que la RPC retorno, en el mismo orden
+    query = query.in("id", orderedIds);
+  } else {
+    // Sort directo (columnas nativas)
+    const directSortMap: Record<string, string> = {
+      scheduled: "scheduled_at",
+      status: "status",
+      created_at: "created_at",
+      inspector: "inspector_id",
+    };
+    const orderColumn = (options?.sortKey && directSortMap[options.sortKey]) ? directSortMap[options.sortKey] : "created_at";
+    const ascending = (options?.sortDir === "asc");
+    query = query.order(orderColumn, { ascending });
+
+    if (claimId) query = query.eq("claim_id", claimId);
+    if (options?.statusFilter?.length) query = query.in("status", options.statusFilter);
+    if (options?.inspectorFilter?.length) query = query.in("inspector_id", options.inspectorFilter);
+    if (options?.inspectionType) query = query.eq("inspection_type", options.inspectionType);
+    if (options?.internalNumber) {
+      const digits = options.internalNumber.replace(/\D/g, "");
+      if (digits) query = query.ilike("claim.liquidation_number", `%${digits}%`);
+    }
+    const from = (effectivePage - 1) * effectivePageSize;
+    const to = from + effectivePageSize - 1;
+    query = query.range(from, to);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
+  let sessions = (data as SessionWithRelations[]) ?? [];
+
+  // Si useRpc, reordenar sessions segun el orden de orderedIds
+  if (useRpc && orderedIds.length > 0) {
+    const orderMap = new Map(orderedIds.map((id, idx) => [id, idx]));
+    sessions = sessions.sort((a, b) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0));
+  }
+
+  sessions = dedupeSessions(sessions);
+
+  for (const s of sessions) {
+    if (s.claim?.claims_participants) {
+      s.claim.claims_participants = s.claim.claims_participants.filter((p: { type: string }) => p.type === "insured").slice(0, 1);
+    }
+  }
+
+  for (const s of sessions) {
+    const ca = s as InspectionSession & { claim_action?: { code: string | null } | null; inspection_number: string };
+    if (ca.claim_action?.code) {
+      ca.inspection_number = ca.claim_action.code;
+    }
+  }
+
+  // Guardar totalCount en el primer elemento para que la pagina lo lea
+  if (useRpc && totalCount !== null && sessions.length > 0) {
+    (sessions[0] as SessionWithRelations & { _totalCount?: number })._totalCount = totalCount;
+  }
+
+  return sessions;
+}
+
+export async function getInspectionSessionsCount(
+  claimId?: string,
+  options?: {
+    statusFilter?: string[];
+    inspectorFilter?: string[];
+    q?: string;
+    internalNumber?: string;
+  }
+) {
+  const supabase = getSupabaseClient();
+
+  // Si hay filtro por internalNumber, usar RPC porque ilike con notacion
+  // de punto no funciona en PostgREST
+  if (options?.internalNumber) {
+    const { data, error } = await supabase.rpc("get_inspection_sessions_ordered_v3", {
+      p_page: 1,
+      p_page_size: 1,
+      p_status_filter: options?.statusFilter?.length ? options.statusFilter : null,
+      p_inspector_filter: options?.inspectorFilter?.length ? options.inspectorFilter : null,
+      p_internal_number: options.internalNumber,
+      p_sort_column: "created_at",
+      p_sort_dir: "desc",
+    });
+    if (error) throw new Error(error.message);
+    return (data as { total_count: number }[])[0]?.total_count ?? 0;
+  }
+
+  let query = supabase
+    .from("inspection_sessions")
+    .select("id", { count: "exact" })
+    .limit(1);
+
+  if (claimId) query = query.eq("claim_id", claimId);
+  if (options?.statusFilter?.length) query = query.in("status", options.statusFilter);
+  if (options?.inspectorFilter?.length) query = query.in("inspector_id", options.inspectorFilter);
+
+  const { count, error } = await query;
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
+export interface SessionForReassign {
+  id: string;
+  claim_id: string;
+  company_id: string;
+  inspector_id: string;
+  inspection_number: string;
+  status: string;
+  inspection_date: string | null;
+  inspection_time: string | null;
+  scheduled_at: string | null;
+  claim: {
+    claim_number?: string | null;
+    client_reference?: string | null;
+    liquidation_number?: string | null;
+    claim_address?: string | null;
+    company_id?: string | null;
+  } | null;
+  inspector: {
+    full_name?: string | null;
+    email?: string | null;
+  } | null;
+  claim_action?: { code: string | null } | null;
+}
+
+export async function getPendingInspectionSessionsForReassign() {
+  const sessions = await fetchAll<SessionForReassign>("inspection_sessions", {
+    select: "id, claim_id, company_id, inspector_id, inspection_number, status, inspection_date, inspection_time, scheduled_at, claim:claims!inspection_sessions_claim_id_fkey(claim_number, client_reference, liquidation_number, claim_address, company_id), inspector:profiles!inspection_sessions_inspector_id_fkey(full_name, email), claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code)",
+    in: { status: ["scheduled", "active"] },
+    order: { column: "inspection_date", ascending: true },
+  });
+
+  for (const s of sessions) {
+    if (s.claim_action?.code) {
+      (s as SessionForReassign & { inspection_number: string }).inspection_number = s.claim_action.code;
+    }
+  }
+
+  return sessions;
+}
+
+export async function reassignInspectionSession(
+  sessionId: string,
+  newInspectorId: string,
+  reason: string,
+  userId?: string,
+) {
+  const session = await fetchById<{ id: string; claim_id: string | null; inspector_id: string | null; company_id: string | null }>(
+    "inspection_sessions",
+    sessionId,
+    "id, claim_id, inspector_id, company_id",
+  );
+  if (!session) throw new Error("Inspección no encontrada");
+
+  const oldInspectorId = session.inspector_id;
+
+  // 1. Actualizar inspector_id en la sesión de inspección
+  await updateRow<Pick<InspectionSession, "id" | "inspector_id">>(
+    "inspection_sessions",
+    sessionId,
+    { inspector_id: newInspectorId },
+    "id, inspector_id",
+  );
+
+  // 2. Actualizar inspector_id en el claim (coordinación) para mantener consistencia
+  //    Si el inspector anterior era el mismo del claim, actualizarlo también.
+  if (session.claim_id) {
+    try {
+      const claim = await fetchById<{ id: string; inspector_id: string | null }>(
+        "claims",
+        session.claim_id,
+        "id, inspector_id",
+      );
+      // Solo actualizar si el claim tenía el mismo inspector que la sesión
+      // (o si el claim no tiene inspector asignado)
+      if (claim && (claim.inspector_id === oldInspectorId || !claim.inspector_id)) {
+        await updateRow<{ id: string; inspector_id: string | null }>(
+          "claims",
+          session.claim_id,
+          { inspector_id: newInspectorId, updated_by: userId || null },
+          "id, inspector_id",
+        );
+      }
+    } catch (e) {
+      console.error("No se pudo actualizar inspector_id del claim al reasignar:", e);
+    }
+  }
+
+  try {
+    await insertRow(
+      "audit_logs",
+      {
+        table_name: "inspection_sessions",
+        record_id: sessionId,
+        action: "UPDATE",
+        old_data: { inspector_id: oldInspectorId },
+        new_data: { inspector_id: newInspectorId, reason },
+        performed_by: userId || null,
+        company_id: session.company_id || null,
+      },
+      "id",
+    );
+  } catch (e) {
+    console.error("No se pudo registrar auditoría de reasignación:", e);
+  }
+
+  return { id: sessionId, inspector_id: newInspectorId };
+}
+
+/**
+ * Obtener sesiones de inspección activas para supervisión.
+ * Permite filtrar por inspection_type (remote/onsite) o traer todas.
+ */
+export async function getActiveRemoteSessions(inspectionType?: "remote" | "onsite") {
+  const eq: Record<string, string> = { status: "active" };
+  if (inspectionType) {
+    eq.inspection_type = inspectionType;
+  }
+  const sessions = await fetchAll<SessionWithRelations>("inspection_sessions", {
+    select: `${SESSION_SELECT}, claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), inspector:profiles!inspection_sessions_inspector_id_fkey(id, full_name, email), claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, client_reference, claim_address, liquidation_number, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, email, phone, cell_phone), insurance_company:insurance_companies!claims_insurance_company_id_fkey(name), claim_cause:claim_causes!claims_claim_cause_id_fkey(name)), inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, type), inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id, category, subcategory, description, severity, damage_type, dependency, sector, materiality_type, unit, quantity, length, width, height, damage_length, damage_width, damage_height, damage_quantity, estimated_amount, currency, observations, product, brand_model, purchase_date, created_at), inspection_signatures:inspection_signatures!inspection_signatures_session_id_fkey(id, role)`,
+    eq,
+    order: { column: "started_at", ascending: false },
+  });
+
+  return sessions;
+}
+
+export async function getInspectionSessionByToken(token: string) {
+  const sessions = await fetchAll<SessionWithRelations>("inspection_sessions", {
+    select: `${SESSION_SELECT}, claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, client_reference, claim_address, claim_latitude, claim_longitude, liquidation_number, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, email, phone, cell_phone), insurance_company:insurance_companies!claims_insurance_company_id_fkey(name), inspection_reports:inspection_reports!inspection_reports_session_id_fkey(report_url, status, generated_at))`,
+    eq: { magic_link_token: token },
+    limit: 1,
+  });
+  const session = sessions[0];
+  if (!session) return null;
+
+  // Filtrar claims_participants client-side: insured + contact
+  if (session.claim?.claims_participants) {
+    session.claim.claims_participants = session.claim.claims_participants.filter(
+      (p: { type: string }) => p.type === "insured" || p.type === "contact",
+    );
+  }
+
+  // Usar el code del claim_action como inspection_number (estándar de gestiones)
+  const ca = session as InspectionSession & { claim_action?: { code: string | null } | null; inspection_number: string };
+  if (ca.claim_action?.code) {
+    ca.inspection_number = ca.claim_action.code;
+  }
+
+  return session;
+}
+
+/**
+ * Obtener la sesión completa con datos relacionados para vista en tiempo real del magic link.
+ * Trae evidencias, notas, checklist, daños y mensajes del chat.
+ */
+export async function getInspectionSessionLive(token: string) {
+  const sessions = await fetchAll<LiveSession>("inspection_sessions", {
+    select: `
+      id, claim_id, status, inspection_type, scheduled_at, started_at, ended_at,
+      magic_link_token, magic_link_expires_at, created_at,
+      inspection_date, inspection_time,
+      interviewed_name, interviewed_email, interviewed_relationship,
+      police_report_number, police_report_name, police_report_rut,
+      firefighters_company, other_insurances, other_insurance_company,
+      active_tab, acta_step, inspector_observations,
+      property_risk, property_materiality, security_measures, insured_statement, third_parties, geo_latitude, geo_longitude, geo_captured_at, geo_captured_by, geo_distance_meters, geo_status, geo_map_url, geo_recapture_enabled,
+      signature_waiver_reason,
+      action_template:action_template!inspection_sessions_action_template_id_fkey(code),
+      claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code),
+      inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, url, type, description, category, damage_id, metadata, created_at),
+      inspection_notes:inspection_notes!inspection_notes_session_id_fkey(id, content, created_at),
+      inspection_checklists:inspection_checklists!inspection_checklists_session_id_fkey(id, area, item, status, notes, created_at),
+      inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id, category, subcategory, description, observations, severity, dependency, sector, materiality_type, unit, quantity, length, width, height, damage_length, damage_width, damage_height, damage_quantity, damage_type, product, brand_model, purchase_date, estimated_amount, created_at),
+      inspection_chat_messages:inspection_chat_messages!inspection_chat_messages_session_id_fkey(id, content, sender_name, sender_role, created_at),
+      inspection_signatures:inspection_signatures!inspection_signatures_session_id_fkey(id, role, signature_url, signed_at),
+      damage_sketches:damage_sketches!damage_sketches_session_id_fkey(id, sketch_url, label, created_at),
+      claim:claims!inspection_sessions_claim_id_fkey(claim_number, client_reference, claim_address, policy_number, claim_date, liquidation_number, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, email, phone, cell_phone), insurance_company:insurance_companies!claims_insurance_company_id_fkey(name))
+    `,
+    eq: { magic_link_token: token },
+    limit: 1,
+  });
+  const session = sessions[0];
+  if (!session) return null;
+
+  // Sort nested relations client-side (Supabase no soporta order_by en nested select)
+  if (session.inspection_evidences) {
+    session.inspection_evidences.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }
+  if (session.inspection_notes) {
+    session.inspection_notes.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }
+  if (session.inspection_checklists) {
+    session.inspection_checklists.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }
+  if (session.inspection_damages) {
+    session.inspection_damages.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }
+  if (session.inspection_chat_messages) {
+    session.inspection_chat_messages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  }
+  if (session.inspection_signatures) {
+    session.inspection_signatures.sort((a, b) => new Date(a.signed_at).getTime() - new Date(b.signed_at).getTime());
+  }
+  if (session.damage_sketches) {
+    session.damage_sketches.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }
+  // Filtrar claims_participants client-side: insured + contact
+  if (session.claim?.claims_participants) {
+    session.claim.claims_participants = session.claim.claims_participants.filter(
+      (p: { type: string }) => p.type === "insured" || p.type === "contact",
+    );
+  }
+
+  // Usar el code del claim_action como inspection_number (estándar de gestiones)
+  const ca = session;
+  if (ca.claim_action?.code) {
+    ca.inspection_number = ca.claim_action.code;
+  }
+
+  return session;
+}
+
+export async function getInspectionSessionById(id: string) {
+  const session = await fetchById<SessionDetail>("inspection_sessions", id, `
+    ${SESSION_SELECT}, created_at,
+    claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(id, code, action_status_id, action_data, issuer_id, issued_on, issued_by),
+    action_template:action_template!inspection_sessions_action_template_id_fkey(id, name, code, action_features_id),
+    claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, report_date, assignment_date, client_reference, claim_address, claim_latitude, claim_longitude, liquidation_number, broker_executive, company_id, inspector_id, assigned_adjuster_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, insurance_company_id, broker_id, advisor_id, country_id, region_id, city_id, commune_id, claim_cause_id, destination_housing_id, created_at, insurance_company:insurance_companies!claims_insurance_company_id_fkey(name), broker:brokers!claims_broker_id_fkey(name), advisor:advisors!claims_advisor_id_fkey(name), claim_cause:claim_causes!claims_claim_cause_id_fkey(name), country:countries!claims_country_id_fkey(name), region:regions!claims_region_id_fkey(name), city:cities!claims_city_id_fkey(name), commune:communes!claims_commune_id_fkey(name), destination_housing:housing_destinations!claims_destination_housing_id_fkey(name), claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, email, phone, cell_phone, rut, address, person_type, country, region, city, commune)),
+    inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, url, type, description, category, damage_id, include_in_report, metadata, created_at),
+    inspection_checklists:inspection_checklists!inspection_checklists_session_id_fkey(id, area, item, status),
+    inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id, session_id, category, subcategory, description, severity, damage_type, dependency, sector, materiality_type, unit, quantity, length, width, height, damage_length, damage_width, damage_height, damage_quantity, estimated_amount, currency, observations, product, brand_model, product_id, brand_id, purchase_date, third_party_id, space_id, content_good_type_id, building_damage_category_id, created_at, updated_at),
+    third_parties:third_parties!third_parties_session_id_fkey(id, party_type, full_name, rut, address, commune, phone, email, company_name, has_insurance, insurance_company, claim_number, notes, created_at, updated_at),
+    inspection_signatures:inspection_signatures!inspection_signatures_session_id_fkey(id, role, signature_url, signed_at),
+    damage_sketches:damage_sketches!damage_sketches_session_id_fkey(id, sketch_url, label, created_at),
+    offlineInspector:profiles!offline_downloaded_by(full_name)
+  `);
+  if (!session) return null;
+
+  // Filtrar claims_participants client-side: insured + contact
+  if (session.claim?.claims_participants) {
+    session.claim.claims_participants = session.claim.claims_participants.filter(
+      (p: { type: string }) => p.type === "insured" || p.type === "contact",
+    );
+  }
+
+  // Usar el code del claim_action como inspection_number (estándar de gestiones)
+  if (session.claim_action?.code) {
+    session.inspection_number = session.claim_action.code;
+  }
+
+  return session;
+}
+
+
+/**
+ * Obtener las sesiones agendadas de un inspector en un rango de fechas.
+ * Busca por inspector_id de la sesión Y por claim.inspector_id (compatibilidad).
+ * Solo retorna sesiones con status scheduled o active (paused no bloquea agenda).
+ */
+export async function getInspectorSchedule(
+  inspectorId: string,
+  dateStart: string,
+  dateEnd: string,
+) {
+  const supabase = getSupabaseClient();
+
+  // 1. Buscar sesiones directamente por inspector_id
+  const { data: directData, error: directError } = await supabase
+    .from("inspection_sessions")
+    .select(`
+      id, scheduled_at, inspection_type, status, claim_id,
+      claim:claims!inspection_sessions_claim_id_fkey(claim_number, claim_address, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name))
+    `)
+    .eq("inspector_id", inspectorId)
+    .gte("scheduled_at", dateStart)
+    .lt("scheduled_at", dateEnd)
+    .in("status", ["scheduled", "active"])
+    .order("scheduled_at", { ascending: true });
+
+  if (directError) throw new Error(directError.message);
+
+  // 2. Buscar también por claims.inspector_id (sesiones sin inspector_id propio)
+  const { data: claimsData, error: claimsError } = await supabase
+    .from("claims")
+    .select("id, claim_number, claim_address")
+    .eq("inspector_id", inspectorId);
+
+  if (claimsError) throw new Error(claimsError.message);
+  const claims = (claimsData as { id: string; claim_number: string; claim_address: string }[]) || [];
+  const claimIds = claims.map(c => c.id);
+
+  let legacySessions: typeof directData = [];
+  if (claimIds.length > 0) {
+    const { data: legacyData, error: legacyError } = await supabase
+      .from("inspection_sessions")
+      .select(`
+        id, scheduled_at, inspection_type, status, claim_id,
+        claim:claims!inspection_sessions_claim_id_fkey(claim_number, claim_address, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name))
+      `)
+      .in("claim_id", claimIds)
+      .is("inspector_id", null)
+      .gte("scheduled_at", dateStart)
+      .lt("scheduled_at", dateEnd)
+      .in("status", ["scheduled", "active"])
+      .order("scheduled_at", { ascending: true });
+
+    if (legacyError) throw new Error(legacyError.message);
+    legacySessions = legacyData ?? [];
+  }
+
+  // Combinar y deduplicar
+  const allSessions = [...(directData ?? []), ...legacySessions];
+  const seen = new Set<string>();
+  const sessions = allSessions.filter((s) => {
+    if (seen.has(s.id)) return false;
+    seen.add(s.id);
+    return true;
+  }) as {
+    id: string;
+    scheduled_at: string;
+    inspection_type: "onsite" | "remote";
+    status: string;
+    claim: { claim_number: string; claim_address: string | null; claims_participants: { type: string; full_name: string | null }[] };
+  }[];
+
+  // Filtrar claims_participants client-side: solo insured, limit 1
+  for (const s of sessions) {
+    if (s.claim?.claims_participants) {
+      s.claim.claims_participants = s.claim.claims_participants.filter((p) => p.type === "insured").slice(0, 1);
+    }
+  }
+
+  return sessions;
+}
+
+export async function createInspectionSession(claimId: string, options: {
+  inspectionType: "onsite" | "remote";
+  scheduledAt: string;
+  inspectorId?: string;
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  inspectionLocation?: string;
+  schedulingNotes?: string;
+  actionTemplateId?: string;
+}) {
+  // Validar que no exista una inspección activa para este siniestro
+  const existing = await fetchAll<{ id: string; status: string }>("inspection_sessions", {
+    select: "id, status",
+    eq: { claim_id: claimId },
+    in: { status: ["scheduled", "active"] },
+    limit: 1,
+  });
+  if (existing.length > 0) {
+    throw new Error("Ya existe una inspección activa para este siniestro. Debe cancelar o completar la inspección existente antes de crear una nueva.");
+  }
+
+  // ── 1. Crear claim_action (gestión estándar) ──
+  const { createClaimAction } = await import("@/services/claim-actions");
+  const INSPECTION_FEATURE_ID = "a1000001-0000-0000-0000-000000000001"; // Inspección
+  const inspectionName = options.inspectionType === "remote" ? "Inspección Remota" : "Inspección Presencial";
+
+  const claimAction = await createClaimAction({
+    claim_id: claimId,
+    action_features_id: INSPECTION_FEATURE_ID,
+    action_template_id: options.actionTemplateId,
+    name: inspectionName,
+    description: `Inspección ${options.inspectionType === "remote" ? "remota" : "presencial"} programada para ${formatUserDateTime(options.scheduledAt)}`,
+    issuer_id: options.inspectorId,
+    expected_date: options.scheduledAt,
+  });
+
+  // ── 2. Crear inspection_session vinculada al claim_action ──
+  const object: Record<string, unknown> = {
+    claim_id: claimId,
+    claim_action_id: claimAction.id,
+    status: "scheduled",
+    inspection_type: options.inspectionType,
+    scheduled_at: options.scheduledAt,
+    inspector_id: options.inspectorId || null,
+  };
+  if (options.actionTemplateId) object.action_template_id = options.actionTemplateId;
+  // Datos de contacto editables
+  if (options.contactName) object.interviewed_name = options.contactName;
+  if (options.contactEmail) object.interviewed_email = options.contactEmail;
+  // Comentarios del agendamiento + teléfono → inspector_observations
+  const obsParts: string[] = [];
+  if (options.contactPhone) obsParts.push(`Tel: ${options.contactPhone}`);
+  if (options.schedulingNotes) obsParts.push(options.schedulingNotes);
+  if (obsParts.length > 0) object.inspector_observations = obsParts.join("\n\n");
+  // Si es remota, generar magic link token con expiración de 24h
+  if (options.inspectionType === "remote") {
+    object.magic_link_token = crypto.randomUUID();
+    const expires = new Date();
+    expires.setHours(expires.getHours() + 24);
+    object.magic_link_expires_at = expires.toISOString();
+  }
+
+  const created = await insertRow<InspectionSession>("inspection_sessions", object, SESSION_SELECT);
+
+  // Si se especificó un inspector, asignarlo al claim
+  if (options.inspectorId && created) {
+    try {
+      const { updateClaimFields } = await import("@/services/claims");
+      const fields: Record<string, unknown> = { inspector_id: options.inspectorId };
+      // Si se modificó el lugar de inspección, actualizar el claim_address
+      if (options.inspectionLocation) {
+        fields.claim_address = options.inspectionLocation;
+      }
+      await updateClaimFields(claimId, fields);
+    } catch {
+      // No bloquear la creación si no se puede asignar el inspector
+    }
+  }
+
+  return created;
+}
+
+/**
+ * Cancelar una inspección con motivo.
+ * Registra el motivo de cancelación y marca cancelled_at (via trigger).
+ */
+export async function cancelInspectionSession(
+  id: string,
+  reasonId: string,
+  notes?: string,
+  cancelledBy?: string,
+) {
+  const set: Record<string, unknown> = {
+    status: "cancelled",
+    cancellation_reason_id: reasonId,
+  };
+  if (notes !== undefined) set.cancellation_notes = notes;
+  if (cancelledBy !== undefined) set.cancelled_by = cancelledBy;
+  // cancelled_at lo setea el trigger automáticamente
+  return updateRow<InspectionSession>("inspection_sessions", id, set, SESSION_SELECT);
+}
+
+/**
+ * Reagendar una inspección: cancela la actual y crea una nueva
+ * con la nueva fecha/hora y tipo.
+ * Retorna la nueva inspección creada.
+ */
+export async function rescheduleInspectionSession(
+  currentSessionId: string,
+  claimId: string,
+  reasonId: string,
+  notes: string | undefined,
+  newOptions: {
+    inspectionType: "onsite" | "remote";
+    scheduledAt: string;
+    inspectorId?: string;
+  },
+  cancelledBy?: string,
+) {
+  // 1. Cancelar la inspección actual
+  await cancelInspectionSession(currentSessionId, reasonId, notes, cancelledBy);
+
+  // 2. Crear nueva inspección agendada con la nueva fecha
+  const newSession = await createInspectionSession(claimId, newOptions);
+  return newSession;
+}
+
+/**
+ * Mueve la fecha de una inspección agendada sin crear nueva coordinación.
+ * Conserva inspector, tipo y token. Actualiza magic_link_expires_at a 6h
+ * desde la nueva fecha, sin reducir la expiración previa.
+ */
+export async function moveInspectionDate(
+  sessionId: string,
+  newScheduledAt: string,
+) {
+  const session = await getInspectionSessionById(sessionId);
+  if (!session) throw new Error("Inspección no encontrada");
+  const status = session.status as string;
+  if (!["scheduled", "active"].includes(status)) {
+    throw new Error("Solo se puede mover la fecha de una inspección agendada o en progreso");
+  }
+  if (session.inspection_type !== "remote") {
+    throw new Error("Mover fecha solo aplica a inspecciones remotas");
+  }
+
+  const newScheduled = new Date(newScheduledAt);
+  const now = new Date();
+  now.setSeconds(0, 0);
+  if (newScheduled.getTime() < now.getTime()) {
+    throw new Error("No se puede mover a una fecha/hora pasada");
+  }
+
+  // Máximo = fecha_creacion_claim + days_to_issue del CIN (días hábiles)
+  const { calculateMaxDate } = await import("@/lib/utils");
+  const claimCreatedAt = session.claim?.created_at ?? new Date().toISOString();
+  const cinTemplate = await findCINTemplateForClaim(session.claim_id ?? "");
+  let maxDays = 2;
+  if (cinTemplate) {
+    const tpl = await fetchById<{ days_to_issue: number | null }>(
+      "action_template",
+      cinTemplate.action_template_id,
+      "days_to_issue",
+    );
+    maxDays = tpl?.days_to_issue ?? 2;
+  }
+  const maxDate = calculateMaxDate(claimCreatedAt, maxDays);
+  if (newScheduled.getTime() > maxDate.getTime()) {
+    throw new Error(`La nueva fecha no puede superar el plazo máximo de ${maxDays} días hábiles desde la creación del siniestro.`);
+  }
+
+  // Verificar que el inspector tenga el slot libre en la nueva fecha.
+  const dateStart = newScheduled.toISOString().slice(0, 10);
+  const nextDay = new Date(newScheduled);
+  nextDay.setDate(nextDay.getDate() + 1);
+  const dateEnd = nextDay.toISOString().slice(0, 10);
+  const busy = await getInspectorSchedule(session.inspector_id ?? "", dateStart, dateEnd);
+  const newDuration = 60; // solo aplica a remotas
+  const newStart = newScheduled.getTime();
+  const newEnd = newStart + newDuration * 60 * 1000;
+  const overlap = busy
+    .filter((s) => s.id !== sessionId)
+    .find((s) => {
+      const sStart = new Date(s.scheduled_at).getTime();
+      const sDuration = s.inspection_type === "onsite" ? 180 : 60;
+      const sEnd = sStart + sDuration * 60 * 1000;
+      return sStart < newEnd && sEnd > newStart;
+    });
+  if (overlap) {
+    throw new Error(
+      `El inspector ya tiene una inspección agendada en ese horario ` +
+      `(existente: ${formatUserDateTime(overlap.scheduled_at)}). ` +
+      `Elija otro horario.`
+    );
+  }
+
+  // Calcular expiración del magic link: 6h desde la nueva fecha,
+  // sin reducir la expiración previa.
+  const newExpires = new Date(newScheduledAt);
+  newExpires.setHours(newExpires.getHours() + 6);
+  const previousExpires = session.magic_link_expires_at
+    ? new Date(session.magic_link_expires_at)
+    : new Date(0);
+  const finalExpires = new Date(Math.max(newExpires.getTime(), previousExpires.getTime()));
+
+  const set: Record<string, unknown> = {
+    scheduled_at: newScheduledAt,
+    magic_link_expires_at: finalExpires.toISOString(),
+  };
+  if (status !== "active") {
+    // inspection_date es tipo `date` en BD: debe ser YYYY-MM-DD (no DD-MM-YYYY)
+    // inspection_time es tipo `time` en BD: debe ser HH:mm
+    // Extraer fecha/hora en la zona horaria del usuario (no UTC)
+    const newDate = new Date(newScheduledAt);
+    const tz = getUserTimeZone();
+    const dateParts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", hour12: false,
+    }).formatToParts(newDate);
+    const p = (type: string) => dateParts.find((x) => x.type === type)?.value ?? "0";
+    set.inspection_date = `${p("year")}-${p("month")}-${p("day")}`;
+    set.inspection_time = `${p("hour")}:${p("minute")}`;
+  }
+
+  if (status === "active") {
+    // Modelo reloj de ajedrez: cerrar periodo activo actual con una pausa.
+    // paused_at = ahora (cuando se detiene), resumed_at = NULL (se setea al reanudar).
+    await closeOpenWorkPeriod(sessionId);
+    set.status = "scheduled";
+    set.substate = "paused";
+  }
+
+  return updateRow<InspectionSession>("inspection_sessions", sessionId, set, SESSION_SELECT);
+}
+
+// Modelo de reloj de ajedrez: inspection_work_periods
+interface WorkPeriod {
+  id: string;
+  inspection_session_id: string;
+  company_id: string;
+  started_at: string;
+  ended_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Cierra el periodo de trabajo abierto (ended_at IS NULL) seteando ended_at = ahora.
+ */
+export async function closeOpenWorkPeriod(sessionId: string) {
+  const supabase = getSupabaseClient();
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from('inspection_work_periods')
+    .update({ ended_at: now })
+    .eq('inspection_session_id', sessionId)
+    .is('ended_at', null);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Abre un nuevo periodo de trabajo (started_at = ahora, ended_at = NULL).
+ */
+export async function openWorkPeriod(sessionId: string, companyId: string) {
+  if (!companyId) throw new Error('No se puede abrir work period sin company_id');
+  return insertRow<WorkPeriod>('inspection_work_periods', {
+    inspection_session_id: sessionId,
+    company_id: companyId,
+    started_at: new Date().toISOString(),
+    ended_at: null,
+  });
+}
+
+/**
+ * Pausa una inspección en curso (status active → scheduled + substate paused).
+ * Cierra el periodo de trabajo activo (modelo reloj de ajedrez).
+ */
+export async function pauseInspection(sessionId: string) {
+  const session = await getInspectionSessionById(sessionId);
+  if (!session) throw new Error("Inspección no encontrada");
+  if (session.status !== "active") {
+    throw new Error("Solo se puede pausar una inspección en curso");
+  }
+  await closeOpenWorkPeriod(sessionId);
+  return updateRow<InspectionSession>("inspection_sessions", sessionId, {
+    status: "scheduled",
+    substate: "paused",
+  }, SESSION_SELECT);
+}
+
+/**
+ * Reanuda una inspeccion pausada (scheduled + substate paused).
+ * Abre un nuevo work_period y cambia status->active, substate->normal.
+ */
+export async function resumeInspection(sessionId: string, fromMobile?: boolean) {
+  const session = await getInspectionSessionById(sessionId);
+  if (!session) throw new Error('Inspeccion no encontrada');
+  if (session.status !== 'scheduled' || session.substate !== 'paused') {
+    throw new Error('Solo se puede reanudar una inspeccion pausada');
+  }
+  await openWorkPeriod(sessionId, String(session.company_id ?? session.claim?.company_id ?? ""));
+  return updateRow<InspectionSession>('inspection_sessions', sessionId, {
+    status: 'active',
+    substate: 'normal',
+    ...(fromMobile ? { started_from_mobile: true } : {}),
+  }, SESSION_SELECT);
+}
+
+export async function getWorkPeriods(sessionId: string) {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('inspection_work_periods')
+    .select('id, inspection_session_id, company_id, started_at, ended_at, created_at, updated_at')
+    .eq('inspection_session_id', sessionId)
+    .order('started_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data as WorkPeriod[]) ?? [];
+}
+
+/**
+ * Calcula el tiempo activo total sumando los work_periods.
+ * Cada work_period con ended_at NULL se trata como activo hasta 'ahora'.
+ *   tiempo_activo = sum(ended_at - started_at) de todos los work_periods
+ */
+export function calculateInspectionActiveDuration(
+  periods: { started_at: string; ended_at: string | null }[],
+) {
+  const now = Date.now();
+  let active = 0;
+  for (const p of periods) {
+    const start = new Date(p.started_at).getTime();
+    const end = p.ended_at ? new Date(p.ended_at).getTime() : now;
+    if (!Number.isNaN(start) && !Number.isNaN(end) && end > start) {
+      active += end - start;
+    }
+  }
+  return active;
+}
+
+export async function getInspectionActiveDuration(sessionId: string) {
+  const periods = await getWorkPeriods(sessionId);
+  return calculateInspectionActiveDuration(periods);
+}
+
+/**
+ * Inicia una inspección: status→active, started_at=ahora, abre work_period.
+ * Reemplaza el updateInspectionSession directo para el botón "Iniciar".
+ */
+export async function startInspection(sessionId: string, fromMobile?: boolean) {
+  const session = await getInspectionSessionById(sessionId);
+  if (!session) throw new Error("Inspección no encontrada");
+  if (session.status !== "scheduled") {
+    throw new Error("Solo se puede iniciar una inspección agendada");
+  }
+  const now = new Date();
+  // Usar hora de Chile (BUSINESS_TIME_ZONE) para inspection_date e inspection_time,
+  // sin importar la zona horaria del servidor.
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: BUSINESS_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  });
+  const parts = fmt.formatToParts(now);
+  const p = (type: string) => parts.find((x) => x.type === type)?.value ?? "0";
+  const dateStr = `${p("year")}-${p("month")}-${p("day")}`;
+  const timeStr = `${p("hour") === "24" ? "00" : p("hour")}:${p("minute")}`;
+  const companyId = String(session.company_id ?? session.claim?.company_id ?? "");
+  await openWorkPeriod(sessionId, companyId);
+
+  // Si el inspector inicia la inspección antes de la hora programada,
+  // extender magic_link_expires_at para que el link del asegurado no expire
+  // durante la inspección. Mínimo 6h desde el inicio real. No reduce la
+  // expiración previa si era más lejana.
+  const set: Record<string, unknown> = {
+    status: "active",
+    substate: "normal",
+    started_at: now.toISOString(),
+    inspection_date: dateStr,
+    inspection_time: timeStr,
+    ...(fromMobile ? { started_from_mobile: true } : {}),
+  };
+  if (session.inspection_type === "remote") {
+    const minExpires = new Date(now.getTime() + 6 * 60 * 60 * 1000);
+    const prevExpires = session.magic_link_expires_at
+      ? new Date(session.magic_link_expires_at)
+      : new Date(0);
+    const finalExpires = new Date(Math.max(minExpires.getTime(), prevExpires.getTime()));
+    set.magic_link_expires_at = finalExpires.toISOString();
+  }
+
+  return updateRow<InspectionSession>("inspection_sessions", sessionId, set, SESSION_SELECT);
+}
+
+/**
+ * Completa una inspección: status→completed, ended_at=ahora, cierra work_period.
+ * Reemplaza el updateInspectionSession directo para finalizar.
+ */
+export async function completeInspection(sessionId: string) {
+  const session = await getInspectionSessionById(sessionId);
+  if (!session) throw new Error("Inspección no encontrada");
+  if (session.status !== "active") {
+    throw new Error("Solo se puede completar una inspección en progreso");
+  }
+  await closeOpenWorkPeriod(sessionId);
+  return updateRow<InspectionSession>("inspection_sessions", sessionId, {
+    status: "completed",
+    ended_at: new Date().toISOString(),
+  }, SESSION_SELECT);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Reapertura de inspecciones
+// ═══════════════════════════════════════════════════════════════════
+// Permite reabrir una inspección completada para que el inspector pueda
+// hacer cambios. La gestión (claim_action) deja de estar emitida (el
+// trigger sync_inspection_claim_action la vuelve a 'todo' y limpia
+// issued_on). Al volver a completar, la gestión se emite nuevamente.
+
+interface SessionForReopen {
+  id: string;
+  claim_id: string | null;
+  company_id: string | null;
+  inspector_id: string | null;
+  inspection_number: string;
+  status: string;
+  inspection_date: string | null;
+  inspection_time: string | null;
+  ended_at: string | null;
+  reopened_at: string | null;
+  reopened_reason: string | null;
+  created_at: string;
+  claim?: {
+    claim_number: string | null;
+    client_reference: string | null;
+    liquidation_number: string | null;
+    claim_address: string | null;
+    company_id: string | null;
+  } | null;
+  inspector?: {
+    full_name: string | null;
+    email: string | null;
+  } | null;
+  claim_action?: { code: string | null } | null;
+}
+
+/**
+ * Obtiene las inspecciones completadas que pueden ser reabiertas.
+ * Solo se lista la ÚLTIMA inspección de cada liquidación (claim), y solo si
+ * esa última está completada. Si la última está activa (ya fue reabierta),
+ * ninguna aparece. Las inspecciones anteriores no se pueden reabrir nunca.
+ */
+export async function getCompletedInspectionSessionsForReopen() {
+  // Traer TODAS las inspecciones (no solo completadas) para poder
+  // determinar cuál es la última de cada liquidación.
+  const allSessions = await fetchAll<SessionForReopen>("inspection_sessions", {
+    select: "id, claim_id, company_id, inspector_id, inspection_number, status, inspection_date, inspection_time, ended_at, reopened_at, reopened_reason, created_at, claim:claims!inspection_sessions_claim_id_fkey(claim_number, client_reference, liquidation_number, claim_address, company_id), inspector:profiles!inspection_sessions_inspector_id_fkey(full_name, email), claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code)",
+    order: { column: "created_at", ascending: false },
+  });
+
+  for (const s of allSessions) {
+    if (s.claim_action?.code) {
+      (s as SessionForReopen & { inspection_number: string }).inspection_number = s.claim_action.code;
+    }
+  }
+
+  // Para cada claim_id, encontrar la inspección más reciente (mayor created_at).
+  const latestPerClaim = new Map<string, SessionForReopen>();
+  for (const s of allSessions) {
+    const claimId = s.claim_id || "__no_claim__";
+    const existing = latestPerClaim.get(claimId);
+    if (!existing || s.created_at > existing.created_at) {
+      latestPerClaim.set(claimId, s);
+    }
+  }
+
+  // De las últimas por claim, solo devolver las que están completadas.
+  // Si la última está activa (reabierta) o cancelada, no se puede reabrir.
+  const reopenable = Array.from(latestPerClaim.values()).filter(
+    (s) => s.status === "completed",
+  );
+
+  // Devolver ordenadas por ended_at descendente
+  return reopenable.sort(
+    (a, b) => (b.ended_at || "").localeCompare(a.ended_at || ""),
+  );
+}
+
+/**
+ * Obtiene las inspecciones que fueron reabiertas recientemente.
+ * Se identifican por tener reopened_at no nulo y status distinto de completed
+ * (están activas nuevamente o ya fueron re-completadas).
+ */
+export async function getReopenedInspectionSessions() {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("inspection_sessions")
+    .select("id, claim_id, company_id, inspector_id, inspection_number, status, inspection_date, inspection_time, ended_at, reopened_at, reopened_by, reopened_reason, claim:claims!inspection_sessions_claim_id_fkey(claim_number, client_reference, liquidation_number, claim_address, company_id), inspector:profiles!inspection_sessions_inspector_id_fkey(full_name, email), claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code)")
+    .not("reopened_at", "is", null)
+    .order("reopened_at", { ascending: false })
+    .limit(50);
+
+  if (error) throw new Error(error.message);
+
+  const sessions = (data as SessionForReopen[]) ?? [];
+
+  for (const s of sessions) {
+    if (s.claim_action?.code) {
+      (s as SessionForReopen & { inspection_number: string }).inspection_number = s.claim_action.code;
+    }
+  }
+
+  return sessions;
+}
+
+/**
+ * Reabre una inspección completada: status → 'active', substate → 'normal',
+ * ended_at → null, abre un nuevo work_period y registra la reapertura.
+ * El trigger sync_inspection_claim_action se encarga de volver la gestión
+ * a 'todo' y limpiar issued_on.
+ */
+export async function reopenInspectionSession(
+  sessionId: string,
+  reason: string,
+  userId?: string,
+) {
+  const session = await fetchById<{
+    id: string;
+    status: string;
+    company_id: string | null;
+    claim_id: string | null;
+    claim_action_id: string | null;
+    created_at: string;
+  }>(
+    "inspection_sessions",
+    sessionId,
+    "id, status, company_id, claim_id, claim_action_id, created_at",
+  );
+  if (!session) throw new Error("Inspección no encontrada");
+  if (session.status !== "completed") {
+    throw new Error("Solo se puede reabrir una inspección completada");
+  }
+
+  // Validar que sea la última inspección del claim (liquidación).
+  // Solo la última inspección de una liquidación puede reabrirse.
+  if (session.claim_id) {
+    const newer = await fetchAll<{ id: string; created_at: string }>(
+      "inspection_sessions",
+      {
+        select: "id, created_at",
+        eq: { claim_id: session.claim_id },
+        order: { column: "created_at", ascending: false },
+        limit: 1,
+      },
+    );
+    const latest = newer[0];
+    if (latest && latest.id !== sessionId) {
+      throw new Error(
+        "Solo se puede reabrir la última inspección de la liquidación",
+      );
+    }
+  }
+
+  const now = new Date().toISOString();
+  const companyId = String(session.company_id ?? "");
+
+  // 1. Abrir un nuevo periodo de trabajo (la inspección vuelve a estar activa)
+  if (companyId) {
+    await openWorkPeriod(sessionId, companyId);
+  }
+
+  // 2. Actualizar la sesión: status → active, ended_at → null, registrar reapertura
+  const updated = await updateRow<InspectionSession>(
+    "inspection_sessions",
+    sessionId,
+    {
+      status: "active",
+      substate: "normal",
+      ended_at: null,
+      reopened_at: now,
+      reopened_by: userId || null,
+      reopened_reason: reason,
+    },
+    SESSION_SELECT,
+  );
+
+  // 3. Revertir el reporte "final" a "draft" para que la UI muestre
+  //    la marca de agua "BORRADOR" y el botón "Generar" nuevamente.
+  try {
+    const supabase = getSupabaseClient();
+    await supabase
+      .from("inspection_reports")
+      .update({ status: "draft" })
+      .eq("session_id", sessionId)
+      .eq("status", "final");
+  } catch (e) {
+    console.error("No se pudo revertir el reporte a draft al reabrir:", e);
+  }
+
+  // 4. Registrar en audit_logs
+  try {
+    await insertRow(
+      "audit_logs",
+      {
+        table_name: "inspection_sessions",
+        record_id: sessionId,
+        action: "UPDATE",
+        old_data: { status: "completed" },
+        new_data: { status: "active", reopened_at: now, reopened_reason: reason },
+        performed_by: userId || null,
+        company_id: session.company_id || null,
+      },
+      "id",
+    );
+  } catch (e) {
+    console.error("No se pudo registrar auditoría de reapertura:", e);
+  }
+
+  return updated;
+}
+
+export async function updateInspectionSession(id: string, input: Partial<InspectionSession>) {
+  const set: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (value !== undefined) set[key] = value;
+  }
+  return updateRow<InspectionSession>("inspection_sessions", id, set, SESSION_SELECT);
+}
+
+/**
+ * Levanta el bloqueo de una inspección activa para que un administrador
+ * o usuario internal pueda ingresar a cerrarla/finalizarla.
+ */
+export async function liftInspectionLock(sessionId: string, userId: string) {
+  return updateRow<InspectionSession>("inspection_sessions", sessionId, {
+    lock_overridden_by: userId,
+    lock_overridden_at: new Date().toISOString(),
+  }, SESSION_SELECT);
+}
+
+/**
+ * Restaura el bloqueo de una inspección que fue desbloqueada.
+ * Vuelve a dejar la inspección exclusiva para el inspector asignado.
+ */
+export async function restoreInspectionLock(sessionId: string) {
+  return updateRow<InspectionSession>("inspection_sessions", sessionId, {
+    lock_overridden_by: null,
+    lock_overridden_at: null,
+  }, SESSION_SELECT);
+}
+
+/**
+ * Determina si el usuario puede acceder a una inspección teniendo en cuenta
+ * el bloqueo de sesiones activas: solo el inspector asignado puede entrar a
+ * una inspección en curso, salvo que un internal haya levantado el bloqueo.
+ * También bloquea si la inspección está descargada offline por otro inspector.
+ */
+export function canAccessInspectionSession(
+  session: { status: string; inspector_id: string | null; lock_overridden_by: string | null; offline_downloaded_by?: string | null; claim?: { inspector_id?: string | null } | null },
+  profile: { id: string } | null | undefined,
+  dataAccess: { is_admin: boolean; see_all_client_claims: boolean } | null | undefined,
+): boolean {
+  if (!profile) return false;
+  const effectiveInspectorId = session.inspector_id ?? session.claim?.inspector_id ?? null;
+
+  // Si está descargada offline por alguien, bloquear acceso online SIEMPRE.
+  // El acceso offline es solo desde el dispositivo que la descargó (mobile).
+  // Nadie puede acceder online hasta que se libere (offline_downloaded_by = null).
+  if (session.offline_downloaded_by) {
+    return false;
+  }
+
+  if (session.status !== "active") {
+    return !!(dataAccess?.is_admin || dataAccess?.see_all_client_claims || effectiveInspectorId === profile.id);
+  }
+  if (effectiveInspectorId === profile.id) return true;
+  return !!session.lock_overridden_by;
+}
+
+/**
+ * Renueva el magic link de una inspección remota usando la función SQL
+ * `renew_inspection_magic_link`. Respeta la ventana de vigencia:
+ * - Antes de la ventana: nuevo token, mismo rango.
+ * - Dentro de la ventana: extiende una sola vez hasta scheduled_at + 2h.
+ * - Fuera del rango extendido: devuelve "expired".
+ */
+export async function refreshMagicLink(sessionId: string) {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase.rpc("renew_inspection_magic_link", { p_session_id: sessionId });
+  if (error) throw new Error(error.message);
+  const row = Array.isArray(data)
+    ? (data as Array<{ token: string; expires_at: string; message: string }>)[0]
+    : (data as { token: string; expires_at: string; message: string } | undefined);
+  if (!row) throw new Error("No se pudo renovar el link");
+  return {
+    magic_link_token: row.token,
+    magic_link_expires_at: row.expires_at,
+    message: row.message,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// REAGENDAR / CANCELAR VÍA CIN (vinculación con coordinación)
+// ═══════════════════════════════════════════════════════════════
+//
+// Principio: la inspección nace de la coordinación (CIN).
+// Reagendar o cancelar la inspección debe generar una gestión CIN
+// que registre el evento (fallida para reagendar, desistida para cancelar).
+// La gestión INS original queda rechazada.
+
+/**
+ * Reagendar una inspección vinculando con la coordinación.
+ * Flujo:
+ *   1. Valida fecha (no pasado, máx days_to_issue del CIN, calendario del inspector)
+ *   2. Cancela la sesión de inspección en curso
+ *   3. Rechaza la gestión INS original (no se concretó)
+ *   4. Crea y emite una CIN coordinada (origen A = automático) con los datos nuevos
+ *   5. El trigger cascade_workflow_on_issue crea la nueva INS (origen W) y copia
+ *      el action_data del CIN a parent_action_data de la INS
+ *   6. El trigger auto_create_inspection_session lee parent_action_data y crea
+ *      la inspection_session con tipo, fecha, inspector, contacto, ubicación
+ */
+export async function rescheduleInspectionViaCIN(params: {
+  sessionId: string;
+  claimId: string;
+  insActionId?: string | null;
+  reasonId: string;
+  notes?: string;
+  newOptions: {
+    inspectionType: "onsite" | "remote";
+    scheduledAt: string;
+    inspectorId?: string;
+  };
+  cancelledBy?: string;
+  userId?: string;
+}) {
+  const { sessionId, claimId, insActionId, reasonId, notes, newOptions, userId } = params;
+  if (!userId) throw new Error("Debe iniciar sesión para reagendar.");
+  if (!insActionId) throw new Error("Se requiere la gestión INS para reagendar.");
+
+  const scheduledDate = new Date(newOptions.scheduledAt);
+  const now = new Date();
+  now.setSeconds(0, 0);
+  if (scheduledDate.getTime() < now.getTime()) {
+    throw new Error("No se puede agendar en una fecha/hora pasada.");
+  }
+
+  // Obtener el template CIN y su plazo máximo
+  const cinTemplate = await findCINTemplateForClaim(claimId);
+  if (!cinTemplate) {
+    throw new Error("No se encontró el template CIN para este siniestro");
+  }
+  const tpl = await fetchById<{ days_to_issue: number | null }>("action_template", cinTemplate.action_template_id, "days_to_issue");
+  const maxDays = tpl?.days_to_issue ?? 2;
+
+  // Fecha máxima = fecha_creacion_claim + days_to_issue (días hábiles)
+  const { calculateMaxDate } = await import("@/lib/utils");
+  const claim = await fetchById<{ created_at: string }>("claims", claimId, "created_at");
+  const claimCreatedAt = claim?.created_at ?? new Date().toISOString();
+  const maxDate = calculateMaxDate(claimCreatedAt, maxDays);
+  if (scheduledDate.getTime() > maxDate.getTime()) {
+    throw new Error(`La fecha de reagendamiento no puede superar el plazo máximo de ${maxDays} días hábiles desde la creación del siniestro.`);
+  }
+
+  // Calendario del inspector: verificar solapamiento real con sesiones existentes.
+  // La sesión actual todavía está activa (status=scheduled) en este punto, así que
+  // cuenta como ocupada — el usuario NO puede elegir el mismo horario con el mismo
+  // inspector. Usamos detección de solapamiento real (no solo comparar hora de inicio).
+  if (newOptions.inspectorId) {
+    const dateStart = scheduledDate.toISOString().slice(0, 10);
+    const nextDay = new Date(scheduledDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+    const dateEnd = nextDay.toISOString().slice(0, 10);
+    const busy = await getInspectorSchedule(newOptions.inspectorId, dateStart, dateEnd);
+    const newStart = scheduledDate.getTime();
+    const newDuration = newOptions.inspectionType === "onsite" ? 180 : 60;
+    const newEnd = newStart + newDuration * 60 * 1000;
+    const overlap = busy.find((s) => {
+      const sStart = new Date(s.scheduled_at).getTime();
+      const sDuration = s.inspection_type === "onsite" ? 180 : 60;
+      const sEnd = sStart + sDuration * 60 * 1000;
+      return sStart < newEnd && sEnd > newStart;
+    });
+    if (overlap) {
+      throw new Error(
+        `El inspector ya tiene una inspección agendada que se solapa con ese horario ` +
+        `(existente: ${new Date(overlap.scheduled_at).toLocaleString("es-CL", { timeZone: BUSINESS_TIME_ZONE })}). ` +
+        `Elija otro horario o cancele primero la inspección en curso.`
+      );
+    }
+  }
+
+  // Datos de la sesión original y de la CIN previa (para no revalidar dirección)
+  const session = await getInspectionSessionById(sessionId);
+  const prevCinData = await getPreviousCINData(claimId);
+  const contactName = String(prevCinData.coord_cont_1 || prevCinData.coord_cont || session?.interviewed_name || "");
+  const location = String(prevCinData.coord_ubic_1 || prevCinData.coord_ubic || session?.claim?.claim_address || "");
+  const latitude = prevCinData.claim_latitude ?? session?.claim?.claim_latitude ?? null;
+  const longitude = prevCinData.claim_longitude ?? session?.claim?.claim_longitude ?? null;
+
+  // 1. Cancelar la sesión de inspección en curso
+  await cancelInspectionSession(sessionId, reasonId, notes, userId);
+
+  // 2. Rechazar la gestión INS-001 original (status=rejected, etapa emisión).
+  //    Esto queda registrado en la historia como "rechazada por reagendamiento".
+  //    El trigger auto_recreate_rejected_workflow_action NO la recrea porque
+  //    las gestiones con característica INS están excluidas (migración 251).
+  //    La INS-001 queda en la historia para auditoría, pero ya no es la activa.
+  if (insActionId) {
+    const { rejectClaimAction } = await import("@/services/claim-actions");
+    await rejectClaimAction(insActionId, "issue", userId, notes || "Reagendamiento desde inspección");
+  }
+
+  // 3. Crear y emitir CIN-002 (Coordinación de Inspección reagendamiento)
+  //    con los nuevos datos. NO se pasa existing_session_id porque queremos
+  //    que el cascade cree una INS-002 NUEVA + sesión nueva (no que actualice
+  //    la existente). Así se conserva la historia:
+  //      CIN-001 (emitida) → INS-001 (rechazada) → sesión cancelada
+  //      CIN-002 (emitida) → INS-002 (todo)      → sesión nueva agendada
+  const { createClaimAction, issueClaimAction } = await import("@/services/claim-actions");
+  const reasonName = await getLookupName(reasonId);
+  const observationText = [reasonName, notes].filter(Boolean).join(". ");
+
+  // Construir action_data sin valores undefined (JSON los elimina pero
+  // algunos drivers los preservan como null, lo que confunde al trigger)
+  // IMPORTANTE: guardar AMBAS variantes (con y sin sufijo _1) porque:
+  // - La pantalla dinámica lee por ID exacto del snapshot (coord_fecha_1, coord_inspector_1, etc.)
+  // - Los triggers find_coord_field leen por prefijo (coord_fecha, coord_inspector, etc.)
+  const cinActionData: Record<string, unknown> = {
+    ...prevCinData,
+    coord_result: "coordinada",
+    coord_motivo: reasonId,
+    // Sin sufijo (para triggers)
+    coord_fecha: newOptions.scheduledAt,
+    coord_inspection_type: newOptions.inspectionType,
+    coord_type: newOptions.inspectionType,
+    coord_inspector: newOptions.inspectorId ?? null,
+    coord_cont: contactName,
+    coord_ubic: location,
+    coord_comentarios: observationText || null,
+    // Con sufijo _1 (para pantalla dinámica — IDs del snapshot)
+    coord_fecha_1: newOptions.scheduledAt,
+    coord_type_1: newOptions.inspectionType,
+    coord_inspector_1: newOptions.inspectorId ?? null,
+    coord_cont_1: contactName,
+    coord_ubic_1: location,
+    coord_com_1: observationText || null,
+    // Geo
+    claim_latitude: latitude,
+    claim_longitude: longitude,
+  };
+  // Limpiar undefined/null para que el JSON quede limpio
+  for (const k of Object.keys(cinActionData)) {
+    if (cinActionData[k] === undefined) delete cinActionData[k];
+  }
+
+  const newCin = await createClaimAction({
+    claim_id: claimId,
+    action_template_id: cinTemplate.action_template_id,
+    action_features_id: cinTemplate.action_features_id,
+    name: "Coordinación de Inspección (reagendamiento)",
+    description: `Reagendamiento generado desde inspección. Motivo: ${reasonName}`,
+    action_data: cinActionData,
+    issuer_id: userId,
+    created_by: userId,
+    origin: "A",
+  });
+
+  // issueClaimAction sobrescribe action_data con { ...actionData, inf_fecha_entrega }
+  // Por eso pasamos el mismo cinActionData para preservar todos los campos.
+  await issueClaimAction(newCin.id, userId, cinActionData);
+
+  // 4. El trigger cascade_workflow_on_issue del CIN-002 crea automáticamente:
+  //    - INS-002 (nueva, status=todo) con parent_action_data del CIN-002
+  //    - El trigger auto_create_inspection_session crea la sesión nueva
+  //      con los datos del CIN-002 (tipo, fecha, inspector, magic link)
+  //
+  //    La sesión anterior ya está cancelada (paso 1) y la INS-001 ya está
+  //    rechazada (paso 2). La historia se conserva completa:
+  //      CIN-001 (emitida) → INS-001 (rechazada) → sesión cancelada
+  //      CIN-002 (emitida) → INS-002 (todo)      → sesión nueva agendada
+
+  return { cancelledSessionId: sessionId, newCinId: newCin.id };
+}
+
+/**
+ * Cancelar una inspección vinculando con la coordinación.
+ * Flujo:
+ *   1. Cancela la sesión de inspección actual
+ *   2. Emite la gestión INS como "frustrada/cancelada" (el inspector hizo el trabajo)
+ *      - El cancelador queda como emisor (issued_by)
+ *      - Se conservan los datos originales + datos de cancelación en action_data
+ *   3. Crea el reporte de inspección de cancelación
+ *   4. Crea una gestión CIN con coord_result=desistida como registro de auditoría
+ *   5. Emite la CIN → desistida no crea nueva CIN (rompe el flujo)
+ */
+export async function cancelInspectionViaCIN(params: {
+  sessionId: string;
+  claimId: string;
+  insActionId?: string | null;
+  reasonId: string;
+  notes?: string;
+  cancelledBy?: string;
+  userId?: string;
+}) {
+  const { sessionId, claimId, insActionId, reasonId, notes, cancelledBy, userId } = params;
+
+  // 1. Cancelar la sesión actual
+  await cancelInspectionSession(sessionId, reasonId, notes, cancelledBy);
+
+  // 2. Emitir la gestión INS como frustrada/cancelada (no rechazar)
+  //    El inspector realizó el trabajo, se debe pagar igual.
+  if (insActionId && userId) {
+    try {
+      const { issueClaimAction } = await import("@/services/claim-actions");
+      const { fetchById } = await import("@/lib/supabase/db");
+      const insAction = await fetchById<{ action_data: Record<string, unknown> | null }>("claim_actions", insActionId, "action_data");
+      const mergedActionData = {
+        ...(insAction?.action_data || {}),
+        cancellation_session_id: sessionId,
+        cancellation_reason_id: reasonId,
+        cancellation_notes: notes || undefined,
+        cancelled_by: cancelledBy || userId,
+        cancellation_status: "cancelled",
+      };
+      await issueClaimAction(insActionId, userId, mergedActionData);
+    } catch (err) {
+      console.warn("[cancelInspectionViaCIN] No se pudo emitir INS como cancelada:", err);
+    }
+  }
+
+  // 3. Crear reporte de inspección de cancelación
+  try {
+    await createReport({
+      session_id: sessionId,
+      claim_id: claimId,
+      report_url: null,
+      generated_at: new Date().toISOString(),
+      status: "draft",
+      report_type: "cancellation",
+      cancellation_reason_id: reasonId,
+      cancellation_notes: notes || undefined,
+    });
+  } catch (err) {
+    console.warn("[cancelInspectionViaCIN] No se pudo crear reporte de cancelación:", err);
+  }
+
+  // 4. Encontrar el template CIN para este claim
+  const cinTemplate = await findCINTemplateForClaim(claimId);
+  if (!cinTemplate) {
+    throw new Error("No se encontró el template CIN para este siniestro");
+  }
+
+  // 5. Recuperar datos de CIN previa (dirección ya validada) para no revalidar
+  const prevCinData = await getPreviousCINData(claimId);
+
+  // 6. Crear gestión CIN con coord_result=desistida como registro de auditoría
+  const { createClaimAction, issueClaimAction } = await import("@/services/claim-actions");
+  const reasonName = await getLookupName(reasonId);
+  const desistidaActionData = {
+    ...prevCinData,
+    coord_result: "desistida",
+    coord_motivo: reasonId,
+    coord_comentarios: notes || undefined,
+  };
+  const newCin = await createClaimAction({
+    claim_id: claimId,
+    action_template_id: cinTemplate.action_template_id,
+    action_features_id: cinTemplate.action_features_id,
+    name: "Coordinación de Inspección (desistida)",
+    description: `Inspección desistida. Motivo: ${reasonName}`,
+    action_data: desistidaActionData,
+    issuer_id: userId,
+    origin: "A",
+  });
+
+  // 7. Emitir la CIN → desistida no crea nueva CIN
+  await issueClaimAction(newCin.id, userId, desistidaActionData);
+
+  return { cancelledSessionId: sessionId, newCinId: newCin.id };
+}
+
+/**
+ * Encuentra el template CIN para un claim.
+ * Busca entre las gestiones CIN existentes del claim (incluyendo rechazadas)
+ * para obtener action_template_id y action_features_id.
+ */
+export async function findTemplateForClaim(
+  claimId: string,
+  code: string
+): Promise<{ action_template_id: string; action_features_id: string } | null> {
+  // Buscar cualquier gestión existente con ese código (incluyendo rechazadas)
+  const { getClaimActions } = await import("@/services/claim-actions");
+  const actions = await getClaimActions(claimId, true); // includeRejected
+  const action = actions.find((a) => a.action_template?.code === code && a.action_template_id);
+  if (action?.action_template_id && action.action_features_id) {
+    return {
+      action_template_id: action.action_template_id,
+      action_features_id: action.action_features_id,
+    };
+  }
+
+  // Fallback: buscar el template directamente por código
+  const templates = await fetchAll<{ id: string; action_features_id: string }>(
+    "action_template",
+    {
+      select: "id, action_features_id",
+      eq: { code, is_active: true },
+      limit: 1,
+    }
+  );
+  if (templates[0]) {
+    return {
+      action_template_id: templates[0].id,
+      action_features_id: templates[0].action_features_id,
+    };
+  }
+  return null;
+}
+
+async function findCINTemplateForClaim(claimId: string): Promise<{
+  action_template_id: string;
+  action_features_id: string;
+} | null> {
+  return findTemplateForClaim(claimId, "CIN");
+}
+
+/**
+ * Obtiene el nombre de un lookup_catalog por ID.
+ */
+async function getLookupName(id: string): Promise<string> {
+  const row = await fetchById<{ name: string }>("lookup_catalog", id, "name");
+  return row?.name || "Motivo no especificado";
+}
+
+/**
+ * Recupera datos de la última CIN del siniestro para precargar
+ * información ya validada (dirección, contacto, etc.).
+ */
+export async function getPreviousCINData(claimId: string): Promise<Record<string, unknown>> {
+  const { getClaimActions } = await import("@/services/claim-actions");
+  const actions = await getClaimActions(claimId, true);
+  const cinActions = actions
+    .filter((a) => a.action_template?.code === "CIN" && a.action_data && Object.keys(a.action_data).length > 0)
+    .sort((a, b) => new Date(b.created_on || 0).getTime() - new Date(a.created_on || 0).getTime());
+  if (!cinActions[0]?.action_data) return {};
+  const data = cinActions[0].action_data as Record<string, unknown>;
+  const preserve: Record<string, unknown> = {};
+  for (const key of Object.keys(data)) {
+    if (
+      key.startsWith("coord_ubic") ||
+      key.startsWith("claim_latitude") ||
+      key.startsWith("claim_longitude") ||
+      key.startsWith("coord_cont")
+    ) {
+      preserve[key] = data[key];
+    }
+  }
+  return preserve;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PROPERTY RISK
+// ═══════════════════════════════════════════════════════════════
+
+const RISK_SELECT = `
+  id, session_id, risk_type, risk_class, property_type, apartment_number,
+  floor_count, age_years, built_surface, room_count, bathroom_count,
+  office_count, warehouse_count, is_habitable, owner_name, branch_count,
+  worker_resident_count, business_line, created_at, updated_at
+`;
+
+export async function getPropertyRisk(sessionId: string) {
+  const rows = await fetchAll<PropertyRisk>("property_risk", {
+    select: RISK_SELECT,
+    eq: { session_id: sessionId },
+  });
+  return rows[0] || null;
+}
+
+export async function upsertPropertyRisk(sessionId: string, input: Partial<PropertyRisk>) {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("property_risk")
+    .upsert({ session_id: sessionId, ...input }, { onConflict: "session_id" })
+    .select(RISK_SELECT)
+    .single();
+  if (error) throw new Error(error.message);
+  return data as PropertyRisk;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PROPERTY MATERIALITY
+// ═══════════════════════════════════════════════════════════════
+
+const MATERIALITY_SELECT = `
+  id, session_id, walls, roof, interior_flooring, interior_ceilings,
+  interior_finishes, exterior_finishes, perimeter_closure, others,
+  created_at, updated_at
+`;
+
+export async function getPropertyMateriality(sessionId: string) {
+  const rows = await fetchAll<PropertyMateriality>("property_materiality", {
+    select: MATERIALITY_SELECT,
+    eq: { session_id: sessionId },
+  });
+  return rows[0] || null;
+}
+
+export async function upsertPropertyMateriality(sessionId: string, input: Partial<PropertyMateriality>) {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("property_materiality")
+    .upsert({ session_id: sessionId, ...input }, { onConflict: "session_id" })
+    .select(MATERIALITY_SELECT)
+    .single();
+  if (error) throw new Error(error.message);
+  return data as PropertyMateriality;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SECURITY MEASURES
+// ═══════════════════════════════════════════════════════════════
+
+const SECURITY_SELECT = `
+  id, session_id, protections, protections_detail, security_locks,
+  security_locks_detail, security_guards, security_guards_detail,
+  alarms, alarms_detail, cameras, cameras_detail, other_measures,
+  created_at, updated_at
+`;
+
+export async function getSecurityMeasures(sessionId: string) {
+  const rows = await fetchAll<SecurityMeasures>("security_measures", {
+    select: SECURITY_SELECT,
+    eq: { session_id: sessionId },
+  });
+  return rows[0] || null;
+}
+
+export async function upsertSecurityMeasures(sessionId: string, input: Partial<SecurityMeasures>) {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("security_measures")
+    .upsert({ session_id: sessionId, ...input }, { onConflict: "session_id" })
+    .select(SECURITY_SELECT)
+    .single();
+  if (error) throw new Error(error.message);
+  return data as SecurityMeasures;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INSURED STATEMENT
+// ═══════════════════════════════════════════════════════════════
+
+const STATEMENT_SELECT = `
+  id, session_id, statement, entry_exit_point, alarm_activation,
+  stolen_items_estimate, vehicle_use, incident_duration,
+  created_at, updated_at
+`;
+
+export async function getInsuredStatement(sessionId: string) {
+  const rows = await fetchAll<InsuredStatement>("insured_statement", {
+    select: STATEMENT_SELECT,
+    eq: { session_id: sessionId },
+  });
+  return rows[0] || null;
+}
+
+export async function upsertInsuredStatement(sessionId: string, input: Partial<InsuredStatement>) {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("insured_statement")
+    .upsert({ session_id: sessionId, ...input }, { onConflict: "session_id" })
+    .select(STATEMENT_SELECT)
+    .single();
+  if (error) throw new Error(error.message);
+  return data as InsuredStatement;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// THIRD PARTIES
+// ═══════════════════════════════════════════════════════════════
+
+const THIRD_PARTY_SELECT = `
+  id, session_id, party_type, full_name, rut, address, commune, phone, email,
+  company_name, has_insurance, insurance_company, claim_number, notes,
+  created_at, updated_at
+`;
+
+export async function getThirdParties(sessionId: string) {
+  return fetchAll<ThirdParty>("third_parties", {
+    select: THIRD_PARTY_SELECT,
+    eq: { session_id: sessionId },
+  });
+}
+
+export async function createThirdParty(input: Omit<ThirdParty, "id" | "created_at" | "updated_at">) {
+  return insertRow<ThirdParty>("third_parties", input, THIRD_PARTY_SELECT);
+}
+
+export async function updateThirdParty(id: string, input: Partial<ThirdParty>) {
+  const set: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (value !== undefined) set[key] = value;
+  }
+  return updateRow<ThirdParty>("third_parties", id, set, THIRD_PARTY_SELECT);
+}
+
+export async function deleteThirdParty(id: string) {
+  await deleteRow("third_parties", id);
+}
+
+/**
+ * Fuerza la liberación de una inspección descargada offline.
+ * Quita offline_downloaded_by y offline_downloaded_at, invalidando
+ * la sesión offline del dispositivo que la tenía descargada.
+ * El dispositivo no podrá sincronizar cambios.
+ */
+export async function forceReleaseOfflineSession(
+  sessionId: string,
+  userId?: string,
+) {
+  const session = await fetchById<{
+    id: string;
+    status: string;
+    offline_downloaded_by: string | null;
+    offline_downloaded_at: string | null;
+    company_id: string | null;
+  }>(
+    "inspection_sessions",
+    sessionId,
+    "id, status, offline_downloaded_by, offline_downloaded_at, company_id",
+  );
+  if (!session) throw new Error("Inspección no encontrada");
+  if (!session.offline_downloaded_by) {
+    throw new Error("Esta inspección no está descargada offline");
+  }
+
+  const updated = await updateRow<InspectionSession>(
+    "inspection_sessions",
+    sessionId,
+    {
+      offline_downloaded_by: null,
+      offline_downloaded_at: null,
+      offline_synced_at: new Date().toISOString(),
+    },
+    SESSION_SELECT,
+  );
+
+  // Registrar en audit_logs
+  try {
+    await insertRow(
+      "audit_logs",
+      {
+        table_name: "inspection_sessions",
+        record_id: sessionId,
+        action: "UPDATE",
+        old_data: { offline_downloaded_by: session.offline_downloaded_by, offline_downloaded_at: session.offline_downloaded_at },
+        new_data: { offline_downloaded_by: null, offline_downloaded_at: null },
+        performed_by: userId || null,
+        company_id: session.company_id || null,
+      },
+      "id",
+    );
+  } catch (e) {
+    console.error("No se pudo registrar auditoría de liberación offline:", e);
+  }
+
+  return updated;
+}
+
+/**
+ * Obtiene las inspecciones que están descargadas offline.
+ */
+export async function getOfflineDownloadedSessions() {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("inspection_sessions")
+    .select(`${SESSION_SELECT}, inspector:profiles!offline_downloaded_by(full_name), claim:claims(liquidation_number, client_reference)`)
+    .not("offline_downloaded_by", "is", null)
+    .order("offline_downloaded_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data || []) as (InspectionSession & { inspector?: { full_name: string }; claim?: { liquidation_number: string | null; client_reference: string | null } })[];
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DAMAGE SKETCHES
+// ═══════════════════════════════════════════════════════════════
+
+const SKETCH_SELECT = `id, session_id, sketch_url, sketch_data, label, created_at`;
+
+export async function getDamageSketches(sessionId: string) {
+  return fetchAll<DamageSketch>("damage_sketches", {
+    select: SKETCH_SELECT,
+    eq: { session_id: sessionId },
+  });
+}
+
+export async function createDamageSketch(input: Omit<DamageSketch, "id" | "created_at">) {
+  return insertRow<DamageSketch>("damage_sketches", input, SKETCH_SELECT);
+}
+
+export async function updateDamageSketch(id: string, input: Partial<Pick<DamageSketch, "label" | "sketch_url" | "sketch_data">>) {
+  const set: Record<string, unknown> = {};
+  if (input.label !== undefined) set.label = input.label;
+  if (input.sketch_url !== undefined) set.sketch_url = input.sketch_url;
+  if (input.sketch_data !== undefined) set.sketch_data = input.sketch_data;
+  return updateRow<DamageSketch>("damage_sketches", id, set, SKETCH_SELECT);
+}
+
+export async function deleteDamageSketch(id: string) {
+  const res = await fetch(`/api/inspection/sketch/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Error al borrar croquis");
+  }
+  return res.json();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DAMAGES (extended)
+// ═══════════════════════════════════════════════════════════════
+
+const DAMAGE_SELECT = `
+  id, session_id, category, subcategory, description, observations, severity,
+  dependency, sector, materiality_type, unit, quantity, length, width, height,
+  damage_length, damage_width, damage_height, damage_quantity, damage_type,
+  product, brand_model, product_id, brand_id, purchase_date, estimated_amount, currency,
+  third_party_id, space_id, content_good_type_id, building_damage_category_id,
+  created_at, updated_at
+`;
+
+export async function getDamages(sessionId: string) {
+  return fetchAll<InspectionDamage>("inspection_damages", {
+    select: DAMAGE_SELECT,
+    eq: { session_id: sessionId },
+  });
+}
+
+export async function createDamage(input: Omit<InspectionDamage, "id" | "created_at" | "updated_at">) {
+  return insertRow<InspectionDamage>("inspection_damages", input, DAMAGE_SELECT);
+}
+
+export async function updateDamage(id: string, input: Partial<InspectionDamage>) {
+  const set: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (value !== undefined) set[key] = value;
+  }
+  return updateRow<InspectionDamage>("inspection_damages", id, set, DAMAGE_SELECT);
+}
+
+export async function deleteDamage(id: string) {
+  await deleteRow("inspection_damages", id);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CHECKLIST
+// ═══════════════════════════════════════════════════════════════
+
+const CHECKLIST_SELECT = `id, session_id, area, item, status, notes, created_at, updated_at`;
+
+export async function getChecklists(sessionId: string) {
+  return fetchAll<import("@/types").InspectionChecklist>("inspection_checklists", {
+    select: CHECKLIST_SELECT,
+    eq: { session_id: sessionId },
+  });
+}
+
+export async function createChecklistItem(input: Omit<import("@/types").InspectionChecklist, "id" | "created_at" | "updated_at">) {
+  return insertRow<import("@/types").InspectionChecklist>("inspection_checklists", input, CHECKLIST_SELECT);
+}
+
+export async function updateChecklistItem(id: string, input: Partial<import("@/types").InspectionChecklist>) {
+  const set: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (value !== undefined) set[key] = value;
+  }
+  return updateRow<import("@/types").InspectionChecklist>("inspection_checklists", id, set, CHECKLIST_SELECT);
+}
+
+export async function deleteChecklistItem(id: string) {
+  await deleteRow("inspection_checklists", id);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  EVIDENCES
+// ═══════════════════════════════════════════════════════════════
+
+const EVIDENCE_SELECT = `id, session_id, type, url, description, category, damage_id, include_in_report, metadata, created_at`;
+
+export async function getEvidences(sessionId: string) {
+  return fetchAll<import("@/types").InspectionEvidence>("inspection_evidences", {
+    select: EVIDENCE_SELECT,
+    eq: { session_id: sessionId },
+  });
+}
+
+export async function createEvidence(input: Omit<import("@/types").InspectionEvidence, "id" | "created_at">) {
+  return insertRow<import("@/types").InspectionEvidence>("inspection_evidences", input, EVIDENCE_SELECT);
+}
+
+export async function updateEvidenceInclude(id: string, includeInReport: boolean) {
+  const res = await fetch(`/api/inspection/evidences/${id}/include`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ include_in_report: includeInReport }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Error al actualizar evidencia");
+  }
+  return res.json();
+}
+
+export async function deleteEvidence(id: string) {
+  const res = await fetch(`/api/inspection/evidences/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Error al borrar evidencia");
+  }
+  return res.json();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SIGNATURES
+// ═══════════════════════════════════════════════════════════════
+
+const SIGNATURE_SELECT = `id, session_id, role, signature_url, signed_at, ip_address, user_agent`;
+
+export async function getSignatures(sessionId: string) {
+  return fetchAll<import("@/types").InspectionSignature>("inspection_signatures", {
+    select: SIGNATURE_SELECT,
+    eq: { session_id: sessionId },
+  });
+}
+
+export async function createSignature(input: Omit<import("@/types").InspectionSignature, "id">) {
+  return insertRow<import("@/types").InspectionSignature>("inspection_signatures", input, SIGNATURE_SELECT);
+}
+
+export async function deleteSignature(id: string) {
+  return deleteRow("inspection_signatures", id);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  REPORTS
+// ═══════════════════════════════════════════════════════════════
+
+const REPORT_SELECT = `id, session_id, claim_id, report_url, generated_at, status, report_type, cancellation_reason_id, cancellation_notes`;
+
+export async function getReport(sessionId: string) {
+  const rows = await fetchAll<import("@/types").InspectionReport>("inspection_reports", {
+    select: REPORT_SELECT,
+    eq: { session_id: sessionId },
+  });
+  return rows[0] || null;
+}
+
+export async function createReport(input: Omit<import("@/types").InspectionReport, "id">) {
+  return insertRow<import("@/types").InspectionReport>("inspection_reports", input, REPORT_SELECT);
+}
+
+export async function updateReport(id: string, input: Partial<import("@/types").InspectionReport>) {
+  const set: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (value !== undefined) set[key] = value;
+  }
+  return updateRow<import("@/types").InspectionReport>("inspection_reports", id, set, REPORT_SELECT);
+}
+
+export async function enableGeoRecapture(sessionId: string) {
+  // Al habilitar recaptura, limpiar los campos geo_* para que el asegurado
+  // empiece de cero. La ubicacion anterior ya no sirve.
+  return updateRow<InspectionSession>("inspection_sessions", sessionId, {
+    geo_recapture_enabled: true,
+    geo_latitude: null,
+    geo_longitude: null,
+    geo_captured_at: null,
+    geo_captured_by: null,
+    geo_distance_meters: null,
+    geo_status: "pending",
+    geo_map_url: null,
+  }, SESSION_SELECT);
+}

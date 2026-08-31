@@ -1,0 +1,1071 @@
+/* ═══════════════════════════════════════════════════════════════
+   Mobile Module — Estilos del módulo de inspección mobile.
+   Optimizado para touch (44-48px targets), celular y tablet.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Pantalla de elección ── */
+.mobile-choice-card {
+  display: block;
+  width: 100%;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  transition: border-color 0.15s, background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.mobile-choice-card:active {
+  border-color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.05);
+}
+
+.mobile-choice-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+/* ── Skin mobile (fuente Sora) ── */
+.mobile-skin {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, system-ui, sans-serif;
+}
+
+/* ── Lista de inspecciones ── */
+.mobile-inspection-card {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  transition: border-color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.mobile-inspection-card:active {
+  border-color: hsl(var(--primary));
+}
+
+.mobile-inspection-code {
+  font-size: 13px;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  font-family: monospace;
+}
+
+.mobile-inspection-subcode {
+  font-size: 11px;
+  color: hsl(var(--muted-foreground));
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-inspection-inspector {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: hsl(var(--muted-foreground));
+}
+
+.mobile-inspection-address {
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+  line-height: 1.4;
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-inspection-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 11px;
+}
+
+.mobile-status-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.mobile-status-dot.scheduled { background: var(--c-sky); }
+.mobile-status-dot.active { background: hsl(var(--muted-foreground)); }
+.mobile-status-dot.paused { background: var(--c-orange); }
+.mobile-status-dot.completed { background: var(--c-violet); }
+.mobile-status-dot.cancelled { background: var(--st-error); }
+
+/* ── Tabs mobile ── */
+.mobile-tabs-wrap {
+  position: relative;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.mobile-tabs {
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 0 8px;
+}
+
+.mobile-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* Indicador de scroll a la derecha */
+.mobile-tabs-wrap::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 20px;
+  background: linear-gradient(to left, hsl(var(--background)), transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.mobile-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 6px;
+  font-size: 9px;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 48px;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.mobile-tab svg {
+  width: 18px;
+  height: 18px;
+}
+
+.mobile-tab.active {
+  color: hsl(var(--primary));
+  border-bottom-color: hsl(var(--primary));
+}
+
+/* ── Botones mobile ── */
+.mobile-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 20px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: opacity 0.15s;
+}
+
+.mobile-btn:active {
+  opacity: 0.8;
+}
+
+.mobile-btn-primary {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.mobile-btn-outline {
+  background: transparent;
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+}
+
+.mobile-btn-danger {
+  background: var(--st-error);
+  color: hsl(var(--destructive-foreground));
+}
+
+.mobile-btn-warning {
+  background: var(--c-orange);
+  color: hsl(var(--primary-foreground));
+}
+
+.mobile-btn-success {
+  background: var(--st-success);
+  color: #ffffff;
+}
+
+/* Split 60-40 para header de inspección mobile */
+.mobile-header-split {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 8px !important;
+}
+
+.mobile-header-split-left {
+  flex: 6 !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+}
+
+.mobile-header-split-right {
+  flex: 4 !important;
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 4px !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  flex-wrap: wrap !important;
+}
+
+.mobile-header-split-right .mobile-btn-sm {
+  flex: 1 !important;
+  min-width: 0 !important;
+  white-space: nowrap !important;
+}
+
+.mobile-btn:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.mobile-btn-sm {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 11px;
+  gap: 3px;
+  border-radius: 8px;
+}
+
+/* ── Inputs mobile ── */
+.mobile-input {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--background));
+  font-size: 16px; /* evita zoom en iOS */
+  color: hsl(var(--foreground));
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-input:focus {
+  outline: none;
+  border-color: hsl(var(--primary));
+}
+
+.mobile-textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--background));
+  font-size: 16px;
+  color: hsl(var(--foreground));
+  resize: vertical;
+}
+
+.mobile-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+  margin-bottom: 6px;
+}
+
+/* ── Cards de contenido ── */
+.mobile-card {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.mobile-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  margin-bottom: 8px;
+}
+
+.mobile-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid hsl(var(--border) / 0.5);
+  font-size: 13px;
+}
+
+.mobile-card-row:last-child {
+  border-bottom: none;
+}
+
+.mobile-card-row-label {
+  color: hsl(var(--muted-foreground));
+  flex-shrink: 0;
+}
+
+.mobile-card-row-value {
+  color: hsl(var(--foreground));
+  text-align: right;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Badges mobile ── */
+.mobile-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Badge de tipo de inspección (Remota / Presencial) */
+.mobile-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.mobile-type-badge-remote {
+  color: var(--c-violet);
+  background: color-mix(in srgb, var(--c-violet) 15%, transparent);
+}
+
+.mobile-type-badge-onsite {
+  color: var(--c-sky);
+  background: color-mix(in srgb, var(--c-sky) 15%, transparent);
+}
+
+.mobile-type-icon-remote {
+  color: var(--c-violet);
+}
+
+.mobile-type-icon-onsite {
+  color: var(--c-sky);
+}
+
+.mobile-badge-scheduled { background: color-mix(in srgb, var(--c-sky) 15%, transparent); color: var(--c-sky); }
+.mobile-badge-active { background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }
+.mobile-badge-paused { background: color-mix(in srgb, var(--c-orange) 15%, transparent); color: var(--c-orange); }
+.mobile-badge-completed { background: color-mix(in srgb, var(--c-violet) 15%, transparent); color: var(--c-violet); }
+.mobile-badge-cancelled { background: color-mix(in srgb, var(--st-error) 15%, transparent); color: var(--st-error); }
+
+/* ── Grid de fotos ── */
+.mobile-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+@media (min-width: 640px) {
+  .mobile-photo-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 768px) {
+  .mobile-photo-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+.mobile-photo-item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid hsl(var(--border));
+}
+
+.mobile-photo-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Botón flotante sobre fotos/videos en grilla — touch target mínimo 44px */
+.mobile-photo-delete-btn {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: color-mix(in srgb, black 60%, transparent);
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Botón flotante superior derecho en zoom de evidencia */
+.mobile-photo-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  bottom: auto;
+  left: auto;
+  background: color-mix(in srgb, white 10%, transparent);
+}
+
+.mobile-photo-delete-btn:disabled {
+  opacity: 0.5;
+}
+
+/* Indicadores flotantes (GPS, IA) — no interactivos, pueden ser pequeños */
+.mobile-photo-badge {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: color-mix(in srgb, black 60%, transparent);
+  padding: 2px 4px;
+}
+
+/* Botón eliminar en lista de documentos — touch target mínimo 44px */
+.mobile-doc-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 8px;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  flex-shrink: 0;
+}
+
+.mobile-doc-delete-btn:disabled {
+  opacity: 0.5;
+}
+
+/* ── Toggle switch mobile ── */
+.mobile-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 56px;
+  height: 44px;
+  border-radius: 22px;
+  background: hsl(var(--muted));
+  transition: background 0.2s;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.mobile-toggle.active {
+  background: hsl(var(--primary));
+}
+
+.mobile-toggle-thumb {
+  position: absolute;
+  left: 4px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: hsl(var(--background));
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px color-mix(in srgb, hsl(var(--foreground)) 20%, transparent);
+}
+
+.mobile-toggle.active .mobile-toggle-thumb {
+  transform: translateX(16px);
+}
+
+/* ── Empty state ── */
+.mobile-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  color: hsl(var(--muted-foreground));
+}
+
+.mobile-empty-icon {
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+.mobile-empty-text {
+  font-size: 14px;
+}
+
+/* ── Pull to refresh hint ── */
+.mobile-pull-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+}
+
+/* ── Wizard steps ── */
+.mobile-wizard-steps {
+  display: flex;
+  gap: 4px;
+  padding: 8px 16px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.mobile-wizard-steps::-webkit-scrollbar {
+  display: none;
+}
+
+.mobile-wizard-step {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--muted-foreground));
+}
+
+.mobile-wizard-step.active {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+}
+
+.mobile-wizard-step.completed {
+  background: hsl(var(--primary) / 0.15);
+  color: hsl(var(--primary));
+  border-color: hsl(var(--primary) / 0.3);
+}
+
+/* ── Breakpoints faltantes: tablet landscape y desktop ── */
+@media (min-width: 1024px) {
+  .mobile-photo-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+  .mobile-tabs {
+    justify-content: center;
+  }
+  .mobile-tabs-wrap::after {
+    display: none;
+  }
+  .mobile-tab {
+    flex-direction: row;
+    min-width: auto;
+    font-size: 13px;
+    padding: 10px 10px;
+  }
+  .mobile-inspection-card {
+    max-width: 480px;
+    margin: 0 auto 8px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .mobile-photo-grid {
+    grid-template-columns: repeat(8, 1fr);
+  }
+  .mobile-choice-card {
+    max-width: 420px;
+    margin: 0 auto 12px;
+  }
+}
+
+/* ── Desactivar hover en dispositivos touch ── */
+@media (hover: none) {
+  .mobile-choice-card:hover,
+  .mobile-inspection-card:hover,
+  .mobile-tab:hover,
+  .mobile-btn:hover {
+    background: inherit;
+    border-color: inherit;
+    transform: none;
+  }
+}
+
+/* ── Safe area iOS ── */
+.mobile-safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* ── Formulario de daños en móvil (todo apilado vertical) ── */
+.mobile-damage-form .modal-grid-3,
+.mobile-damage-form .modal-grid-4,
+.mobile-damage-form .modal-grid-5 {
+  grid-template-columns: 1fr !important;
+}
+.mobile-damage-form .modal-field,
+.mobile-damage-form .modal-field-full,
+.mobile-damage-form [class*="col-span-"] {
+  grid-column: 1 / -1 !important;
+  width: 100%;
+}
+.mobile-damage-form .damage-dimension-pair {
+  grid-template-columns: 1fr 1fr !important;
+  gap: 6px !important;
+}
+.mobile-damage-form .damage-dimension-row,
+.mobile-damage-form .damage-dimension-row.cols-2,
+.mobile-damage-form .damage-dimension-row.cols-3,
+.mobile-damage-form .damage-dimension-row.cols-4 {
+  grid-template-columns: 1fr !important;
+}
+.mobile-damage-form .w-\[130px\] {
+  width: 100% !important;
+}
+.mobile-damage-form .amount-field-row {
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 6px;
+}
+.mobile-damage-form .amount-field-row .app-amount-input,
+.mobile-damage-form .amount-field-row .app-amount-words {
+  width: 100% !important;
+}
+
+/* ── Hover solo en dispositivos con hover real ── */
+@media (hover: hover) {
+  .mobile-choice-card:hover {
+    border-color: hsl(var(--primary) / 0.5);
+  }
+  .mobile-inspection-card:hover {
+    border-color: hsl(var(--primary) / 0.3);
+  }
+  .mobile-tab:hover {
+    color: hsl(var(--primary));
+  }
+}
+
+/* ── Offline: banner ── */
+.offline-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: hsl(var(--amber-9, 30 80% 40%));
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+}
+
+/* ── Offline: indicador de conexión ── */
+.connection-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+.connection-indicator.online {
+  color: hsl(var(--emerald-9, 150 80% 30%));
+  background: hsl(var(--emerald-2, 150 80% 95%));
+}
+.connection-indicator.offline {
+  color: hsl(var(--amber-9, 30 80% 40%));
+  background: hsl(var(--amber-2, 30 80% 95%));
+}
+
+/* ── Offline: botón descargar cuadrado ── */
+.mobile-offline-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid hsl(var(--primary) / 0.25);
+  background: hsl(var(--primary) / 0.06);
+  color: hsl(var(--primary));
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  flex-shrink: 0;
+}
+.mobile-offline-icon-btn:hover:not(:disabled) {
+  background: hsl(var(--primary) / 0.12);
+  border-color: hsl(var(--primary) / 0.4);
+}
+.mobile-offline-icon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.mobile-offline-icon-btn.done {
+  border-color: hsl(var(--emerald-6, 150 60% 45%) / 0.3);
+  background: hsl(var(--emerald-2, 150 80% 95%));
+  color: hsl(var(--emerald-9, 150 80% 30%));
+}
+
+/* ── Diálogo de PIN offline ── */
+.mobile-pin-dialog {
+  width: min(92vw, 360px) !important;
+  padding: 20px 22px 22px !important;
+  border-radius: 16px !important;
+  background: hsl(var(--popover)) !important;
+  color: hsl(var(--popover-foreground)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  box-shadow:
+    0 24px 48px -12px rgba(0, 0, 0, 0.18),
+    0 12px 24px -8px rgba(0, 0, 0, 0.12),
+    0 0 0 1px rgba(0, 0, 0, 0.04) !important;
+}
+.mobile-pin-dialog [data-slot="dialog-title"] {
+  font-size: 15px;
+  font-weight: 600;
+}
+.mobile-pin-dialog [data-slot="dialog-header"] {
+  padding-bottom: 8px;
+}
+
+/* ── Diálogo de progreso de descarga ── */
+.download-progress-dialog {
+  width: min(92vw, 380px) !important;
+  padding: 20px 22px 22px !important;
+  border-radius: 16px !important;
+  background: hsl(var(--popover)) !important;
+  color: hsl(var(--popover-foreground)) !important;
+  border: none !important;
+  box-shadow:
+    0 24px 48px -12px rgba(0, 0, 0, 0.18),
+    0 12px 24px -8px rgba(0, 0, 0, 0.12),
+    0 0 0 1px rgba(0, 0, 0, 0.04) !important;
+}
+.download-progress-dialog [data-slot="dialog-title"] {
+  font-size: 15px;
+  font-weight: 600;
+}
+.download-progress-dialog [data-slot="dialog-header"] {
+  padding-bottom: 8px;
+}
+.download-progress-bar-track {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: hsl(var(--muted));
+  overflow: hidden;
+}
+.download-progress-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, hsl(38 92% 50%), hsl(38 92% 55%)) !important;
+  transition: width 0.4s ease !important;
+}
+
+/* ── Offline: badge descargada ── */
+.mobile-offline-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 999px;
+}
+.mobile-offline-badge.downloaded {
+  background: hsl(var(--emerald-2, 150 80% 95%));
+  color: hsl(var(--emerald-9, 150 80% 30%));
+}
+
+/* ── Offline: botón sincronizar ── */
+.mobile-sync-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 8px;
+  border: 1px solid hsl(var(--blue-9, 220 80% 50%) / 0.3);
+  background: hsl(var(--blue-2, 220 80% 95%));
+  color: hsl(var(--blue-9, 220 80% 40%));
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.mobile-sync-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Offline: badge sincronizada ── */
+.mobile-sync-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 999px;
+}
+.mobile-sync-badge.synced {
+  background: hsl(var(--emerald-2, 150 80% 95%));
+  color: hsl(var(--emerald-9, 150 80% 30%));
+}
+
+/* ── Offline: badge pendiente ── */
+.mobile-offline-pending-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  font-size: 9px;
+  font-weight: 600;
+  border-radius: 999px;
+  background: hsl(var(--amber-2, 30 80% 95%));
+  color: hsl(var(--amber-9, 30 80% 40%));
+}
+
+/* ── Offline: badge offline (en card de inspección) ── */
+.mobile-offline-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  font-size: 9px;
+  font-weight: 600;
+  border-radius: 999px;
+}
+.mobile-offline-status.available {
+  background: hsl(var(--emerald-2, 150 80% 95%));
+  color: hsl(var(--emerald-9, 150 80% 30%));
+}
+.mobile-offline-status.pending {
+  background: hsl(var(--amber-2, 30 80% 95%));
+  color: hsl(var(--amber-9, 30 80% 40%));
+}
+.mobile-offline-status.synced {
+  background: hsl(var(--blue-2, 220 80% 95%));
+  color: hsl(var(--blue-9, 220 80% 40%));
+}
+
+/* ── Offline: login ── */
+.offline-login-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  background: hsl(var(--amber-2, 30 80% 95%));
+  color: hsl(var(--amber-9, 30 80% 30%));
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* ── Offline: botón eliminar descarga ── */
+.mobile-offline-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 8px;
+  border: 1px solid hsl(var(--destructive, 0 80% 50%) / 0.3);
+  background: hsl(var(--destructive, 0 80% 50%) / 0.08);
+  color: hsl(var(--destructive, 0 80% 50%));
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.mobile-offline-delete-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Offline: empty subtext ── */
+.mobile-empty-subtext {
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+  margin-top: 4px;
+}
+
+/* ── Croquis: canvas simple mobile ── */
+.simple-drawing-canvas {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.simple-drawing-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 8px;
+  background: hsl(var(--muted) / 0.5);
+}
+
+.simple-drawing-colors {
+  display: flex;
+  gap: 4px;
+}
+
+.simple-drawing-color {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.1s ease;
+}
+.simple-drawing-color.active {
+  border-color: hsl(var(--primary));
+  transform: scale(1.15);
+}
+
+.simple-drawing-tools {
+  display: flex;
+  gap: 4px;
+}
+
+.simple-drawing-tool {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--background));
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.simple-drawing-tool.active {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+}
+.simple-drawing-tool:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.simple-drawing-stage {
+  flex: 1;
+  min-height: 300px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  background: #ffffff;
+  overflow: hidden;
+  position: relative;
+}
+
+.simple-drawing-canvas-element {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.simple-drawing-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ── Croquis: cards de sketch ── */
+.mobile-sketch-card {
+  position: relative;
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  overflow: hidden;
+  background: hsl(var(--background));
+}
+
+.mobile-sketch-image {
+  width: 100%;
+  aspect-ratio: 4/3;
+  object-fit: cover;
+  background: #ffffff;
+}
+
+.mobile-sketch-label {
+  padding: 4px 8px;
+  font-size: 11px;
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-sketch-actions {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  gap: 4px;
+}
+
+.mobile-sketch-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: hsl(var(--background) / 0.9);
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: background-color 0.15s ease;
+}
+.mobile-sketch-action-btn.danger {
+  color: hsl(var(--destructive, 0 80% 50%));
+}
