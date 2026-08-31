@@ -269,16 +269,14 @@ export default function MonitoringPanel({ sessionId }: MonitoringPanelProps) {
               Alertas
               <span className="text-[10px] text-slate-400">({alerts.length})</span>
             </h4>
-            <table className="w-full border-collapse table-fixed">
-              <thead>
-                <tr className="text-[10px] text-slate-400 border-b border-slate-200 dark:border-slate-700">
-                  <th className="w-20 py-1 text-left font-normal">Severidad</th>
-                  <th className="py-1 text-left font-normal">Mensaje</th>
-                </tr>
-              </thead>
-            </table>
             <div className="max-h-[100px] overflow-y-auto pr-1">
               <table className="w-full border-collapse table-fixed">
+                <thead className="sticky top-0 z-10 bg-popover">
+                  <tr className="text-[10px] text-slate-400 border-b border-slate-200 dark:border-slate-700">
+                    <th className="w-20 py-1 text-left font-normal">Severidad</th>
+                    <th className="py-1 text-left font-normal">Mensaje</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {alerts.map((alert, i) => (
                     <tr key={i} className="text-[10px] text-slate-500 border-b border-slate-100 dark:border-slate-800">
@@ -311,11 +309,9 @@ export default function MonitoringPanel({ sessionId }: MonitoringPanelProps) {
             Accesos del asegurado
             <span className="text-[10px] text-slate-400">({insuredLogs.length})</span>
           </h4>
-          <table className="w-full border-collapse table-fixed">
-            <thead>{headRow}</thead>
-          </table>
           <div className="max-h-[120px] overflow-y-auto pr-1">
             <table className="w-full border-collapse table-fixed">
+              <thead className="sticky top-0 z-10 bg-popover">{headRow}</thead>
               <tbody>
                 {insuredLogs.slice(0, 20).sort((a, b) => new Date(a.connected_at).getTime() - new Date(b.connected_at).getTime()).map((log, idx) => renderLogRow(log, idx))}
               </tbody>
@@ -349,11 +345,9 @@ export default function MonitoringPanel({ sessionId }: MonitoringPanelProps) {
                 <p className="text-xs text-slate-500">No hay eventos registrados.</p>
               ) : (
                 <>
-                  <table className="w-full border-collapse table-fixed">
-                    <thead>{headRow}</thead>
-                  </table>
                   <div className="max-h-[120px] overflow-y-auto pr-1">
                     <table className="w-full border-collapse table-fixed">
+                      <thead className="sticky top-0 z-10 bg-popover">{headRow}</thead>
                       <tbody>
                         {timeline.slice(0, 100).map((item, i) => item.type === "event" ? renderEventRow(item.data as WebrtcEvent, i, i) : renderLogRow(item.data as ConnectionLog, i))}
                       </tbody>
