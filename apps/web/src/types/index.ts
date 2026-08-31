@@ -1087,6 +1087,61 @@ export interface BillingBatchItem {
   created_at: string;
 }
 
+// ── Agrupaciones de Inspectores ──
+export interface InspectorGroup {
+  id: string;
+  name: string;
+  description: string | null;
+  member_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InspectorGroupMember {
+  id: string;
+  group_id: string;
+  inspector_id: string;
+  inspector_name?: string | null;
+  inspector_email?: string | null;
+  created_at: string;
+}
+
+// ── Nóminas de Facturación de Inspecciones (por agrupación) ──
+export interface InspectionBillingBatch {
+  id: string;
+  group_id: string;
+  group_name?: string | null;
+  name: string;
+  status: "pendiente_revision" | "enviada_revision" | "aprobada";
+  generated_at: string;
+  sent_at: string | null;
+  approved_at: string | null;
+  approved_by: string | null;
+  item_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InspectionBillingBatchItem {
+  id: string;
+  batch_id: string;
+  session_id: string;
+  claim_id: string | null;
+  inspector_id: string | null;
+  include_for_billing: boolean;
+  billed: boolean;
+  liquidation_number: string | null;
+  case_code: string | null;
+  inspection_number: string | null;
+  client_reference: string | null;
+  inspector_name: string | null;
+  insured_name: string | null;
+  claim_address: string | null;
+  inspection_date: string | null;
+  inspection_type: string | null;
+  created_at: string;
+}
+
 // ── Tempario (DS27 Chile) ──
 export type {
   TemparioChapter,

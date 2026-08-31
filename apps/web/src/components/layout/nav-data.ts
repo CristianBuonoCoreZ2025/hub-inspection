@@ -176,6 +176,8 @@ export const operationLinks: NavLink[] = [
   { href: "/dashboard/operaciones/reasignar-inspecciones", label: "Reasignar Inspecciones", icon: Users },
   { href: "/dashboard/operaciones/liberar-offline", label: "Liberar Offline", icon: Smartphone },
   { href: "/dashboard/operaciones/facturacion", label: "Facturación", icon: Receipt },
+  { href: "/dashboard/operaciones/agrupaciones-inspectores", label: "Agrupaciones", icon: Users },
+  { href: "/dashboard/operaciones/facturacion-inspecciones", label: "Facturación Inspecciones", icon: ClipboardCheck },
 ];
 
 // ── Administración ──
