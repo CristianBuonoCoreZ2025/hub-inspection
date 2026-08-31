@@ -169,7 +169,7 @@ export default function MonitoringPanel({ sessionId }: MonitoringPanelProps) {
       ...logs.map((l) => ({ timestamp: l.connected_at, type: "log" as const, data: l })),
       ...events.map((e) => ({ timestamp: e.created_at, type: "event" as const, data: e })),
     ];
-    return items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    return items.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
   }, [logs, events]);
 
   const refetchAll = () => { refetchLogs(); refetchEvents(); };
@@ -177,6 +177,7 @@ export default function MonitoringPanel({ sessionId }: MonitoringPanelProps) {
 
   const headRow = (
     <tr className="text-[10px] text-slate-400 border-b border-slate-200 dark:border-slate-700">
+      <th className="w-6 py-1 text-left font-normal">#</th>
       <th className="w-4 py-1 text-left"></th>
       <th className="w-32 py-1 text-left font-normal">Fecha</th>
       <th className="w-20 py-1 text-left font-normal">Rol</th>
@@ -187,10 +188,11 @@ export default function MonitoringPanel({ sessionId }: MonitoringPanelProps) {
     </tr>
   );
 
-  const renderLogRow = (log: ConnectionLog) => {
+  const renderLogRow = (log: ConnectionLog, idx: number) => {
     const status = statusConfig[log.status] || statusConfig.connecting;
     return (
       <tr key={log.id} className="text-[10px] text-slate-500">
+        <td className="w-6 py-1 text-slate-400 tabular-nums">{String(idx + 1).padStart(2, "0")}</td>
         <td className="w-4 py-1"><StatusDot label={status.label} color={status.color} /></td>
         <td className="w-32 py-1">
           <span className="inline-flex items-center gap-1 truncate">
@@ -217,10 +219,11 @@ export default function MonitoringPanel({ sessionId }: MonitoringPanelProps) {
     );
   };
 
-  const renderEventRow = (evt: WebrtcEvent, i: number) => {
+  const renderEventRow = (evt: WebrtcEvent, i: number, idx: number) => {
     const cfg = eventConfig[evt.event_type] || { label: evt.event_type, icon: Activity, color: "text-slate-500" };
     return (
       <tr key={`evt-${i}`} className="text-[10px] text-slate-500">
+        <td className="w-6 py-1 text-slate-400 tabular-nums">{String(idx + 1).padStart(2, "0")}</td>
         <td className="w-4 py-1"><EventIcon eventType={evt.event_type} /></td>
         <td className="w-32 py-1">
           <span className="inline-flex items-center gap-1 truncate">
@@ -314,7 +317,7 @@ export default function MonitoringPanel({ sessionId }: MonitoringPanelProps) {
           <div className="max-h-[120px] overflow-y-auto pr-1">
             <table className="w-full border-collapse table-fixed">
               <tbody>
-                {insuredLogs.slice(0, 20).sort((a, b) => new Date(b.connected_at).getTime() - new Date(a.connected_at).getTime()).map(renderLogRow)}
+                {insuredLogs.slice(0, 20).sort((a, b) => new Date(a.connected_at).getTime() - new Date(b.connected_at).getTime()).map((log, idx) => renderLogRow(log, idx))}
               </tbody>
             </table>
           </div>
@@ -352,7 +355,7 @@ export default function MonitoringPanel({ sessionId }: MonitoringPanelProps) {
                   <div className="max-h-[120px] overflow-y-auto pr-1">
                     <table className="w-full border-collapse table-fixed">
                       <tbody>
-                        {timeline.slice(0, 100).map((item, i) => item.type === "event" ? renderEventRow(item.data as WebrtcEvent, i) : renderLogRow(item.data as ConnectionLog))}
+                        {timeline.slice(0, 100).map((item, i) => item.type === "event" ? renderEventRow(item.data as WebrtcEvent, i, i) : renderLogRow(item.data as ConnectionLog, i))}
                       </tbody>
                     </table>
                   </div>
