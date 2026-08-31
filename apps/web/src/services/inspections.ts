@@ -215,8 +215,8 @@ export async function getInspectionSessionsLight(
       {
         p_page: effectivePage,
         p_page_size: effectivePageSize,
-        p_status_filter: options?.statusFilter?.length ? options.statusFilter : [],
-        p_inspector_filter: options?.inspectorFilter?.length ? options.inspectorFilter : [],
+        p_status_filter: options?.statusFilter?.length ? options.statusFilter : null,
+        p_inspector_filter: options?.inspectorFilter?.length ? options.inspectorFilter : null,
         p_internal_number: options?.internalNumber || null,
         p_sort_column: rpcSortColumn,
         p_sort_dir: options?.sortDir || "desc",
@@ -313,8 +313,8 @@ export async function getInspectionSessionsCount(
     const { data, error } = await supabase.rpc("get_inspection_sessions_ordered_v3", {
       p_page: 1,
       p_page_size: 1,
-      p_status_filter: options?.statusFilter?.length ? options.statusFilter : [],
-      p_inspector_filter: options?.inspectorFilter?.length ? options.inspectorFilter : [],
+      p_status_filter: options?.statusFilter?.length ? options.statusFilter : null,
+      p_inspector_filter: options?.inspectorFilter?.length ? options.inspectorFilter : null,
       p_internal_number: options.internalNumber,
       p_sort_column: "created_at",
       p_sort_dir: "desc",

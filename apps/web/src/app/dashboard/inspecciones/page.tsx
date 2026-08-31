@@ -102,11 +102,8 @@ function InspectionsPageContent() {
     });
   }, []);
 
-  // Si la búsqueda es solo numérica, usar filtro server-side por internal_number
-  const numericSearch = search.trim() && /^\d+$/.test(search.trim());
-
   const { data: sessions, isLoading, error: sessionsError } = useQuery({
-    queryKey: ["inspection-sessions", page, pageSize, statusFilter, inspectorFilter, sortKey, sortDir, numericSearch ? search : ""],
+    queryKey: ["inspection-sessions", page, pageSize, statusFilter, inspectorFilter, sortKey, sortDir],
     queryFn: () => getInspectionSessionsLight(undefined, {
       page,
       pageSize,
@@ -114,7 +111,6 @@ function InspectionsPageContent() {
       inspectorFilter: inspectorFilter.length ? inspectorFilter : undefined,
       sortKey,
       sortDir,
-      internalNumber: numericSearch ? search.trim() : undefined,
     }),
     staleTime: 60_000,
     gcTime: 5 * 60_000,
@@ -135,14 +131,13 @@ function InspectionsPageContent() {
 
   const fkSortColumns = ["internal_number", "inspection", "client_reference", "address"];
   const isFkSort = !!(sortKey && fkSortColumns.includes(sortKey));
-  const useRpcForList = isFkSort || numericSearch;
+  const useRpcForList = isFkSort;
 
   const { data: totalCount } = useQuery({
-    queryKey: ["inspection-sessions-count", statusFilter, inspectorFilter, numericSearch ? search : ""],
+    queryKey: ["inspection-sessions-count", statusFilter, inspectorFilter],
     queryFn: () => getInspectionSessionsCount(undefined, {
       statusFilter: statusFilter.length ? statusFilter : undefined,
       inspectorFilter: inspectorFilter.length ? inspectorFilter : undefined,
-      internalNumber: numericSearch ? search.trim() : undefined,
     }),
     enabled: !useRpcForList,
     staleTime: 60_000,
@@ -274,7 +269,7 @@ function InspectionsPageContent() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reset intencional de paginación al cambiar filtros
     setPage(1);
-  }, [statusFilter, inspectorFilter, sortKey, sortDir, numericSearch]);
+  }, [statusFilter, inspectorFilter, sortKey, sortDir]);
 
   return (
     <div className="app-page">
@@ -314,7 +309,6 @@ function InspectionsPageContent() {
                     inspectorFilter: inspectorFilter.length ? inspectorFilter : undefined,
                     sortKey,
                     sortDir,
-                    internalNumber: numericSearch ? search.trim() : undefined,
                   });
                   if (batch.length === 0) break;
                   allSessions.push(...batch);
