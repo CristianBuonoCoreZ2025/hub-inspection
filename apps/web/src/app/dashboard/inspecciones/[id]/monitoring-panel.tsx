@@ -260,21 +260,21 @@ export default function MonitoringPanel({ sessionId }: MonitoringPanelProps) {
         </div>
 
         {alerts.length > 0 && (
-          <div className="grid grid-cols-2 gap-1 max-h-[50px] overflow-y-auto p-1 rounded-md border border-slate-200 dark:border-slate-700 app-panel">
+          <div className="grid grid-cols-3 gap-1 max-h-[100px] overflow-y-auto p-1 rounded-md border border-slate-200 dark:border-slate-700 app-panel">
             {alerts.map((alert, i) => (
               <Tooltip key={i}>
                 <TooltipTrigger className="w-full">
                   <div
-                    className={`flex items-center gap-1.5 px-2 py-1 rounded border truncate ${
+                    className={`flex items-center gap-1 px-1.5 py-1 rounded truncate ${
                       alert.severity === "high"
-                        ? "border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/30"
+                        ? "bg-rose-100 dark:bg-rose-950/40"
                         : alert.severity === "medium"
-                        ? "border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30"
-                        : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50"
+                        ? "bg-amber-100 dark:bg-amber-950/40"
+                        : "bg-slate-100 dark:bg-slate-800"
                     }`}
                   >
                     <AlertTriangle className={`h-2.5 w-2.5 shrink-0 ${alert.severity === "high" ? "text-rose-500" : "text-amber-500"}`} />
-                    <p className="text-[10px] leading-tight text-slate-700 dark:text-slate-300 truncate">{alert.message}</p>
+                    <p className="text-[9px] leading-tight text-slate-700 dark:text-slate-300 truncate">{alert.message}</p>
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="top"><p className="text-xs">{alert.message}</p></TooltipContent>
@@ -292,7 +292,7 @@ export default function MonitoringPanel({ sessionId }: MonitoringPanelProps) {
           <table className="w-full border-collapse table-fixed">
             <thead>{headRow}</thead>
           </table>
-          <div className="max-h-40 overflow-y-auto pr-1">
+          <div className="max-h-[40px] overflow-y-auto pr-1">
             <table className="w-full border-collapse table-fixed">
               <tbody>
                 {insuredLogs.slice(0, 20).sort((a, b) => new Date(b.connected_at).getTime() - new Date(a.connected_at).getTime()).map(renderLogRow)}
@@ -330,7 +330,7 @@ export default function MonitoringPanel({ sessionId }: MonitoringPanelProps) {
                   <table className="w-full border-collapse table-fixed">
                     <thead>{headRow}</thead>
                   </table>
-                  <div className="max-h-64 overflow-y-auto pr-1">
+                  <div className="max-h-[40px] overflow-y-auto pr-1">
                     <table className="w-full border-collapse table-fixed">
                       <tbody>
                         {timeline.slice(0, 100).map((item, i) => item.type === "event" ? renderEventRow(item.data as WebrtcEvent, i) : renderLogRow(item.data as ConnectionLog))}
