@@ -102,8 +102,11 @@ function InspectionsPageContent() {
     });
   }, []);
 
+  // Si la búsqueda es solo numérica, usar filtro server-side por internal_number
+  const numericSearch = search.trim() && /^\d+$/.test(search.trim());
+
   const { data: sessions, isLoading, error: sessionsError } = useQuery({
-    queryKey: ["inspection-sessions", page, pageSize, statusFilter, inspectorFilter, sortKey, sortDir],
+    queryKey: ["inspection-sessions", page, pageSize, statusFilter, inspectorFilter, sortKey, sortDir, numericSearch ? search : ""],
     queryFn: () => getInspectionSessionsLight(undefined, {
       page,
       pageSize,
@@ -111,6 +114,7 @@ function InspectionsPageContent() {
       inspectorFilter: inspectorFilter.length ? inspectorFilter : undefined,
       sortKey,
       sortDir,
+      internalNumber: numericSearch ? search.trim() : undefined,
     }),
     staleTime: 60_000,
     gcTime: 5 * 60_000,
@@ -131,13 +135,14 @@ function InspectionsPageContent() {
 
   const fkSortColumns = ["internal_number", "inspection", "client_reference", "address"];
   const isFkSort = !!(sortKey && fkSortColumns.includes(sortKey));
-  const useRpcForList = isFkSort;
+  const useRpcForList = isFkSort || numericSearch;
 
   const { data: totalCount } = useQuery({
-    queryKey: ["inspection-sessions-count", statusFilter, inspectorFilter],
+    queryKey: ["inspection-sessions-count", statusFilter, inspectorFilter, numericSearch ? search : ""],
     queryFn: () => getInspectionSessionsCount(undefined, {
       statusFilter: statusFilter.length ? statusFilter : undefined,
       inspectorFilter: inspectorFilter.length ? inspectorFilter : undefined,
+      internalNumber: numericSearch ? search.trim() : undefined,
     }),
     enabled: !useRpcForList,
     staleTime: 60_000,
@@ -224,7 +229,7 @@ function InspectionsPageContent() {
   const filtered = useMemo(
     () =>
       sessions?.filter((s) => {
-        if (!search.trim()) return true;
+        if (!search.trim() || numericSearch) return true;
         const insuredName = s.claim?.claims_participants?.[0]?.full_name;
         const q = search.toLowerCase();
         const matchesSearch =
@@ -238,7 +243,7 @@ function InspectionsPageContent() {
           s.inspection_number?.toLowerCase().includes(q)
         return matchesSearch;
       }) ?? [],
-    [sessions, search]
+    [sessions, search, numericSearch]
   );
 
   // Sort client-side solo para insured (relacion array, PostgREST no puede ordenar)
@@ -269,7 +274,7 @@ function InspectionsPageContent() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reset intencional de paginación al cambiar filtros
     setPage(1);
-  }, [statusFilter, inspectorFilter, sortKey, sortDir]);
+  }, [statusFilter, inspectorFilter, sortKey, sortDir, numericSearch]);
 
   return (
     <div className="app-page">
@@ -309,6 +314,7 @@ function InspectionsPageContent() {
                     inspectorFilter: inspectorFilter.length ? inspectorFilter : undefined,
                     sortKey,
                     sortDir,
+                    internalNumber: numericSearch ? search.trim() : undefined,
                   });
                   if (batch.length === 0) break;
                   allSessions.push(...batch);
