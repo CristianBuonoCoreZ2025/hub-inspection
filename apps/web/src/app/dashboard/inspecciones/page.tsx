@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, Suspense, useEffect } from "react";
+import React, { useState, useMemo, useCallback, Suspense, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -69,6 +69,77 @@ const sessionStatusLabels: Record<string, string> = {
   cancelled: "Cancelada",
 };
 
+function removeAccents(str: string) {
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function Highlight({ text, term }: { text: string; term: string }) {
+  if (!term.trim()) return <>{text}</>;
+  const normalizedTerm = removeAccents(term).toLowerCase();
+  const normalizedText = removeAccents(text).toLowerCase();
+  const nodes: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let i = normalizedText.indexOf(normalizedTerm);
+  while (i !== -1) {
+    if (i > lastIndex) nodes.push(<span key={lastIndex}>{text.slice(lastIndex, i)}</span>);
+    const matched = text.slice(i, i + normalizedTerm.length);
+    nodes.push(<mark key={i} className="bg-amber-200 rounded px-0.5">{matched}</mark>);
+    lastIndex = i + normalizedTerm.length;
+    i = normalizedText.indexOf(normalizedTerm, lastIndex);
+  }
+  if (lastIndex < text.length) nodes.push(<span key={lastIndex}>{text.slice(lastIndex)}</span>);
+  return <>{nodes}</>;
+}
+
+function getInspectionMatchLabels(
+  session: SessionWithRelations,
+  term: string
+): string[] {
+  if (!term.trim()) return [];
+  const q = removeAccents(term).toLowerCase();
+  const matches: string[] = [];
+  const check = (label: string, value: string | null | undefined) => {
+    if (value && removeAccents(value).toLowerCase().includes(q)) matches.push(label);
+  };
+  const claim = session.claim;
+  if (claim) {
+    check("Nº Liquidación", claim.liquidation_number);
+    check("Nº Interno", claim.internal_number);
+    check("Ref. Cliente", claim.client_reference);
+    check("Nº Siniestro", claim.claim_number);
+    check("Nº Compañía", claim.company_report_number);
+    check("Nº Póliza", claim.policy_number);
+    check("Dirección siniestro", claim.claim_address);
+    check("Ciudad siniestro", claim.city?.name);
+    check("Comuna siniestro", claim.commune?.name);
+
+    const participantLabels: Record<string, string> = {
+      insured: "Asegurado",
+      contractor: "Contratante",
+      beneficiary: "Beneficiario",
+      contact: "Contacto",
+      executive: "Ejecutivo",
+    };
+    for (const p of claim.claims_participants || []) {
+      const label = participantLabels[p.type] || p.type;
+      check(`Nombre ${label}`, p.full_name);
+      check(`Nombre ${label}`, p.first_name);
+      check(`Apellido ${label}`, p.last_name);
+      check(`RUT ${label}`, p.rut);
+      check(`Dirección ${label}`, p.address);
+      check(`Ciudad ${label}`, p.city);
+      check(`Comuna ${label}`, p.commune);
+      check(`Email ${label}`, p.email);
+      check(`Teléfono ${label}`, p.phone);
+      check(`Celular ${label}`, p.cell_phone);
+    }
+  }
+  check("Nº Inspección", session.claim_action?.code);
+  check("Nº Inspección", session.inspection_number);
+  check("Estado", sessionStatusLabels[session.status]);
+  return [...new Set(matches)];
+}
+
 export default function InspectionsPage() {
   return (
     <Suspense fallback={<div className="app-page"><p className="text-muted-foreground py-20 text-center">Cargando...</p></div>}>
@@ -102,20 +173,19 @@ function InspectionsPageContent() {
     });
   }, []);
 
-  // Si la búsqueda es numérica con 4+ dígitos, usar filtro server-side
-  // (busca por internal_number y liquidation_number en todas las páginas)
-  const numericSearch = search.trim().length >= 4 && /^\d+$/.test(search.trim());
+  // Busqueda global: 4+ caracteres via RPC server-side (todos los campos)
+  const hasSearch = search.trim().length >= 4;
 
   const { data: sessions, isLoading, error: sessionsError } = useQuery({
-    queryKey: ["inspection-sessions", page, pageSize, statusFilter, inspectorFilter, sortKey, sortDir, numericSearch ? search : ""],
+    queryKey: ["inspection-sessions", page, pageSize, statusFilter, inspectorFilter, sortKey, sortDir, hasSearch ? search : ""],
     queryFn: () => getInspectionSessionsLight(undefined, {
       page,
       pageSize,
-      statusFilter: statusFilter.length ? statusFilter : undefined,
-      inspectorFilter: inspectorFilter.length ? inspectorFilter : undefined,
+      statusFilter: hasSearch ? undefined : (statusFilter.length ? statusFilter : undefined),
+      inspectorFilter: hasSearch ? undefined : (inspectorFilter.length ? inspectorFilter : undefined),
       sortKey,
       sortDir,
-      internalNumber: numericSearch ? search.trim() : undefined,
+      q: hasSearch ? search.trim() : undefined,
     }),
     staleTime: 60_000,
     gcTime: 5 * 60_000,
@@ -136,14 +206,14 @@ function InspectionsPageContent() {
 
   const fkSortColumns = ["internal_number", "inspection", "client_reference", "address"];
   const isFkSort = !!(sortKey && fkSortColumns.includes(sortKey));
-  const useRpcForList = isFkSort || numericSearch;
+  const useRpcForList = isFkSort;
 
   const { data: totalCount } = useQuery({
-    queryKey: ["inspection-sessions-count", statusFilter, inspectorFilter, numericSearch ? search : ""],
+    queryKey: ["inspection-sessions-count", statusFilter, inspectorFilter, hasSearch ? search : ""],
     queryFn: () => getInspectionSessionsCount(undefined, {
-      statusFilter: statusFilter.length ? statusFilter : undefined,
-      inspectorFilter: inspectorFilter.length ? inspectorFilter : undefined,
-      internalNumber: numericSearch ? search.trim() : undefined,
+      statusFilter: hasSearch ? undefined : (statusFilter.length ? statusFilter : undefined),
+      inspectorFilter: hasSearch ? undefined : (inspectorFilter.length ? inspectorFilter : undefined),
+      q: hasSearch ? search.trim() : undefined,
     }),
     enabled: !useRpcForList,
     staleTime: 60_000,
@@ -230,7 +300,7 @@ function InspectionsPageContent() {
   const filtered = useMemo(
     () =>
       sessions?.filter((s) => {
-        if (!search.trim() || numericSearch) return true;
+        if (!search.trim() || hasSearch) return true;
         const insuredName = s.claim?.claims_participants?.[0]?.full_name;
         const q = search.toLowerCase();
         const matchesSearch =
@@ -244,7 +314,7 @@ function InspectionsPageContent() {
           s.inspection_number?.toLowerCase().includes(q)
         return matchesSearch;
       }) ?? [],
-    [sessions, search, numericSearch]
+    [sessions, search, hasSearch]
   );
 
   // Sort client-side solo para insured (relacion array, PostgREST no puede ordenar)
@@ -275,7 +345,7 @@ function InspectionsPageContent() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reset intencional de paginación al cambiar filtros
     setPage(1);
-  }, [statusFilter, inspectorFilter, sortKey, sortDir, numericSearch]);
+  }, [statusFilter, inspectorFilter, sortKey, sortDir, hasSearch]);
 
   return (
     <div className="app-page">
@@ -311,11 +381,11 @@ function InspectionsPageContent() {
                   const batch = await getInspectionSessionsLight(undefined, {
                     page: exportPage,
                     pageSize: exportPageSize,
-                    statusFilter: statusFilter.length ? statusFilter : undefined,
-                    inspectorFilter: inspectorFilter.length ? inspectorFilter : undefined,
+                    statusFilter: hasSearch ? undefined : (statusFilter.length ? statusFilter : undefined),
+                    inspectorFilter: hasSearch ? undefined : (inspectorFilter.length ? inspectorFilter : undefined),
                     sortKey,
                     sortDir,
-                    internalNumber: numericSearch ? search.trim() : undefined,
+                    q: hasSearch ? search.trim() : undefined,
                   });
                   if (batch.length === 0) break;
                   allSessions.push(...batch);
@@ -397,15 +467,36 @@ function InspectionsPageContent() {
       <div className="app-panel">
         <div className="app-grid-toolbar">
           <div className="app-grid-toolbar-left">
-            <div className="app-grid-search-wrap">
-              <Search />
-              <Input
-                placeholder="Buscar inspeccion..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="liquid-search"
-              />
-            </div>
+            <Tooltip>
+              <TooltipTrigger delay={0} closeDelay={0}>
+                <div className="app-grid-search-wrap">
+                  <Search />
+                  <Input
+                    placeholder="Buscar asegurado, dirección, siniestro, ref. cliente o liquidación..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="liquid-search"
+                  />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent className="bg-white text-sky-600 text-xs border border-sky-100 shadow-md" side="bottom">
+                <div className="max-w-xs">
+                  <p className="font-semibold mb-1">Busca en:</p>
+                  <ul className="list-disc pl-3 space-y-0.5">
+                    <li>Nº Liquidación</li>
+                    <li>Nº Interno</li>
+                    <li>Nº Siniestro</li>
+                    <li>Ref. Cliente</li>
+                    <li>Nº Compañía</li>
+                    <li>Nº Póliza</li>
+                    <li>Dirección, ciudad y comuna del siniestro</li>
+                    <li>Nombre, RUT, dirección, ciudad y comuna del asegurado</li>
+                    <li>Nombre, dirección, ciudad y comuna del contratante y beneficiario</li>
+                    <li>Nº de inspección y estado</li>
+                  </ul>
+                </div>
+              </TooltipContent>
+            </Tooltip>
             <Select
               multiple
               value={statusFilter}
@@ -478,26 +569,46 @@ function InspectionsPageContent() {
                   </td>
                 </tr>
               ) : (
-                paginatedData.map((session) => (
+                paginatedData.map((session) => {
+                const matchLabels = getInspectionMatchLabels(session, hasSearch ? search.trim() : "");
+                const inspectionCode = session.claim_action?.code
+                  ? session.claim_action.code.split("-").slice(-2).join("-")
+                  : session.inspection_number || session.id.slice(0, 8);
+                return (
                   <tr
                     key={session.id}
                     className={canOpenSession(session) ? "row-clickable" : ""}
                     onClick={canOpenSession(session) ? () => router.push(`/dashboard/inspecciones/${session.id}`) : undefined}
                   >
                     <td className="whitespace-nowrap hidden lg:table-cell">
-                      <span className="grid-cell-link">
+                      <div className="flex items-center gap-2">
+                        {search && matchLabels.length > 0 ? (
+                          <Tooltip>
+                            <TooltipTrigger delay={0} closeDelay={0}>
+                              <Search className="h-4 w-4 text-primary" />
+                            </TooltipTrigger>
+                            <TooltipContent className="bg-white text-sky-600 text-xs border border-sky-100 shadow-md">
+                              <div className="max-w-xs">
+                                <p className="font-semibold mb-1">Coincidencias:</p>
+                                <ul className="list-disc pl-3 space-y-0.5">
+                                  {matchLabels.map((l) => <li key={l}>{l}</li>)}
+                                </ul>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : null}
                         {session.claim?.liquidation_number ? (
                           canOpenClaim(session.claim) ? (
                             <Link href={`/dashboard/claims/${session.claim_id}`} className="grid-cell-link" onClick={(e) => e.stopPropagation()}>
-                              {session.claim.liquidation_number}
+                              <Highlight text={session.claim.liquidation_number} term={search} />
                             </Link>
                           ) : (
-                            <span>{session.claim.liquidation_number}</span>
+                            <span><Highlight text={session.claim.liquidation_number} term={search} /></span>
                           )
                         ) : (
                           "—"
                         )}
-                      </span>
+                      </div>
                     </td>
                     <td className="whitespace-nowrap">
                       <div className="flex items-center gap-2">
@@ -507,15 +618,11 @@ function InspectionsPageContent() {
                             className="grid-cell-link"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            {session.claim_action?.code
-                              ? session.claim_action.code.split("-").slice(-2).join("-")
-                              : session.inspection_number || session.id.slice(0, 8)}
+                            <Highlight text={inspectionCode} term={search} />
                           </Link>
                         ) : (
                           <span className="grid-cell-link">
-                            {session.claim_action?.code
-                              ? session.claim_action.code.split("-").slice(-2).join("-")
-                              : session.inspection_number || session.id.slice(0, 8)}
+                            <Highlight text={inspectionCode} term={search} />
                           </span>
                         )}
                         <StatusBadge
@@ -534,7 +641,7 @@ function InspectionsPageContent() {
                     </td>
                     <td className="whitespace-nowrap hidden sm:table-cell">
                       <span>
-                        {session.claim?.client_reference || "—"}
+                        <Highlight text={session.claim?.client_reference || "—"} term={search} />
                       </span>
                     </td>
                     <td className="hidden lg:table-cell">
@@ -547,14 +654,14 @@ function InspectionsPageContent() {
                     </td>
                     <td>
                       <span>
-                        {session.claim?.claims_participants?.[0]?.full_name || "—"}
+                        <Highlight text={session.claim?.claims_participants?.[0]?.full_name || "—"} term={search} />
                       </span>
                     </td>
                     <td className="max-w-60 sm:max-w-80 hidden lg:table-cell">
                       <div className="flex items-center gap-1">
                         <MapPin className="h-3 w-3 text-muted-foreground shrink-0" />
                         <span className="truncate">
-                          {session.claim?.claim_address || "—"}
+                          <Highlight text={session.claim?.claim_address || "—"} term={search} />
                         </span>
                       </div>
                     </td>
@@ -696,7 +803,8 @@ function InspectionsPageContent() {
                       </div>
                     </td>
                   </tr>
-                ))
+                );
+                })
               )}
             </tbody>
           </table>

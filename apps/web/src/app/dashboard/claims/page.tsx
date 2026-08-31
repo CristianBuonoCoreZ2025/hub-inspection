@@ -458,20 +458,22 @@ function ClaimsPageContent() {
  },
  });
 
+ const hasSearchClaims = search.trim().length >= 4;
+
  const { data: rawClaims, isLoading, error } = useQuery({
  queryKey: ["claims", page, pageSize, sortKey, sortDir, statusFilter, insuranceCompanyFilter, adjusterFilter, inspectorFilter, dateFrom, dateTo, search, codeToId],
  queryFn: () => getClaims(undefined, {
    page,
    pageSize,
-   statusIds: statusFilter.length ? statusFilter.map((c) => codeToId[c]).filter(Boolean) as string[] : undefined,
-   insuranceCompanyIds: insuranceCompanyFilter.length ? insuranceCompanyFilter : undefined,
-   adjusterIds: adjusterFilter.length ? adjusterFilter : undefined,
-   inspectorIds: inspectorFilter.length ? inspectorFilter : undefined,
-   dateFrom: dateFrom || undefined,
-   dateTo: dateTo || undefined,
+   statusIds: hasSearchClaims ? undefined : (statusFilter.length ? statusFilter.map((c) => codeToId[c]).filter(Boolean) as string[] : undefined),
+   insuranceCompanyIds: hasSearchClaims ? undefined : (insuranceCompanyFilter.length ? insuranceCompanyFilter : undefined),
+   adjusterIds: hasSearchClaims ? undefined : (adjusterFilter.length ? adjusterFilter : undefined),
+   inspectorIds: hasSearchClaims ? undefined : (inspectorFilter.length ? inspectorFilter : undefined),
+   dateFrom: hasSearchClaims ? undefined : (dateFrom || undefined),
+   dateTo: hasSearchClaims ? undefined : (dateTo || undefined),
    sortKey,
    sortDir,
-   q: search.trim().length >= 4 ? search : undefined,
+   q: hasSearchClaims ? search : undefined,
  }),
  enabled: !!profile && (!statusFilter.length || Object.keys(codeToId).length > 0),
  staleTime: 0,
@@ -482,13 +484,13 @@ function ClaimsPageContent() {
  const { data: claimsCount } = useQuery({
  queryKey: ["claims-count", statusFilter, insuranceCompanyFilter, adjusterFilter, inspectorFilter, dateFrom, dateTo, search, codeToId],
  queryFn: () => getClaimsCount(undefined, {
-   statusIds: statusFilter.length ? statusFilter.map((c) => codeToId[c]).filter(Boolean) as string[] : undefined,
-   insuranceCompanyIds: insuranceCompanyFilter.length ? insuranceCompanyFilter : undefined,
-   adjusterIds: adjusterFilter.length ? adjusterFilter : undefined,
-   inspectorIds: inspectorFilter.length ? inspectorFilter : undefined,
-   dateFrom: dateFrom || undefined,
-   dateTo: dateTo || undefined,
-   q: search.trim().length >= 4 ? search : undefined,
+   statusIds: hasSearchClaims ? undefined : (statusFilter.length ? statusFilter.map((c) => codeToId[c]).filter(Boolean) as string[] : undefined),
+   insuranceCompanyIds: hasSearchClaims ? undefined : (insuranceCompanyFilter.length ? insuranceCompanyFilter : undefined),
+   adjusterIds: hasSearchClaims ? undefined : (adjusterFilter.length ? adjusterFilter : undefined),
+   inspectorIds: hasSearchClaims ? undefined : (inspectorFilter.length ? inspectorFilter : undefined),
+   dateFrom: hasSearchClaims ? undefined : (dateFrom || undefined),
+   dateTo: hasSearchClaims ? undefined : (dateTo || undefined),
+   q: hasSearchClaims ? search : undefined,
  }),
  enabled: !!profile && (!statusFilter.length || Object.keys(codeToId).length > 0),
  staleTime: 0,
@@ -1275,13 +1277,13 @@ const allRaw: Claim[] = [];
  const MAX_RETRIES = 2;
 
  const filterBody = {
-   statusIds: statusFilter.length ? statusFilter.map((c) => codeToId[c]).filter(Boolean) as string[] : undefined,
-   insuranceCompanyIds: insuranceCompanyFilter.length ? insuranceCompanyFilter : undefined,
-   adjusterIds: adjusterFilter.length ? adjusterFilter : undefined,
-   inspectorIds: inspectorFilter.length ? inspectorFilter : undefined,
-   dateFrom: dateFrom || undefined,
-   dateTo: dateTo || undefined,
-   q: search.trim().length >= 4 ? search : undefined,
+   statusIds: hasSearchClaims ? undefined : (statusFilter.length ? statusFilter.map((c) => codeToId[c]).filter(Boolean) as string[] : undefined),
+   insuranceCompanyIds: hasSearchClaims ? undefined : (insuranceCompanyFilter.length ? insuranceCompanyFilter : undefined),
+   adjusterIds: hasSearchClaims ? undefined : (adjusterFilter.length ? adjusterFilter : undefined),
+   inspectorIds: hasSearchClaims ? undefined : (inspectorFilter.length ? inspectorFilter : undefined),
+   dateFrom: hasSearchClaims ? undefined : (dateFrom || undefined),
+   dateTo: hasSearchClaims ? undefined : (dateTo || undefined),
+   q: hasSearchClaims ? search : undefined,
  };
 
  const fetchPage = async (page: number): Promise<{ data: Claim[]; total: number }> => {
@@ -2941,7 +2943,7 @@ disabled={!!exportProgress}
  const flagUrl = flagImgUrl(country?.code ?? null);
  const BlIcon = getClaimTypeIcon(claimType?.icon ?? null);
  const openClaim = canOpenClaim(claim);
- const matchLabels = getSearchMatchLabels(claim, search.trim().length >= 4 ? search : "");
+ const matchLabels = getSearchMatchLabels(claim, hasSearchClaims ? search : "");
  return (
  <tr
  key={claim.id}

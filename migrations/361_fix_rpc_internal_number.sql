@@ -15,6 +15,7 @@ CREATE OR REPLACE FUNCTION public.get_inspection_sessions_ordered_v3(
 )
 RETURNS TABLE(id uuid, total_count bigint)
 LANGUAGE plpgsql
+SECURITY DEFINER
 SET search_path TO 'public'
 AS $function$
 DECLARE

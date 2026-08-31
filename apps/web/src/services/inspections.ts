@@ -20,6 +20,7 @@ export interface SessionClaim {
   assignment_date?: string | null;
   client_reference?: string;
   internal_number?: string;
+  company_report_number?: string;
   claim_address?: string;
   claim_latitude?: number | null;
   claim_longitude?: number | null;
@@ -176,7 +177,6 @@ export async function getInspectionSessionsLight(
     sortKey?: string | null;
     sortDir?: "asc" | "desc";
     q?: string;
-    internalNumber?: string;
     inspectionType?: string;
   }
 ) {
@@ -188,10 +188,20 @@ export async function getInspectionSessionsLight(
     : 200;
   const effectivePage = hasPagination ? Math.max(1, options?.page ?? 1) : 1;
 
+  // Busqueda global (4+ caracteres) via RPC unaccent
+  const q = options?.q?.trim();
+  let searchSessionIds: string[] | null = null;
+  if (q && q.length >= 4) {
+    const { data: searchData, error: searchErr } = await supabase.rpc("search_inspection_sessions_unaccent", { p_q: q });
+    if (searchErr) throw new Error(searchErr.message);
+    const ids = (searchData || []).map((r: { session_id: string }) => r.session_id);
+    if (ids.length === 0) return [];
+    searchSessionIds = ids;
+  }
+
   // Columnas que requieren RPC (PostgREST no puede ordenar parent por FK)
   const fkSortColumns = new Set(["internal_number", "inspection", "client_reference", "address"]);
-  // Tambien requiere RPC cuando hay filtro por internalNumber (ilike con notacion de punto no funciona)
-  const useRpc = (options?.sortKey && fkSortColumns.has(options.sortKey)) || !!options?.internalNumber;
+  const useRpc = !!(options?.sortKey && fkSortColumns.has(options.sortKey));
 
   let orderedIds: string[] = [];
   let totalCount: number | null = null;
@@ -217,7 +227,7 @@ export async function getInspectionSessionsLight(
         p_page_size: effectivePageSize,
         p_status_filter: options?.statusFilter?.length ? options.statusFilter : null,
         p_inspector_filter: options?.inspectorFilter?.length ? options.inspectorFilter : null,
-        p_internal_number: options?.internalNumber || null,
+        p_internal_number: null,
         p_sort_column: rpcSortColumn,
         p_sort_dir: options?.sortDir || "desc",
       }
@@ -232,7 +242,7 @@ export async function getInspectionSessionsLight(
   // 2. Query principal: traer datos completos
   let query = supabase
     .from("inspection_sessions")
-    .select(`${SESSION_SELECT}, created_at, inspector:profiles!inspection_sessions_inspector_id_fkey(id, full_name, email), claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, liquidation_number, internal_number, client_reference, claim_address, company_id, inspector_id, assigned_adjuster_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name))`);
+    .select(`${SESSION_SELECT}, created_at, inspector:profiles!inspection_sessions_inspector_id_fkey(id, full_name, email), claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, liquidation_number, internal_number, client_reference, company_report_number, policy_number, claim_address, company_id, inspector_id, assigned_adjuster_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, city_id, commune_id, city:cities!claims_city_id_fkey(name), commune:communes!claims_commune_id_fkey(name), claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, rut, address, city, commune, email, phone, cell_phone))`);
 
   if (useRpc) {
     // Traer solo los IDs que la RPC retorno, en el mismo orden
@@ -253,10 +263,7 @@ export async function getInspectionSessionsLight(
     if (options?.statusFilter?.length) query = query.in("status", options.statusFilter);
     if (options?.inspectorFilter?.length) query = query.in("inspector_id", options.inspectorFilter);
     if (options?.inspectionType) query = query.eq("inspection_type", options.inspectionType);
-    if (options?.internalNumber) {
-      const digits = options.internalNumber.replace(/\D/g, "");
-      if (digits) query = query.ilike("claim.liquidation_number", `%${digits}%`);
-    }
+    if (searchSessionIds) query = query.in("id", searchSessionIds);
     const from = (effectivePage - 1) * effectivePageSize;
     const to = from + effectivePageSize - 1;
     query = query.range(from, to);
@@ -302,25 +309,19 @@ export async function getInspectionSessionsCount(
     statusFilter?: string[];
     inspectorFilter?: string[];
     q?: string;
-    internalNumber?: string;
   }
 ) {
   const supabase = getSupabaseClient();
 
-  // Si hay filtro por internalNumber, usar RPC porque ilike con notacion
-  // de punto no funciona en PostgREST
-  if (options?.internalNumber) {
-    const { data, error } = await supabase.rpc("get_inspection_sessions_ordered_v3", {
-      p_page: 1,
-      p_page_size: 1,
-      p_status_filter: options?.statusFilter?.length ? options.statusFilter : null,
-      p_inspector_filter: options?.inspectorFilter?.length ? options.inspectorFilter : null,
-      p_internal_number: options.internalNumber,
-      p_sort_column: "created_at",
-      p_sort_dir: "desc",
-    });
-    if (error) throw new Error(error.message);
-    return (data as { total_count: number }[])[0]?.total_count ?? 0;
+  // Busqueda global (4+ caracteres) via RPC unaccent
+  const q = options?.q?.trim();
+  let searchSessionIds: string[] | null = null;
+  if (q && q.length >= 4) {
+    const { data: searchData, error: searchErr } = await supabase.rpc("search_inspection_sessions_unaccent", { p_q: q });
+    if (searchErr) throw new Error(searchErr.message);
+    const ids = (searchData || []).map((r: { session_id: string }) => r.session_id);
+    if (ids.length === 0) return 0;
+    searchSessionIds = ids;
   }
 
   let query = supabase
@@ -331,6 +332,7 @@ export async function getInspectionSessionsCount(
   if (claimId) query = query.eq("claim_id", claimId);
   if (options?.statusFilter?.length) query = query.in("status", options.statusFilter);
   if (options?.inspectorFilter?.length) query = query.in("inspector_id", options.inspectorFilter);
+  if (searchSessionIds) query = query.in("id", searchSessionIds);
 
   const { count, error } = await query;
   if (error) throw new Error(error.message);
