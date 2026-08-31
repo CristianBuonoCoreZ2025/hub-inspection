@@ -10,7 +10,7 @@ import { ShieldCheck, ArrowRight } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { loginSchema, LoginInput } from "@/lib/validations";
 import { logger } from "@/lib/logger";
-import { useMediaQuery } from "@/hooks/use-media-query";
+import { useDeviceType } from "@/hooks/use-device-type";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,7 +21,8 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const supabase = getSupabaseClient();
-  const { isMobile } = useMediaQuery();
+  const deviceType = useDeviceType();
+  const isMobileDevice = deviceType === "mobile";
 
   const {
     register,
@@ -63,7 +64,7 @@ export default function LoginPage() {
         // Se usa router.push (client-side) para preservar el estado de useAuth.
         // Nota: El test E2E usa pushState para navegar a /mobile después del login,
         // por lo que el redirect a /mobile desde el login no es estrictamente necesario.
-        if (isMobile) {
+        if (isMobileDevice) {
           try {
             const { data: profile } = await supabase
               .from("profiles")

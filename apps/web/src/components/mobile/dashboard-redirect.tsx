@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
-import { useMediaQuery } from "@/hooks/use-media-query";
+import { useDeviceType } from "@/hooks/use-device-type";
 
 /**
  * Si el usuario es inspector/internal y accede al dashboard desde móvil,
@@ -15,12 +15,13 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 export function DashboardMobileRedirect() {
   const router = useRouter();
   const { profile, dataAccess, isLoading } = useAuth();
-  const { isMobile } = useMediaQuery();
+  const deviceType = useDeviceType();
+  const isMobileDevice = deviceType === "mobile";
 
   useEffect(() => {
     if (isLoading) return;
     if (!profile) return;
-    if (!isMobile) return;
+    if (!isMobileDevice) return;
 
     const isInspector = profile.role === "inspector";
     const isInternal = profile.role === "internal" || !!dataAccess?.is_admin;
@@ -37,7 +38,7 @@ export function DashboardMobileRedirect() {
       if (typeof window !== "undefined") localStorage.removeItem("no-mobile-redirect");
       router.replace("/mobile/inspecciones");
     }
-  }, [isLoading, profile, dataAccess, isMobile, router]);
+  }, [isLoading, profile, dataAccess, isMobileDevice, router]);
 
   return null;
 }

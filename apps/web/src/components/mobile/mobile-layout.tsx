@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
-import { useMediaQuery } from "@/hooks/use-media-query";
+import { useDeviceType } from "@/hooks/use-device-type";
 import { Button } from "@/components/ui/button";
 import { ClipboardCheck, LogOut, ArrowLeft, RefreshCw } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -25,7 +25,8 @@ export function MobileLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { user, profile, dataAccess, isLoading, signOut } = useAuth();
-  const { isMobile } = useMediaQuery();
+  const deviceType = useDeviceType();
+  const isMobileDevice = deviceType === "mobile";
 
   const isInspector = profile?.role === "inspector";
   const isInternal = profile?.role === "internal" || !!dataAccess?.is_admin;
@@ -39,19 +40,19 @@ export function MobileLayout({ children }: { children: React.ReactNode }) {
     }
   }, [isLoading, user, router]);
 
-  // Si es desktop, redirigir al dashboard normal
+  // Si es desktop (por dispositivo, no por pantalla), redirigir al dashboard normal
   useEffect(() => {
-    if (!isLoading && profile && !isMobile) {
+    if (!isLoading && profile && !isMobileDevice) {
       router.replace("/dashboard");
     }
-  }, [isLoading, profile, isMobile, router]);
+  }, [isLoading, profile, isMobileDevice, router]);
 
   // Si no es inspector ni internal, redirigir al dashboard
   useEffect(() => {
-    if (!isLoading && profile && isMobile && !isInspector && !isInternal) {
+    if (!isLoading && profile && isMobileDevice && !isInspector && !isInternal) {
       router.replace("/dashboard");
     }
-  }, [isLoading, profile, isMobile, isInspector, isInternal, router]);
+  }, [isLoading, profile, isMobileDevice, isInspector, isInternal, router]);
 
   if (isLoading || (user && !profile)) {
     return (
