@@ -20,7 +20,21 @@ export function ServiceWorkerRegister() {
 
     const register = async () => {
       try {
-        const swFile = "/sw-dev.js";
+        // Limpiar SW de desarrollo viejo que pueda estar registrado
+        // (bug previo: sw-dev.js se registraba en producción)
+        if (process.env.NODE_ENV !== "development") {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          for (const r of regs) {
+            const scriptURL = r.active?.scriptURL ?? "";
+            if (scriptURL.includes("sw-dev.js")) {
+              await r.unregister();
+            }
+          }
+        }
+
+        // En producción usar el SW generado por Serwist (sw.js).
+        // En desarrollo usar el SW de desarrollo (sw-dev.js).
+        const swFile = process.env.NODE_ENV === "development" ? "/sw-dev.js" : "/sw.js";
         const reg = await navigator.serviceWorker.register(swFile, { scope: "/" });
 
         // Escuchar actualizaciones del SW
