@@ -64,9 +64,9 @@ export default function AgrupacionesInspectoresPage() {
     queryFn: () => getUsers(),
   });
 
-  // Inspectores disponibles (rol inspector o internal — excluye liquidadores)
+  // Inspectores disponibles (rol inspector o internal, activos — excluye liquidadores e inactivos)
   const inspectorOptions = (users || [])
-    .filter((u) => u.role === "inspector" || u.role === "internal")
+    .filter((u) => (u.role === "inspector" || u.role === "internal") && u.is_active)
     .sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
 
   // IDs ya en la agrupación (para no mostrarlos en el selector)
