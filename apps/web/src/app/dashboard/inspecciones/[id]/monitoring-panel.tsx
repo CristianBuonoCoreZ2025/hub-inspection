@@ -311,7 +311,7 @@ export default function MonitoringPanel({ sessionId }: MonitoringPanelProps) {
           <table className="w-full border-collapse table-fixed">
             <thead>{headRow}</thead>
           </table>
-          <div className="max-h-[80px] overflow-y-auto pr-1">
+          <div className="max-h-[120px] overflow-y-auto pr-1">
             <table className="w-full border-collapse table-fixed">
               <tbody>
                 {insuredLogs.slice(0, 20).sort((a, b) => new Date(b.connected_at).getTime() - new Date(a.connected_at).getTime()).map(renderLogRow)}
@@ -349,7 +349,7 @@ export default function MonitoringPanel({ sessionId }: MonitoringPanelProps) {
                   <table className="w-full border-collapse table-fixed">
                     <thead>{headRow}</thead>
                   </table>
-                  <div className="max-h-[80px] overflow-y-auto pr-1">
+                  <div className="max-h-[120px] overflow-y-auto pr-1">
                     <table className="w-full border-collapse table-fixed">
                       <tbody>
                         {timeline.slice(0, 100).map((item, i) => item.type === "event" ? renderEventRow(item.data as WebrtcEvent, i) : renderLogRow(item.data as ConnectionLog))}
