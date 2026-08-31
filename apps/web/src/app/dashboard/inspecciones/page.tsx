@@ -102,8 +102,9 @@ function InspectionsPageContent() {
     });
   }, []);
 
-  // Si la búsqueda es solo numérica, usar filtro server-side por internal_number
-  const numericSearch = search.trim() && /^\d+$/.test(search.trim());
+  // Si la búsqueda es numérica con 4+ dígitos, usar filtro server-side
+  // (busca por internal_number y liquidation_number en todas las páginas)
+  const numericSearch = search.trim().length >= 4 && /^\d+$/.test(search.trim());
 
   const { data: sessions, isLoading, error: sessionsError } = useQuery({
     queryKey: ["inspection-sessions", page, pageSize, statusFilter, inspectorFilter, sortKey, sortDir, numericSearch ? search : ""],

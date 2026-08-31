@@ -42,7 +42,7 @@ BEGIN
   LEFT JOIN claim_actions ca ON s.claim_action_id = ca.id
   WHERE (p_status_filter IS NULL OR array_length(p_status_filter, 1) IS NULL OR s.status = ANY(p_status_filter))
     AND (v_inspector_uuids IS NULL OR array_length(v_inspector_uuids, 1) IS NULL OR s.inspector_id = ANY(v_inspector_uuids))
-    AND (p_internal_number IS NULL OR p_internal_number = '' OR c.internal_number ILIKE '%' || p_internal_number || '%');
+    AND (p_internal_number IS NULL OR p_internal_number = '' OR c.internal_number ILIKE '%' || p_internal_number || '%' OR c.liquidation_number ILIKE '%' || p_internal_number || '%');
 
   -- Si no hay resultados, retornar solo el total
   IF v_total = 0 THEN
@@ -57,7 +57,7 @@ BEGIN
   LEFT JOIN claim_actions ca ON s.claim_action_id = ca.id
   WHERE (p_status_filter IS NULL OR array_length(p_status_filter, 1) IS NULL OR s.status = ANY(p_status_filter))
     AND (v_inspector_uuids IS NULL OR array_length(v_inspector_uuids, 1) IS NULL OR s.inspector_id = ANY(v_inspector_uuids))
-    AND (p_internal_number IS NULL OR p_internal_number = '' OR c.internal_number ILIKE '%' || p_internal_number || '%')
+    AND (p_internal_number IS NULL OR p_internal_number = '' OR c.internal_number ILIKE '%' || p_internal_number || '%' OR c.liquidation_number ILIKE '%' || p_internal_number || '%')
   ORDER BY
     CASE WHEN (p_sort_column IS NULL OR p_sort_column = '' OR p_sort_column = 'created_at') AND v_ascending THEN s.created_at END ASC NULLS LAST,
     CASE WHEN (p_sort_column IS NULL OR p_sort_column = '' OR p_sort_column = 'created_at') AND NOT v_ascending THEN s.created_at END DESC NULLS LAST,
