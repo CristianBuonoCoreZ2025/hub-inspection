@@ -87,7 +87,6 @@ function InspectionsPageContent() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string[]>(["active", "scheduled"]);
   const [inspectorFilter, setInspectorFilter] = useState<string[]>([]);
-  const [internalNumberFilter, setInternalNumberFilter] = useState("");
   const [logSessionId, setLogSessionId] = useState<string | null>(null);
   const [monitoringSessionId, setMonitoringSessionId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -104,7 +103,7 @@ function InspectionsPageContent() {
   }, []);
 
   const { data: sessions, isLoading, error: sessionsError } = useQuery({
-    queryKey: ["inspection-sessions", page, pageSize, statusFilter, inspectorFilter, sortKey, sortDir, internalNumberFilter],
+    queryKey: ["inspection-sessions", page, pageSize, statusFilter, inspectorFilter, sortKey, sortDir],
     queryFn: () => getInspectionSessionsLight(undefined, {
       page,
       pageSize,
@@ -112,7 +111,6 @@ function InspectionsPageContent() {
       inspectorFilter: inspectorFilter.length ? inspectorFilter : undefined,
       sortKey,
       sortDir,
-      internalNumber: internalNumberFilter || undefined,
     }),
     staleTime: 60_000,
     gcTime: 5 * 60_000,
@@ -133,14 +131,13 @@ function InspectionsPageContent() {
 
   const fkSortColumns = ["internal_number", "inspection", "client_reference", "address"];
   const isFkSort = !!(sortKey && fkSortColumns.includes(sortKey));
-  const useRpcForList = isFkSort || !!internalNumberFilter;
+  const useRpcForList = isFkSort;
 
   const { data: totalCount } = useQuery({
-    queryKey: ["inspection-sessions-count", statusFilter, inspectorFilter, internalNumberFilter],
+    queryKey: ["inspection-sessions-count", statusFilter, inspectorFilter],
     queryFn: () => getInspectionSessionsCount(undefined, {
       statusFilter: statusFilter.length ? statusFilter : undefined,
       inspectorFilter: inspectorFilter.length ? inspectorFilter : undefined,
-      internalNumber: internalNumberFilter || undefined,
     }),
     enabled: !useRpcForList,
     staleTime: 60_000,
@@ -229,7 +226,7 @@ function InspectionsPageContent() {
       sessions?.filter((s) => {
         const insuredName = s.claim?.claims_participants?.[0]?.full_name;
         const matchesSearch =
-          [s.claim?.claim_number, insuredName, s.claim?.claim_address]
+          [s.claim?.claim_number, insuredName, s.claim?.claim_address, s.claim?.internal_number]
             .filter(Boolean)
             .join(" ")
             .toLowerCase()
@@ -270,7 +267,7 @@ function InspectionsPageContent() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reset intencional de paginación al cambiar filtros
     setPage(1);
-  }, [statusFilter, inspectorFilter, sortKey, sortDir, internalNumberFilter]);
+  }, [statusFilter, inspectorFilter, sortKey, sortDir]);
 
   return (
     <div className="app-page">
@@ -310,7 +307,6 @@ function InspectionsPageContent() {
                     inspectorFilter: inspectorFilter.length ? inspectorFilter : undefined,
                     sortKey,
                     sortDir,
-                    internalNumber: internalNumberFilter || undefined,
                   });
                   if (batch.length === 0) break;
                   allSessions.push(...batch);
@@ -401,19 +397,6 @@ function InspectionsPageContent() {
                 className="liquid-search"
               />
             </div>
-            <Tooltip>
-              <TooltipTrigger className="w-full">
-                <Input
-                  placeholder="N° interno..."
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={internalNumberFilter}
-                  onChange={(e) => setInternalNumberFilter(e.target.value.replace(/\D/g, ""))}
-                  className="app-input app-filter-narrow"
-                />
-              </TooltipTrigger>
-              <TooltipContent>Solo la parte numérica</TooltipContent>
-            </Tooltip>
             <Select
               multiple
               value={statusFilter}

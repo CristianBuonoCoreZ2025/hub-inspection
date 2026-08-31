@@ -19,6 +19,7 @@ export interface SessionClaim {
   report_date?: string | null;
   assignment_date?: string | null;
   client_reference?: string;
+  internal_number?: string;
   claim_address?: string;
   claim_latitude?: number | null;
   claim_longitude?: number | null;
@@ -231,7 +232,7 @@ export async function getInspectionSessionsLight(
   // 2. Query principal: traer datos completos
   let query = supabase
     .from("inspection_sessions")
-    .select(`${SESSION_SELECT}, created_at, inspector:profiles!inspection_sessions_inspector_id_fkey(id, full_name, email), claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, liquidation_number, client_reference, claim_address, company_id, inspector_id, assigned_adjuster_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name))`);
+    .select(`${SESSION_SELECT}, created_at, inspector:profiles!inspection_sessions_inspector_id_fkey(id, full_name, email), claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), action_template:action_template!inspection_sessions_action_template_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(claim_number, liquidation_number, internal_number, client_reference, claim_address, company_id, inspector_id, assigned_adjuster_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name))`);
 
   if (useRpc) {
     // Traer solo los IDs que la RPC retorno, en el mismo orden
