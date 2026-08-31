@@ -23,10 +23,17 @@ import {
   FileSpreadsheet,
   Check,
   Send,
+  BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ToggleChip } from "@/components/ui/toggle-chip";
 import { TableSkeleton } from "@/components/ui/skeletons";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -53,6 +60,7 @@ export default function FacturacionInspeccionesPage() {
   const queryClient = useQueryClient();
   const [selectedGroupId, setSelectedGroupId] = useState<string>("");
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
+  const [showDistribution, setShowDistribution] = useState(false);
 
   // ── Agrupaciones ──
   const { data: groups } = useQuery({
@@ -172,6 +180,16 @@ export default function FacturacionInspeccionesPage() {
     const batchItems = isSent ? allItems.filter((i) => i.include_for_billing) : allItems;
     const includedCount = allItems.filter((i) => i.include_for_billing).length;
 
+    // Distribución de casos por inspector (solo los marcados para cobrar)
+    const distribution = allItems
+      .filter((i) => i.include_for_billing)
+      .reduce((acc, i) => {
+        const name = i.inspector_name || "Sin inspector";
+        acc[name] = (acc[name] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+    const distributionRows = Object.entries(distribution).sort((a, b) => b[1] - a[1]);
+
     return (
       <div className="app-page">
         <div className="app-grid-header">
@@ -236,6 +254,43 @@ export default function FacturacionInspeccionesPage() {
                 Exportar
               </Button>
             )}
+            <Button
+              onClick={() => setShowDistribution(true)}
+              disabled={includedCount === 0}
+              className="pg-btn-platinum"
+            >
+              <BarChart3 className="h-3.5 w-3.5" />
+              Distribución
+            </Button>
+            <Dialog open={showDistribution} onOpenChange={setShowDistribution}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Distribución por inspector</DialogTitle>
+                </DialogHeader>
+                <div className="app-data-table-wrap">
+                  <table className="app-data-table">
+                    <thead>
+                      <tr>
+                        <th className="min-w-40">Inspector</th>
+                        <th className="min-w-20 text-center">Casos</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {distributionRows.map(([name, count]) => (
+                        <tr key={name}>
+                          <td className="whitespace-nowrap">{name}</td>
+                          <td className="text-center font-semibold">{count}</td>
+                        </tr>
+                      ))}
+                      <tr className="border-t-2 border-border">
+                        <td className="whitespace-nowrap font-bold">Total</td>
+                        <td className="text-center font-bold">{includedCount}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 

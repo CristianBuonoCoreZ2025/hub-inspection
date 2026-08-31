@@ -59,7 +59,7 @@ export async function getInspectionBillingBatchItems(batchId: string) {
   return fetchAll<InspectionBillingBatchItem>("inspection_billing_batch_items", {
     select: ITEM_SELECT,
     eq: { batch_id: batchId },
-    order: { column: "created_at", ascending: true },
+    order: { column: "case_code", ascending: true },
   });
 }
 
