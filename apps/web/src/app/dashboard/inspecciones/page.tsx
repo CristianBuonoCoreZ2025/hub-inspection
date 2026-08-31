@@ -229,16 +229,18 @@ function InspectionsPageContent() {
   const filtered = useMemo(
     () =>
       sessions?.filter((s) => {
+        if (!search.trim()) return true;
         const insuredName = s.claim?.claims_participants?.[0]?.full_name;
+        const q = search.toLowerCase();
         const matchesSearch =
-          [s.claim?.claim_number, insuredName, s.claim?.claim_address, s.claim?.internal_number]
+          [s.claim?.claim_number, insuredName, s.claim?.claim_address, s.claim?.internal_number, s.claim?.client_reference]
             .filter(Boolean)
             .join(" ")
             .toLowerCase()
-            .includes(search.toLowerCase()) ||
-          sessionStatusLabels[s.status]?.toLowerCase().includes(search.toLowerCase()) ||
-          s.claim?.liquidation_number?.toLowerCase().includes(search.toLowerCase()) ||
-          s.inspection_number?.toLowerCase().includes(search.toLowerCase())
+            .includes(q) ||
+          sessionStatusLabels[s.status]?.toLowerCase().includes(q) ||
+          s.claim?.liquidation_number?.toLowerCase().includes(q) ||
+          s.inspection_number?.toLowerCase().includes(q)
         return matchesSearch;
       }) ?? [],
     [sessions, search]
