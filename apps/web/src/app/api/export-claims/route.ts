@@ -43,6 +43,8 @@ export async function POST(req: NextRequest) {
     const dateFrom: string | undefined = body?.dateFrom || undefined;
     const dateTo: string | undefined = body?.dateTo || undefined;
     const q: string | undefined = body?.q?.trim() || undefined;
+    const inspectorId: string | undefined = body?.inspectorId || undefined;
+    const userRole: string | undefined = body?.userRole || undefined;
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -87,6 +89,12 @@ export async function POST(req: NextRequest) {
     if (dateFrom) query = query.gte("claim_date", dateFrom);
     if (dateTo) query = query.lte("claim_date", dateTo);
     if (searchClaimIds) query = query.in("id", searchClaimIds);
+
+    // Si el usuario es inspector, forzar filtro por su inspector_id
+    // (el API usa service role key que bypassa RLS)
+    if (userRole === "inspector" && inspectorId) {
+      query = query.eq("inspector_id", inspectorId);
+    }
 
     const { data, count, error } = await query;
 

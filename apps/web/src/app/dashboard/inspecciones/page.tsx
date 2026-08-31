@@ -377,12 +377,15 @@ function InspectionsPageContent() {
                 const allSessions: SessionWithRelations[] = [];
                 const exportPageSize = 100;
                 let exportPage = 1;
+                // Si el usuario es inspector, forzar filtro por su profile.id
+                const isInspector = profile?.role === "inspector";
+                const forcedInspectorFilter = isInspector && profile?.id ? [profile.id] : undefined;
                 while (true) {
                   const batch = await getInspectionSessionsLight(undefined, {
                     page: exportPage,
                     pageSize: exportPageSize,
                     statusFilter: hasSearch ? undefined : (statusFilter.length ? statusFilter : undefined),
-                    inspectorFilter: hasSearch ? undefined : (inspectorFilter.length ? inspectorFilter : undefined),
+                    inspectorFilter: forcedInspectorFilter ?? (hasSearch ? undefined : (inspectorFilter.length ? inspectorFilter : undefined)),
                     sortKey,
                     sortDir,
                     q: hasSearch ? search.trim() : undefined,

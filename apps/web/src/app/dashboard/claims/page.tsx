@@ -1284,6 +1284,8 @@ const allRaw: Claim[] = [];
    dateFrom: hasSearchClaims ? undefined : (dateFrom || undefined),
    dateTo: hasSearchClaims ? undefined : (dateTo || undefined),
    q: hasSearchClaims ? search : undefined,
+   inspectorId: profile?.id,
+   userRole: profile?.role,
  };
 
  const fetchPage = async (page: number): Promise<{ data: Claim[]; total: number }> => {
