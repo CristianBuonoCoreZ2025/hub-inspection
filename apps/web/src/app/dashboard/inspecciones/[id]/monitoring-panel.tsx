@@ -260,26 +260,45 @@ export default function MonitoringPanel({ sessionId }: MonitoringPanelProps) {
         </div>
 
         {alerts.length > 0 && (
-          <div className="grid grid-cols-3 gap-1 max-h-[100px] overflow-y-auto p-1 rounded-md border border-slate-200 dark:border-slate-700 app-panel">
-            {alerts.map((alert, i) => (
-              <Tooltip key={i}>
-                <TooltipTrigger className="w-full">
-                  <div
-                    className={`flex items-center gap-1 px-1.5 py-1 rounded truncate ${
-                      alert.severity === "high"
-                        ? "bg-rose-100 dark:bg-rose-950/40"
-                        : alert.severity === "medium"
-                        ? "bg-amber-100 dark:bg-amber-950/40"
-                        : "bg-slate-100 dark:bg-slate-800"
-                    }`}
-                  >
-                    <AlertTriangle className={`h-2.5 w-2.5 shrink-0 ${alert.severity === "high" ? "text-rose-500" : "text-amber-500"}`} />
-                    <p className="text-[9px] leading-tight text-slate-700 dark:text-slate-300 truncate">{alert.message}</p>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="top"><p className="text-xs">{alert.message}</p></TooltipContent>
-              </Tooltip>
-            ))}
+          <div className="app-panel p-2 rounded-md">
+            <h4 className="text-[11px] font-medium mb-1.5 flex items-center gap-2">
+              <AlertTriangle className="h-3.5 w-3.5 text-rose-500" />
+              Alertas
+              <span className="text-[10px] text-slate-400">({alerts.length})</span>
+            </h4>
+            <table className="w-full border-collapse table-fixed">
+              <thead>
+                <tr className="text-[10px] text-slate-400 border-b border-slate-200 dark:border-slate-700">
+                  <th className="w-20 py-1 text-left font-normal">Severidad</th>
+                  <th className="py-1 text-left font-normal">Mensaje</th>
+                </tr>
+              </thead>
+            </table>
+            <div className="max-h-[100px] overflow-y-auto pr-1">
+              <table className="w-full border-collapse table-fixed">
+                <tbody>
+                  {alerts.map((alert, i) => (
+                    <tr key={i} className="text-[10px] text-slate-500 border-b border-slate-100 dark:border-slate-800">
+                      <td className="w-20 py-1">
+                        <span
+                          className={`inline-flex items-center gap-1 px-1 py-0.5 rounded text-[9px] font-medium ${
+                            alert.severity === "high"
+                              ? "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"
+                              : alert.severity === "medium"
+                              ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
+                              : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                          }`}
+                        >
+                          <AlertTriangle className={`h-2.5 w-2.5 shrink-0 ${alert.severity === "high" ? "text-rose-500" : "text-amber-500"}`} />
+                          {alert.severity === "high" ? "Alta" : alert.severity === "medium" ? "Media" : "Baja"}
+                        </span>
+                      </td>
+                      <td className="py-1 truncate">{alert.message}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
