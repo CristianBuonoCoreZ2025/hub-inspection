@@ -459,7 +459,7 @@ function ClaimsPageContent() {
  });
 
  const { data: rawClaims, isLoading, error } = useQuery({
- queryKey: ["claims", page, pageSize, sortKey, sortDir, statusFilter, insuranceCompanyFilter, adjusterFilter, inspectorFilter, dateFrom, dateTo, search],
+ queryKey: ["claims", page, pageSize, sortKey, sortDir, statusFilter, insuranceCompanyFilter, adjusterFilter, inspectorFilter, dateFrom, dateTo, search, codeToId],
  queryFn: () => getClaims(undefined, {
    page,
    pageSize,
@@ -473,12 +473,14 @@ function ClaimsPageContent() {
    sortDir,
    q: search.trim().length >= 4 ? search : undefined,
  }),
- staleTime: 60_000,
+ enabled: !!profile && (!statusFilter.length || Object.keys(codeToId).length > 0),
+ staleTime: 0,
  gcTime: 5 * 60_000,
+ refetchOnMount: "always",
  });
 
  const { data: claimsCount } = useQuery({
- queryKey: ["claims-count", statusFilter, insuranceCompanyFilter, adjusterFilter, inspectorFilter, dateFrom, dateTo, search],
+ queryKey: ["claims-count", statusFilter, insuranceCompanyFilter, adjusterFilter, inspectorFilter, dateFrom, dateTo, search, codeToId],
  queryFn: () => getClaimsCount(undefined, {
    statusIds: statusFilter.length ? statusFilter.map((c) => codeToId[c]).filter(Boolean) as string[] : undefined,
    insuranceCompanyIds: insuranceCompanyFilter.length ? insuranceCompanyFilter : undefined,
@@ -488,8 +490,10 @@ function ClaimsPageContent() {
    dateTo: dateTo || undefined,
    q: search.trim().length >= 4 ? search : undefined,
  }),
- staleTime: 60_000,
+ enabled: !!profile && (!statusFilter.length || Object.keys(codeToId).length > 0),
+ staleTime: 0,
  gcTime: 5 * 60_000,
+ refetchOnMount: "always",
  });
 
  if (error) {
@@ -501,8 +505,9 @@ function ClaimsPageContent() {
  queryKey: ["claims-participants", claimIds],
  queryFn: () => getClaimsParticipants(claimIds),
  enabled: claimIds.length > 0,
- staleTime: 60_000,
+ staleTime: 0,
  gcTime: 5 * 60_000,
+ refetchOnMount: "always",
  });
 
  const claims = rawClaims?.map((claim) => ({
