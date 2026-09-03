@@ -1,0 +1,479 @@
+/* ═══════════════════════════════════════════════════════════════
+ * Hubi Widget — Panel de chat premium
+ * Minimalista, centrado en conversación, no ruido visual
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* ── FAB ── */
+.hubi-fab {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9998;
+  transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1);
+  animation: hubi-fab-enter 400ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.hubi-fab:hover {
+  transform: scale(1.05);
+}
+
+.hubi-fab:active {
+  transform: scale(0.96);
+}
+
+@keyframes hubi-fab-enter {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.hubi-fab-mascot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 6px 18px rgba(56, 189, 248, 0.28));
+  transition: filter 200ms ease-out;
+}
+
+.hubi-fab:hover .hubi-fab-mascot {
+  filter: drop-shadow(0 8px 24px rgba(56, 189, 248, 0.38));
+}
+
+.hubi-fab-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(56, 189, 248, 0.35);
+  animation: hubi-fab-pulse 3s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes hubi-fab-pulse {
+  0% { opacity: 0.5; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+
+.hubi-fab-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #22c55e;
+  border: 2px solid var(--card, #fff);
+  box-shadow: 0 1px 4px rgba(34, 197, 94, 0.4);
+}
+
+/* ── Panel de chat ── */
+.hubi-panel {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  height: 620px;
+  max-height: calc(100vh - 40px);
+  border-radius: 20px;
+  border: 1px solid var(--border, rgba(0,0,0,0.08));
+  background: var(--card, #fff);
+  box-shadow:
+    0 20px 60px -12px rgba(0, 0, 0, 0.18),
+    0 8px 20px -4px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  z-index: 9999;
+  overflow: hidden;
+  animation: hubi-panel-enter 320ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  transform-origin: bottom right;
+}
+
+@keyframes hubi-panel-enter {
+  from { opacity: 0; transform: scale(0.94) translateY(16px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ── Header ── */
+.hubi-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border, rgba(0,0,0,0.06));
+  background: var(--card, #fff);
+  flex-shrink: 0;
+}
+
+.hubi-panel-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hubi-panel-avatar {
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hubi-panel-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.hubi-panel-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--foreground, #1a1a2e);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.hubi-panel-status {
+  font-size: 11px;
+  color: var(--muted-foreground, #9ca3af);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  line-height: 1.3;
+}
+
+.hubi-panel-status::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+}
+
+.hubi-panel-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--muted-foreground, #9ca3af);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 150ms ease-out, color 150ms ease-out;
+}
+
+.hubi-panel-close:hover {
+  background: var(--muted, #f4f4f5);
+  color: var(--foreground, #1a1a2e);
+}
+
+.hubi-panel-close:active {
+  transform: scale(0.95);
+}
+
+/* ── Mensajes ── */
+.hubi-panel-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--background, #fafafa);
+}
+
+.hubi-panel-messages::-webkit-scrollbar {
+  width: 4px;
+}
+
+.hubi-panel-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.hubi-panel-messages::-webkit-scrollbar-thumb {
+  background: var(--muted-foreground, #d4d4d8);
+  border-radius: 2px;
+  opacity: 0.3;
+}
+
+.hubi-msg {
+  display: flex;
+  gap: 10px;
+  max-width: 92%;
+  animation: hubi-msg-enter 260ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+@keyframes hubi-msg-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hubi-msg-user {
+  flex-direction: row-reverse;
+  margin-left: auto;
+}
+
+.hubi-msg-avatar {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hubi-msg-bubble {
+  padding: 11px 14px;
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+.hubi-msg-bubble h1,
+.hubi-msg-bubble h2,
+.hubi-msg-bubble h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: inherit;
+}
+
+.hubi-msg-bubble p {
+  margin: 0 0 8px 0;
+}
+
+.hubi-msg-bubble p:last-child {
+  margin-bottom: 0;
+}
+
+.hubi-msg-bubble ul,
+.hubi-msg-bubble ol {
+  margin: 0 0 8px 0;
+  padding-left: 18px;
+}
+
+.hubi-msg-bubble li {
+  margin-bottom: 4px;
+}
+
+.hubi-msg-bubble strong {
+  font-weight: 600;
+}
+
+.hubi-msg-bubble code {
+  background: rgba(0,0,0,0.06);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 90%;
+  font-family: monospace;
+}
+
+.hubi-msg-bubble a {
+  color: #0284C7;
+  text-decoration: underline;
+}
+
+.hubi-msg-assistant .hubi-msg-bubble {
+  background: var(--card, #fff);
+  color: var(--foreground, #1a1a2e);
+  border: 1px solid var(--border, rgba(0,0,0,0.06));
+  border-top-left-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+.hubi-msg-user .hubi-msg-bubble {
+  background: #0EA5E9;
+  color: white;
+  border: none;
+  border-top-right-radius: 4px;
+}
+
+.hubi-msg-user .hubi-msg-bubble a {
+  color: #e0f2fe;
+}
+
+.hubi-msg-typing {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted-foreground, #9ca3af);
+}
+
+/* ── Sugerencias ── */
+.hubi-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0 4px 42px;
+  animation: hubi-msg-enter 300ms ease-out 100ms both;
+}
+
+.hubi-suggestions-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground, #9ca3af);
+}
+
+.hubi-suggestion-chip {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border, rgba(0,0,0,0.06));
+  background: var(--card, #fff);
+  color: var(--foreground, #1a1a2e);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 160ms ease-out;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+
+.hubi-suggestion-chip:hover {
+  background: var(--muted, #f4f4f5);
+  border-color: rgba(56, 189, 248, 0.3);
+  transform: translateX(2px);
+}
+
+.hubi-suggestion-chip:active {
+  transform: scale(0.98);
+}
+
+/* ── Input ── */
+.hubi-panel-input {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--border, rgba(0,0,0,0.06));
+  background: var(--card, #fff);
+  flex-shrink: 0;
+}
+
+.hubi-input {
+  flex: 1;
+  resize: none;
+  border: 1px solid var(--border, rgba(0,0,0,0.08));
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--background, #fafafa);
+  color: var(--foreground, #1a1a2e);
+  outline: none;
+  max-height: 90px;
+  line-height: 1.45;
+  transition: border-color 160ms ease-out, box-shadow 160ms ease-out;
+}
+
+.hubi-input:focus {
+  border-color: rgba(56, 189, 248, 0.4);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
+}
+
+.hubi-input::placeholder {
+  color: var(--muted-foreground, #9ca3af);
+}
+
+.hubi-input:disabled {
+  opacity: 0.5;
+}
+
+.hubi-send-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: none;
+  background: #0EA5E9;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 160ms ease-out, background 160ms ease-out;
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.25);
+}
+
+.hubi-send-btn:hover:not(:disabled) {
+  background: #0284C7;
+}
+
+.hubi-send-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.hubi-send-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ── Dark mode ── */
+.dark .hubi-panel {
+  box-shadow:
+    0 20px 60px -12px rgba(0, 0, 0, 0.35),
+    0 8px 20px -4px rgba(0, 0, 0, 0.15);
+}
+
+.dark .hubi-panel-messages {
+  background: color-mix(in srgb, var(--background, #000) 100%, transparent);
+}
+
+.dark .hubi-msg-assistant .hubi-msg-bubble {
+  background: var(--card, #18181b);
+}
+
+.dark .hubi-suggestion-chip {
+  background: var(--card, #18181b);
+}
+
+.dark .hubi-suggestion-chip:hover {
+  background: var(--muted, #27272a);
+}
+
+.dark .hubi-input {
+  background: color-mix(in srgb, var(--background, #000) 100%, transparent);
+}
+
+/* ── Responsive ── */
+@media (max-width: 480px) {
+  .hubi-panel {
+    bottom: 0;
+    right: 0;
+    width: 100vw;
+    max-width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+    border: none;
+  }
+
+  .hubi-fab {
+    bottom: 12px;
+    right: 12px;
+  }
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .hubi-fab,
+  .hubi-panel,
+  .hubi-msg,
+  .hubi-suggestions,
+  .hubi-fab-pulse {
+    animation: none !important;
+    transition: none !important;
+  }
+}

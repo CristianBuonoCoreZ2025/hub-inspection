@@ -54,6 +54,7 @@ import { MobileNav } from "@/components/layout/mobile-nav";
 import { HelpButton } from "@/components/layout/help-panel";
 import { MyProfileModal } from "@/components/layout/my-profile-modal";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { HubiMascot } from "@/components/hubi/hubi-mascot";
 
 function getInitials(email?: string | null) {
   if (!email) return "U";
@@ -304,6 +305,24 @@ export function TopBar() {
               {profile?.role ? userTypeLabels[profile.role] : ""}
             </span>
           </div>
+          <Tooltip>
+            <TooltipTrigger className="inline-flex">
+              <button
+                type="button"
+                onClick={() => {
+                  try { localStorage.setItem("hubi-robot-hidden", "false"); } catch {}
+                  window.dispatchEvent(new CustomEvent("hubi-open"));
+                }}
+                className="topbar-hubi-btn dock-item"
+                aria-label="Abrir Hubi"
+              >
+                <HubiMascot state="idle" size={28} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p>Hubi — Asistente IA</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
 
         {/* ── Centro: Siniestros (solo iconos + tooltip) ── */}

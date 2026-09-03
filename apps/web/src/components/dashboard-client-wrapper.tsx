@@ -6,10 +6,13 @@ import { requestLogger, installFetchInterceptor, uninstallFetchInterceptor } fro
 import { RequestLogViewer } from "@/components/request-log-viewer";
 import { useClaimsAppHeartbeat } from "@/hooks/use-claims-app-presence";
 import { DashboardMobileRedirect } from "@/components/mobile/dashboard-redirect";
+import { HubiClippy } from "@/components/hubi/hubi-clippy";
+import { useAuth } from "@/hooks/use-auth";
 
 export function DashboardClientWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [logEnabled, setLogEnabled] = useState(() => requestLogger.getEnabled());
+  const { profile } = useAuth();
 
   // Anunciar que la aplicación Claims está activa en este navegador
   useClaimsAppHeartbeat();
@@ -41,6 +44,12 @@ export function DashboardClientWrapper({ children }: { children: React.ReactNode
       <DashboardMobileRedirect />
       {children}
       {logEnabled && <RequestLogViewer />}
+      {profile && (
+        <HubiClippy
+          userRole={profile.role}
+          userName={profile.full_name || ""}
+        />
+      )}
     </>
   );
 }

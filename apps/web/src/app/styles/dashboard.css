@@ -173,6 +173,34 @@
 
   }
 
+  .topbar-hubi-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+    padding: 0;
+  }
+  .topbar-hubi-btn:hover {
+    background: var(--muted);
+    border-color: var(--border);
+    transform: scale(1.05);
+  }
+  .topbar-hubi-btn:active {
+    transform: scale(0.95);
+  }
+  .topbar-hubi-btn svg,
+  .topbar-hubi-btn canvas {
+    width: 26px !important;
+    height: 26px !important;
+  }
+
   /* ── Centro: chips icon-only tipo Apple toolbar ── */
   .topbar-center {
     display: flex;

@@ -1,0 +1,319 @@
+/* ═══════════════════════════════════════════════════════════════
+ * Hubi Mascot — Robot con animaciones
+ * ═══════════════════════════════════════════════════════════════ */
+
+.hubi-mascot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.hubi-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* ── Flotación suave ── */
+.hubi-svg {
+  animation: hubi-float 3s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+@keyframes hubi-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* ── Sombra pulsante ── */
+.hubi-shadow {
+  animation: hubi-shadow-pulse 3s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes hubi-shadow-pulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(0.8); }
+}
+
+/* ── Cuerpo — movimientos según estado ── */
+.hubi-body {
+  transform-origin: 90px 90px;
+  animation: hubi-head-idle 4s ease-in-out infinite;
+}
+
+@keyframes hubi-head-idle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-3deg); }
+  75% { transform: rotate(3deg); }
+}
+
+/* Thinking — cuerpo inclinado */
+.hubi-state-thinking .hubi-body {
+  animation: hubi-head-thinking 1.5s ease-in-out infinite;
+}
+
+@keyframes hubi-head-thinking {
+  0%, 100% { transform: rotate(-8deg); }
+  50% { transform: rotate(-12deg); }
+}
+
+/* Talking — cuerpo asiente */
+.hubi-state-talking .hubi-body {
+  animation: hubi-head-talking 0.8s ease-in-out infinite;
+}
+
+@keyframes hubi-head-talking {
+  0%, 100% { transform: rotate(0deg) translateY(0); }
+  25% { transform: rotate(2deg) translateY(-2px); }
+  75% { transform: rotate(-2deg) translateY(0); }
+}
+
+/* Error — cuerpo tiembla */
+.hubi-state-error .hubi-body {
+  animation: hubi-head-error 0.3s ease-in-out infinite;
+}
+
+@keyframes hubi-head-error {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-4deg); }
+  75% { transform: rotate(4deg); }
+}
+
+/* ── Brazo izquierdo ── */
+.hubi-arm-left {
+  transform-origin: 47px 105px;
+  animation: hubi-arm-left-idle 3s ease-in-out infinite;
+}
+
+@keyframes hubi-arm-left-idle {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-8deg); }
+}
+
+/* Talking — brazo izquierdo gesticula */
+.hubi-state-talking .hubi-arm-left {
+  animation: hubi-arm-left-talk 0.6s ease-in-out infinite;
+}
+
+@keyframes hubi-arm-left-talk {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-20deg); }
+}
+
+/* ── Brazo derecho — saluda en idle ── */
+.hubi-arm-right {
+  transform-origin: 133px 105px;
+  animation: hubi-arm-right-wave 2.5s ease-in-out infinite;
+}
+
+@keyframes hubi-arm-right-wave {
+  0%, 70%, 100% { transform: rotate(0deg); }
+  80% { transform: rotate(-25deg); }
+  85% { transform: rotate(-15deg); }
+  90% { transform: rotate(-25deg); }
+  95% { transform: rotate(-15deg); }
+}
+
+/* Talking — brazo derecho gesticula */
+.hubi-state-talking .hubi-arm-right {
+  animation: hubi-arm-right-talk 0.5s ease-in-out infinite;
+}
+
+@keyframes hubi-arm-right-talk {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(20deg); }
+}
+
+/* Thinking — brazo derecho en la cabeza */
+.hubi-state-thinking .hubi-arm-right {
+  animation: hubi-arm-right-think 1s ease-in-out infinite;
+}
+
+@keyframes hubi-arm-right-think {
+  0%, 100% { transform: rotate(-40deg) translateY(-10px); }
+  50% { transform: rotate(-45deg) translateY(-12px); }
+}
+
+/* ── Antena parabólica — solo en thinking ── */
+.hubi-parabolic-antenna {
+  opacity: 0;
+  transform: translateY(10px) scale(0.3);
+  transform-origin: 90px 14px;
+  transition: opacity 300ms ease-out, transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none;
+}
+
+.hubi-state-thinking .hubi-parabolic-antenna {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  animation: hubi-antenna-wiggle 1s ease-in-out infinite 300ms;
+}
+
+@keyframes hubi-antenna-wiggle {
+  0%, 100% { transform: translateY(0) scale(1) rotate(0deg); }
+  25% { transform: translateY(0) scale(1) rotate(-5deg); }
+  75% { transform: translateY(0) scale(1) rotate(5deg); }
+}
+
+/* ── Antena LED ── */
+.hubi-antenna-led {
+  animation: hubi-antenna-blink 1.5s ease-in-out infinite;
+}
+
+@keyframes hubi-antenna-blink {
+  0%, 80%, 100% { opacity: 1; filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.8)); }
+  40% { opacity: 0.4; filter: none; }
+}
+
+/* ── LED del pecho ── */
+.hubi-chest-led {
+  animation: hubi-chest-pulse 2s ease-in-out infinite;
+}
+
+@keyframes hubi-chest-pulse {
+  0%, 100% { opacity: 1; filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.6)); }
+  50% { opacity: 0.6; filter: drop-shadow(0 0 3px rgba(56, 189, 248, 0.3)); }
+}
+
+/* ── Boca LED ── */
+.hubi-mouth-led {
+  animation: hubi-mouth-blink 1s ease-in-out infinite;
+}
+
+@keyframes hubi-mouth-blink {
+  0%, 90%, 100% { opacity: 1; }
+  45% { opacity: 0.5; }
+}
+
+/* Talking — boca parpadea rápido */
+.hubi-state-talking .hubi-mouth-led {
+  animation: hubi-mouth-talk 0.3s ease-in-out infinite;
+}
+
+@keyframes hubi-mouth-talk {
+  0%, 100% { opacity: 1; transform: scaleY(1); }
+  50% { opacity: 0.6; transform: scaleY(0.5); }
+}
+
+/* ── Expresiones oculares según estado ── */
+/* Por defecto todas las expresiones ocultas */
+.hubi-eyes > g { opacity: 0; }
+
+/* Estados y sus expresiones */
+.hubi-state-idle .hubi-eye-normal,
+.hubi-state-talking .hubi-eye-normal,
+.hubi-state-grateful .hubi-eye-happy,
+.hubi-state-love .hubi-eye-heart,
+.hubi-state-thinking .hubi-eye-thinking,
+.hubi-state-confused .hubi-eye-confused,
+.hubi-state-surprised .hubi-eye-surprised,
+.hubi-state-sleepy .hubi-eye-sleepy,
+.hubi-state-charging .hubi-eye-charging {
+  opacity: 1;
+}
+
+/* En idle: alternar normal / happy / heart */
+.hubi-state-idle .hubi-eyes .hubi-eye-normal { animation: hubi-normal 8s ease-in-out infinite; }
+.hubi-state-idle .hubi-eyes .hubi-eye-happy { animation: hubi-happy 8s ease-in-out infinite; }
+.hubi-state-idle .hubi-eyes .hubi-eye-heart { animation: hubi-heart 8s ease-in-out infinite; }
+
+@keyframes hubi-normal {
+  0%, 26% { opacity: 1; }
+  33%, 59% { opacity: 0; }
+  66%, 93% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes hubi-happy {
+  0%, 26% { opacity: 0; }
+  33%, 59% { opacity: 1; }
+  66%, 93% { opacity: 0; }
+  100% { opacity: 0; }
+}
+
+@keyframes hubi-heart {
+  0%, 26% { opacity: 0; }
+  33%, 59% { opacity: 0; }
+  66%, 93% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Blink sobre todo el grupo de ojos */
+.hubi-blink .hubi-eyes {
+  animation: hubi-blink-anim 160ms ease-in-out;
+  transform-origin: 90px 50px;
+}
+
+@keyframes hubi-blink-anim {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.08); }
+}
+
+/* Durmiendo o cargando: sin boca */
+.hubi-state-sleepy .hubi-mouth-led,
+.hubi-state-charging .hubi-mouth-led {
+  opacity: 0 !important;
+}
+
+/* Animación de carga: rayito parpadea */
+.hubi-state-charging .hubi-charge-bolt {
+  animation: hubi-charge-bolt 1.2s ease-in-out infinite;
+}
+
+@keyframes hubi-charge-bolt {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+/* Zzz que flota */
+.hubi-state-sleepy .hubi-eye-sleepy text {
+  animation: hubi-zzz 1.6s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.hubi-state-sleepy .hubi-eye-sleepy text:nth-child(3) { animation-delay: 0s; }
+.hubi-state-sleepy .hubi-eye-sleepy text:nth-child(4) { animation-delay: 0.3s; }
+.hubi-state-sleepy .hubi-eye-sleepy text:nth-child(5) { animation-delay: 0.6s; }
+
+@keyframes hubi-zzz {
+  0%, 100% { opacity: 0.3; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-3px); }
+}
+
+/* Signo de interrogación pensando: pequeño rebote */
+.hubi-state-thinking .hubi-thinking-qmark {
+  animation: hubi-qmark-bounce 1.2s ease-in-out infinite;
+  transform-origin: center 55px;
+}
+
+@keyframes hubi-qmark-bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  40% { transform: translateY(-4px) scale(1.05); }
+  60% { transform: translateY(2px) scale(0.95); }
+}
+
+/* ── Error ── */
+.hubi-state-error .hubi-chest-led {
+  fill: #f43f5e !important;
+  animation: hubi-error-pulse 0.4s ease-in-out infinite;
+}
+
+@keyframes hubi-error-pulse {
+  0%, 100% { opacity: 1; filter: drop-shadow(0 0 6px rgba(244, 63, 94, 0.8)); }
+  50% { opacity: 0.3; }
+}
+
+.hubi-state-error .hubi-antenna-led {
+  fill: #f43f5e !important;
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .hubi-mascot *,
+  .hubi-mascot .hubi-svg {
+    animation: none !important;
+  }
+}
