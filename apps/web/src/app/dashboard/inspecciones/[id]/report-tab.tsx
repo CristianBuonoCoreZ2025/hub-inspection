@@ -286,6 +286,19 @@ export default function ReportTab({
       const { jsPDF } = await import("jspdf");
       const html2canvas = (await import("html2canvas-pro")).default;
 
+      // Cargar report-print.css (colores hex) para inyectar en el clone de html2canvas.
+      // Tailwind v4 usa oklch() que html2canvas-pro puede renderizar incorrectamente
+      // (issue #134: colores degradados a negro/gris). El CSS de impresión usa hex
+      // que se renderiza correctamente. También neutraliza el box-shadow de la página
+      // y el overflow del contenedor, que causaban el "cuadro gris" en el PDF.
+      let printCss = "";
+      try {
+        const cssRes = await fetch("/report-print.css");
+        if (cssRes.ok) printCss = await cssRes.text();
+      } catch {
+        // Si no se puede cargar, continuar sin overrides (fallback al CSS de la app)
+      }
+
       // Convertir todas las imágenes a data URLs para evitar problemas de CORS
       // Las imágenes del reporte ya usan el proxy interno (/api/storage/proxy)
       // por lo que el fetch es same-origin y no tiene problemas de CORS.
@@ -330,6 +343,31 @@ export default function ReportTab({
         backgroundColor: "#ffffff",
         logging: false,
         imageTimeout: 0,
+        onclone: (clonedDoc: Document) => {
+          // 1. Inyectar report-print.css (colores hex) para que html2canvas
+          //    renderice los fondos/bordes con hex en vez de oklch de Tailwind v4.
+          if (printCss) {
+            const style = clonedDoc.createElement("style");
+            style.textContent = printCss;
+            clonedDoc.head.appendChild(style);
+          }
+          // 2. Neutralizar el box-shadow de la página del reporte en el clone.
+          //    El shadow-lg puede renderizarse como un cuadro gris sobre el contenido.
+          const clonedPage = clonedDoc.querySelector(".report-pdf-page") as HTMLElement | null;
+          if (clonedPage) {
+            clonedPage.style.boxShadow = "none";
+            clonedPage.style.margin = "0 auto";
+          }
+          // 3. Neutralizar el overflow del contenedor viewer en el clone.
+          //    El overflow: auto del padre puede causar que parte del contenido
+          //    se renderice en gris/blanco al clonar (fix incluido en v2.4.0).
+          const clonedViewer = clonedDoc.querySelector(".report-pdf-viewer") as HTMLElement | null;
+          if (clonedViewer) {
+            clonedViewer.style.overflow = "visible";
+            clonedViewer.style.maxHeight = "none";
+            clonedViewer.style.padding = "0";
+          }
+        },
       });
 
       // Restaurar los src originales
