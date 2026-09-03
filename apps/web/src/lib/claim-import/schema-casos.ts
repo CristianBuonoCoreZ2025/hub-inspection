@@ -125,7 +125,7 @@ export const CASOS_FIELDS: ClaimField[] = [
     key: "insuredEmail",
     label: "E-mail Asegurado",
     required: false,
-    synonyms: ["mail asegurado", "email asegurado", "e-mail asegurado", "correo asegurado", "mail", "email"],
+    synonyms: ["mail asegurado", "email asegurado", "e-mail asegurado", "correo asegurado", "mail", "email", "observaciones"],
   },
   {
     key: "businessLine",
@@ -245,6 +245,13 @@ export const CASOS_FIELDS: ClaimField[] = [
     required: false,
     description: "Causal del siniestro (se resuelve a claim_cause_id)",
     synonyms: ["causa ingresada", "causal ingresada", "causa", "causal", "claim cause", "claim_cause"],
+  },
+  {
+    key: "estado",
+    label: "Estado",
+    required: false,
+    description: "Estado del siniestro (ej: Liquidacion). Si viene, se usa para setear el status_id directamente.",
+    synonyms: ["estado", "status", "state"],
   },
 ];
 
@@ -494,4 +501,43 @@ export function applyCasosMapping(
   }
 
   return data;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Separación de nombre y apellido
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Separa un nombre completo en (firstName, lastName).
+ * Regla: las últimas 2 palabras son apellidos, el resto es nombre.
+ *  - 1 palabra  → firstName=word, lastName=""
+ *  - 2 palabras → firstName=word[0], lastName=word[1]
+ *  - 3 palabras → firstName=word[0], lastName=word[1]+word[2]
+ *  - 4+ palabras → firstName=word[0..n-3], lastName=word[n-2]+word[n-1]
+ *
+ * Si se pasa un override (ej: desde persons table), se usa ese directo.
+ */
+export function splitInsuredName(
+  fullName: string,
+  override?: { first_name: string | null; last_name: string | null } | null,
+): { firstName: string; lastName: string } {
+  const trimmed = (fullName || "").trim();
+  if (!trimmed) return { firstName: "", lastName: "" };
+
+  // Si hay override desde persons table, usarlo
+  if (override && (override.first_name || override.last_name)) {
+    return {
+      firstName: override.first_name || "",
+      lastName: override.last_name || "",
+    };
+  }
+
+  const words = trimmed.split(/\s+/);
+  if (words.length === 1) return { firstName: words[0], lastName: "" };
+  if (words.length === 2) return { firstName: words[0], lastName: words[1] };
+
+  // 3+ palabras: últimas 2 = apellido, resto = nombre
+  const lastName = words.slice(-2).join(" ");
+  const firstName = words.slice(0, -2).join(" ");
+  return { firstName, lastName };
 }

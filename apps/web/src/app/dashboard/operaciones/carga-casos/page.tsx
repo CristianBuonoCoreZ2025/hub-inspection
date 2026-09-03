@@ -55,6 +55,11 @@ interface ExcelRow {
 
 type Step = "upload" | "preview" | "staging" | "done";
 
+// ── Defaults para carga de Casos ──
+const DEFAULT_ADJUSTER_ID = "2c525f76-f23d-450d-9e16-154b9fbdbf53"; // Andrea Celis Rico
+const DEFAULT_INSPECTOR_ID = "2c525f76-f23d-450d-9e16-154b9fbdbf53"; // Andrea Celis Rico
+const DEFAULT_PRODUCT_ID = "b694bd82-6fc9-eb77-e518-b028f6d7d985"; // Hogar
+
 export default function CargaCasosPage() {
   const { canCreate } = usePermissions();
   const { profile } = useAuth();
@@ -154,15 +159,21 @@ export default function CargaCasosPage() {
     staleTime: 60 * 1000,
   });
 
-  // Fixed values efectivos = DB (defaults) + overrides del usuario
+  // Fixed values efectivos = DB (defaults) + overrides del usuario + defaults del sistema
   const effectiveFixedValues = useMemo(() => {
     const result: Record<string, { value: string; catalogUuid: string | null }> = {};
+    // 1. Defaults del sistema para carga de Casos
+    result.adjuster = { value: "Andrea Celis Rico", catalogUuid: DEFAULT_ADJUSTER_ID };
+    result.inspector = { value: "Andrea Celis Rico", catalogUuid: DEFAULT_INSPECTOR_ID };
+    result.insuranceProduct = { value: "Hogar", catalogUuid: DEFAULT_PRODUCT_ID };
+    // 2. Valores guardados en DB (sobreescriben defaults)
     for (const fv of savedFixedValues ?? []) {
       result[fv.field_key] = {
         value: fv.fixed_value || "",
         catalogUuid: fv.catalog_uuid || null,
       };
     }
+    // 3. Overrides del usuario en la sesión actual
     for (const [k, v] of Object.entries(fixedValues)) {
       result[k] = v;
     }
@@ -184,17 +195,33 @@ export default function CargaCasosPage() {
   ], [insuranceCompanies, brokers, events, businessLines, insuranceProducts, inspectors, adjusters, currencies, claimTypes, claimCauses]);
 
   // ── Helpers de resolución texto → UUID ──
+  // Normaliza abreviaturas comunes de compañías de seguros para mejor matching
+  const normalizeCompanyName = useCallback((s: string): string => {
+    return s
+      .toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/\bcia\b\.?\s*/g, "compania ")
+      .replace(/\bsegs\b/g, "seguros")
+      .replace(/\bseg\b\.?\s*/g, "seguros ")
+      .replace(/\bgrales\b/g, "generales")
+      .replace(/\bgen\b\.?\s*/g, "generales ")
+      .replace(/\bs\.?\s?a\.?/g, "sa")
+      .replace(/\./g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }, []);
+
   const resolveByName = useCallback(
     <T extends { id: string; name: string }>(catalog: T[] | undefined, name: string): string | null => {
       if (!catalog || !name) return null;
-      const norm = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+      const norm = normalizeCompanyName(name);
       const found = catalog.find((c) => {
-        const n = c.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+        const n = normalizeCompanyName(c.name);
         return n === norm || n.includes(norm) || norm.includes(n);
       });
       return found?.id || null;
     },
-    [],
+    [normalizeCompanyName],
   );
 
   const resolveInspector = useCallback(
@@ -504,12 +531,17 @@ export default function CargaCasosPage() {
 
           const insuranceCompanyId = isUuid(String(d.insuranceCompany || "")) ? String(d.insuranceCompany)
             : resolveByName(insuranceCompanies, String(d.insuranceCompany || "")) || fv.insuranceCompany?.catalogUuid || null;
-          const brokerId = isUuid(String(d.broker || "")) ? String(d.broker)
-            : resolveByName(brokers, String(d.broker || "")) || fv.broker?.catalogUuid || null;
+          // Validar que la compañía se haya resuelto — sin compañía no se puede crear el claim
+          if (!insuranceCompanyId) {
+            throw new Error(`Compañía "${String(d.insuranceCompany || "")}" no encontrada en el catálogo. Corrige el nombre en el Excel o agrégala al catálogo.`);
+          }
+          // Sin broker por defecto en carga de Casos
+          const brokerId = null;
           const businessLineId = isUuid(String(d.businessLine || "")) ? String(d.businessLine)
             : resolveByName(businessLines, String(d.businessLine || "")) || fv.businessLine?.catalogUuid || null;
+          // Producto: si no viene en Excel, default a "Hogar"
           const insuranceProductId = isUuid(String(d.insuranceProduct || "")) ? String(d.insuranceProduct)
-            : resolveByName(insuranceProducts, String(d.insuranceProduct || "")) || fv.insuranceProduct?.catalogUuid || null;
+            : resolveByName(insuranceProducts, String(d.insuranceProduct || "")) || fv.insuranceProduct?.catalogUuid || DEFAULT_PRODUCT_ID;
           const claimTypeId = isUuid(String(d.claimType || "")) ? String(d.claimType)
             : resolveByName(claimTypes, String(d.claimType || "")) || fv.claimType?.catalogUuid || null;
           const claimCauseId = isUuid(String(d.claimCause || "")) ? String(d.claimCause)
@@ -518,10 +550,12 @@ export default function CargaCasosPage() {
             : resolveByName(events, String(d.event || "")) || fv.event?.catalogUuid || null;
           const currencyId = isUuid(String(d.currency || "")) ? String(d.currency)
             : resolveCurrency(String(d.currency || "")) || fv.currency?.catalogUuid || null;
+          // Inspector: si no viene en Excel o no se resuelve, default a Andrea Celis
           const inspectorId = isUuid(String(d.inspector || "")) ? String(d.inspector)
-            : resolveInspector(String(d.inspector || "")) || fv.inspector?.catalogUuid || null;
+            : resolveInspector(String(d.inspector || "")) || fv.inspector?.catalogUuid || DEFAULT_INSPECTOR_ID;
+          // Adjuster (liquidador): default a Andrea Celis si no viene en Excel
           const adjusterId = isUuid(String(d.adjuster || "")) ? String(d.adjuster)
-            : resolveAdjuster(String(d.adjuster || "")) || fv.adjuster?.catalogUuid || null;
+            : resolveAdjuster(String(d.adjuster || "")) || fv.adjuster?.catalogUuid || DEFAULT_ADJUSTER_ID;
 
           // Resolver destination_housing_id desde el tipo de riesgo:
           // "property" → Habitacional, "comercial" → Comercial
@@ -565,18 +599,13 @@ export default function CargaCasosPage() {
             policyEndDate: String(d.policyEndDate || ""),
             claimCauseId,
             companyId: tenantCompanyId,
-            statusId: createdStatusId, // SIEMPRE "Creación" primero
+            // Si el Excel trae ESTADO="Liquidacion", crear directamente en Liquidación
+            // Si no, crear en "Creación"
+            statusId: String(d.estado || "").toLowerCase().includes("liquidacion") && liquidacionStatusId
+              ? liquidacionStatusId
+              : createdStatusId,
             destinationHousingId,
           });
-
-          // Cambiar a "Liquidación" (adjustment) para disparar el workflow
-          if (liquidacionStatusId && liquidacionStatusId !== createdStatusId) {
-            const { getSupabaseClient } = await import("@/lib/supabase/client");
-            await getSupabaseClient()
-              .from("claims")
-              .update({ status_id: liquidacionStatusId })
-              .eq("id", claim.id);
-          }
 
           await markStagingImported(staging.id, claim.id);
           success++;
@@ -770,7 +799,11 @@ export default function CargaCasosPage() {
                 </p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-60 overflow-y-auto">
-                {CASOS_FIELDS.map((field) => {
+                {CASOS_FIELDS.filter((field) => {
+                  const m = mapping[field.key];
+                  // Mostrar solo: campos requeridos O campos que ya tienen mapeo (el Excel los trae)
+                  return field.required || (m && m.excelHeader);
+                }).map((field) => {
                   const m = mapping[field.key];
                   // Headers ya asignados a otros campos (no ofrecerlos)
                   const assignedHeaders = new Set(
@@ -1158,10 +1191,7 @@ export default function CargaCasosPage() {
                       <Button
                         size="sm"
                         className="pg-btn-platinum"
-                        disabled={confirmMutation.isPending ||
-                          !effectiveFixedValues.insuranceProduct?.catalogUuid ||
-                          !effectiveFixedValues.adjuster?.catalogUuid ||
-                          !effectiveFixedValues.insuranceCompany?.catalogUuid}
+                        disabled={confirmMutation.isPending}
                         onClick={() => {
                           setIsProcessing(true);
                           confirmMutation.mutate();

@@ -1643,6 +1643,25 @@ function personTypeFromRut(rut: string | null | undefined): string {
   return body >= 60_000_000 ? "legal" : "natural";
 }
 
+/**
+ * Busca una persona en la tabla `persons` por su tax_id (RUT).
+ * Retorna first_name, last_name, person_type y business_name si la encuentra.
+ * Se usa para no equivocarse en la separación de nombres al cargar Casos.
+ */
+export async function findPersonByRut(
+  rut: string,
+): Promise<{ first_name: string | null; last_name: string | null; person_type: string | null; business_name: string | null } | null> {
+  if (!rut) return null;
+  const supabase = (await import("@/lib/supabase/client")).getSupabaseClient();
+  const { data, error } = await supabase
+    .from("persons")
+    .select("first_name, last_name, person_type, business_name")
+    .eq("tax_id", rut.trim())
+    .maybeSingle();
+  if (error) return null;
+  return data || null;
+}
+
 export async function createClaimFromCaso(data: CasoRowData) {
   // 1. Resolver jerarquía de ubicación desde la comuna
   const { resolveCommuneHierarchy } = await import("@/services/catalogs");
@@ -1652,12 +1671,24 @@ export async function createClaimFromCaso(data: CasoRowData) {
   const insuredAddress = data.claimAddress || data.insuredAddress;
 
   // 2b. Determinar person_type desde el RUT y preparar nombre/razón social
-  const personType = personTypeFromRut(data.rut);
+  //     Si la persona ya existe en tabla persons, usar su separación de nombre/apellido
+  const existingPerson = await findPersonByRut(data.rut);
+  const personType = existingPerson?.person_type || personTypeFromRut(data.rut);
   const isLegal = personType === "legal";
+
+  // Separar nombre y apellido usando splitInsuredName (con override de persons si existe)
+  const { splitInsuredName } = await import("@/lib/claim-import/schema-casos");
+  const fullName = `${data.insuredName} ${data.lastName || ""}`.trim() || data.insuredName;
+  const override = existingPerson
+    ? { first_name: existingPerson.first_name, last_name: existingPerson.last_name }
+    : null;
+  const { firstName, lastName } = isLegal
+    ? { firstName: "", lastName: "" }
+    : splitInsuredName(fullName, override);
+
   // Si es jurídica: el nombre completo va como razón social (full_name), sin first_name/last_name
-  // Si es natural: first_name = nombre, last_name = apellido
   const razonSocial = isLegal
-    ? `${data.insuredName} ${data.lastName || ""}`.trim()
+    ? (existingPerson?.business_name || `${data.insuredName} ${data.lastName || ""}`.trim())
     : "";
 
   // 3. Póliza: si no hay, "SIN NUMERO"
@@ -1723,8 +1754,8 @@ export async function createClaimFromCaso(data: CasoRowData) {
     },
     // insured
     {
-      insuredName: isLegal ? razonSocial : data.insuredName,
-      lastName: isLegal ? null : (data.lastName || null),
+      insuredName: isLegal ? razonSocial : firstName,
+      lastName: isLegal ? null : (lastName || null),
       rut: data.rut || null,
       insuredEmail: data.insuredEmail || null,
       insuredPhone: data.insuredPhone || null,
@@ -1744,44 +1775,20 @@ export async function createClaimFromCaso(data: CasoRowData) {
       claimCity: location.cityName || null,
       claimCommune: location.communeName || null,
     },
-    // contractor (replicado del asegurado)
-    {
-      contractorName: isLegal ? razonSocial : data.insuredName,
-      contractorLastName: isLegal ? null : (data.lastName || null),
-      contractorRut: data.rut || null,
-      contractorEmail: data.insuredEmail || null,
-      contractorCellPhone: data.insuredPhone || null,
-      contractorAddress: insuredAddress || null,
-      contractorCountry: location.countryName || null,
-      contractorRegion: location.regionName || null,
-      contractorCity: location.cityName || null,
-      contractorCommune: location.communeName || null,
-      contractorPersonType: personType,
-    },
-    // beneficiary (replicado del asegurado)
-    {
-      beneficiaryName: isLegal ? razonSocial : data.insuredName,
-      beneficiaryLastName: isLegal ? null : (data.lastName || null),
-      beneficiaryRut: data.rut || null,
-      beneficiaryEmail: data.insuredEmail || null,
-      beneficiaryCellPhone: data.insuredPhone || null,
-      beneficiaryAddress: insuredAddress || null,
-      beneficiaryCountry: location.countryName || null,
-      beneficiaryRegion: location.regionName || null,
-      beneficiaryCity: location.cityName || null,
-      beneficiaryCommune: location.communeName || null,
-      beneficiaryPersonType: personType,
-    },
+    // contractor: null — no se crea contratante en carga de Casos
+    null,
+    // beneficiary: null — no se crea beneficiario en carga de Casos
+    null,
     // contact (siniestrado) — si viene contactName del Excel, se usa ese nombre.
     // Si NO viene (sin mapear), se replica TODO del asegurado: nombre, apellido, RUT,
     // person_type, email, teléfono, dirección. Y se vincula al asegurado.
     {
       contactName: data.contactName && data.contactName.trim() !== ""
         ? data.contactName
-        : (isLegal ? razonSocial : data.insuredName),
+        : (isLegal ? razonSocial : firstName),
       contactLastName: data.contactName && data.contactName.trim() !== ""
         ? null  // si viene contacto del Excel, no copiamos apellido del asegurado
-        : (isLegal ? null : (data.lastName || null)),
+        : (isLegal ? null : (lastName || null)),
       contactRut: data.rut || null,
       contactEmail: data.insuredEmail || null,
       contactPhone: data.insuredPhone || null,
@@ -1792,7 +1799,7 @@ export async function createClaimFromCaso(data: CasoRowData) {
       contactCommune: location.communeName || null,
       contactPersonType: personType,
     },
-    // linkParticipants = true: beneficiary, contractor y contact se marcan como ligados al asegurado
+    // linkParticipants = true: contact se marca como ligado al asegurado
     true,
   );
 
