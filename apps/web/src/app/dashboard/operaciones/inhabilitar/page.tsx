@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { useConfirm } from "@/hooks/use-confirm";
 
 export default function InhabilitarPage() {
- const { user } = useAuth();
+ const { profile } = useAuth();
  const { canEdit, canDelete } = usePermissions();
  const queryClient = useQueryClient();
  const confirm = useConfirm();
@@ -39,7 +39,7 @@ export default function InhabilitarPage() {
 
  const disableMutation = useMutation({
  mutationFn: ({ id, reason }: { id: string; reason: string }) =>
- disableClaim(id, reason, user?.id),
+ disableClaim(id, reason, profile?.id),
  onSuccess: () => {
  toast.success("Siniestro inhabilitado");
  queryClient.invalidateQueries({ queryKey: ["claims"] });
@@ -50,7 +50,7 @@ export default function InhabilitarPage() {
  });
 
  const enableMutation = useMutation({
- mutationFn: (id: string) => enableClaim(id, user?.id),
+ mutationFn: (id: string) => enableClaim(id, profile?.id),
  onSuccess: () => {
  toast.success("Siniestro reactivado");
  queryClient.invalidateQueries({ queryKey: ["claims"] });

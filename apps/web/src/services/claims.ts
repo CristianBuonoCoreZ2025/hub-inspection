@@ -263,23 +263,28 @@ export async function getClaimsCount(
 }
 
 
-export async function disableClaim(id: string, reason: string, userId?: string) {
+// UUID del status "Cierre" (lookup_catalog, code='closed')
+const STATUS_CLOSED_UUID = "7b8292f3-34cd-4296-aee7-2c8135cb1b16";
+
+export async function disableClaim(id: string, reason: string, profileId?: string) {
   return updateRow<{ id: string; disabled: boolean }>("claims", id, {
     disabled: true,
     disabled_reason: reason,
     disabled_at: new Date().toISOString(),
-    disabled_by: userId || null,
-    updated_by: userId || null,
+    disabled_by: profileId || null,
+    updated_by: profileId || null,
+    // Al inhabilitar, dejar el caso en estado "Cierre" (no se trabajará)
+    status_id: STATUS_CLOSED_UUID,
   }, "id, disabled");
 }
 
-export async function enableClaim(id: string, userId?: string) {
+export async function enableClaim(id: string, profileId?: string) {
   return updateRow<{ id: string; disabled: boolean }>("claims", id, {
     disabled: false,
     disabled_reason: null,
     disabled_at: null,
     disabled_by: null,
-    updated_by: userId || null,
+    updated_by: profileId || null,
   }, "id, disabled");
 }
 
