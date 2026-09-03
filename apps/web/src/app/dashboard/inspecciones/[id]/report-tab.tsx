@@ -351,21 +351,45 @@ export default function ReportTab({
             style.textContent = printCss;
             clonedDoc.head.appendChild(style);
           }
-          // 2. Neutralizar el box-shadow de la página del reporte en el clone.
-          //    El shadow-lg puede renderizarse como un cuadro gris sobre el contenido.
+          // 2. Override agresivo: eliminar shadows, filtros y backdrop-filters
+          //    del reporte en el clone. El cuadro gris del PDF provenía de un
+          //    box-shadow/filter que html2canvas-pro renderiza como sólido.
+          const overrideStyle = clonedDoc.createElement("style");
+          overrideStyle.textContent = `
+            .report-pdf-viewer {
+              overflow: visible !important;
+              max-height: none !important;
+              padding: 0 !important;
+              background: transparent !important;
+            }
+            .report-pdf-page,
+            .report-pdf-page * {
+              box-shadow: none !important;
+              filter: none !important;
+              -webkit-filter: none !important;
+              backdrop-filter: none !important;
+              -webkit-backdrop-filter: none !important;
+            }
+            .report-pdf-page {
+              background-color: #ffffff !important;
+              margin: 0 auto !important;
+            }
+          `;
+          clonedDoc.head.appendChild(overrideStyle);
+          // 3. También limpiar estilos inline de los elementos clonados
+          //    por si Tailwind añade inline styles o variables con oklch.
           const clonedPage = clonedDoc.querySelector(".report-pdf-page") as HTMLElement | null;
           if (clonedPage) {
             clonedPage.style.boxShadow = "none";
+            clonedPage.style.backgroundColor = "#ffffff";
             clonedPage.style.margin = "0 auto";
           }
-          // 3. Neutralizar el overflow del contenedor viewer en el clone.
-          //    El overflow: auto del padre puede causar que parte del contenido
-          //    se renderice en gris/blanco al clonar (fix incluido en v2.4.0).
           const clonedViewer = clonedDoc.querySelector(".report-pdf-viewer") as HTMLElement | null;
           if (clonedViewer) {
             clonedViewer.style.overflow = "visible";
             clonedViewer.style.maxHeight = "none";
             clonedViewer.style.padding = "0";
+            clonedViewer.style.background = "transparent";
           }
         },
       });
