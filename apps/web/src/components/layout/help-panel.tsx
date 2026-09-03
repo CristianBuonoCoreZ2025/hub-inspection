@@ -229,44 +229,6 @@ const HELP_SECTIONS: HelpSection[] = [
     ],
   },
   {
-    id: "inspeccion-remota",
-    title: "Inspección Remota",
-    icon: Video,
-    category: "Core",
-    content: [
-      {
-        question: "¿Cómo se conecta el asegurado?",
-        answer:
-          "El asegurado accede por el magic link. El panel de chat nunca se cierra, así que siempre puede comunicarse. Si la videollamada se cae, hay un botón 'Reconectar' que desmonta y vuelve a montar la llamada WebRTC, generando una conexión limpia.",
-      },
-      {
-        question: "¿Qué hace el inspector si se corta la llamada?",
-        answer:
-          "El inspector puede colgar la videollamada con el botón 'Desconectar' sin cerrar el chat. Si el panel de comunicación está minimizado, lo vuelve a abrir con el botón flotante. El ancho del panel es de 420px tanto en dashboard como en magic link.",
-      },
-      {
-        question: "¿Qué son los logs de conexión?",
-        answer:
-          "El tab 'Conexiones' en la inspección del dashboard muestra el estado actual del asegurado y del inspector (Conectado, Conectando o Desconectado). El historial técnico queda oculto en un acordeón.",
-      },
-      {
-        question: "¿Puede entrar sin cámara o micrófono?",
-        answer:
-          "Sí. Si getUserMedia falla, el sistema intenta usar solo audio. Si tampoco funciona, entra sin media local, pero igual se conecta al canal de signaling para que ambos lados se vean conectados en el chat.",
-      },
-      {
-        question: "¿Qué pasa si otro programa usa la cámara?",
-        answer:
-          "El sistema detecta el error y muestra mensajes claros: 'La cámara o micrófono están en uso por otra aplicación. Cierre otras pestañas o programas y vuelva a intentar.' Si denegó el permiso, indica 'Habilite el acceso a cámara y micrófono en el navegador.'",
-      },
-      {
-        question: "¿Dónde ve el asegurado el informe final?",
-        answer:
-          "En el magic link hay un tab 'Informe'. Si el inspector generó el PDF, aparece con la fecha y un enlace para verlo. El servicio getInspectionSessionByToken trae inspection_reports con report_url, status y generated_at.",
-      },
-    ],
-  },
-  {
     id: "agenda",
     title: "Agenda",
     icon: Calendar,
