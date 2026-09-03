@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -178,6 +178,17 @@ export default function MagicLinkPage() {
   const [videoCallOpen, setVideoCallOpen] = useState(false);
   const [videoCallKey, setVideoCallKey] = useState(0);
   const autoVideoOpenedRef = useRef(false);
+  // iOS/Safari requiere un gesto del usuario para getUserMedia.
+  // Si auto-abrimos la videollamada, getUserMedia falla silenciosamente.
+  // En iOS, el asegurado debe tap un botón "Unirse" para iniciar.
+  const requiresUserGesture = useMemo(() => {
+    if (typeof navigator === "undefined") return false;
+    const ua = navigator.userAgent;
+    const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const isSafari = /^((?!chrome|android|crios|fxios).)*safari/i.test(ua);
+    return isIOS || isSafari;
+  }, []);
+  const [hasJoinedCall, setHasJoinedCall] = useState(false);
   // Ref para el ID del log de conexión del asegurado
   const connectionLogIdRef = useRef<string | null>(null);
   // Si los permisos de media llegan antes de que el log "connecting" se cree,
@@ -218,17 +229,26 @@ export default function MagicLinkPage() {
   useEffect(() => {
     if (session && session.status === "active" && session.inspection_type === "remote" && !autoVideoOpenedRef.current) {
       autoVideoOpenedRef.current = true;
-      setChatPanelOpen(true);
-      setVideoCallOpen(true);
+      // Programar la apertura en el siguiente microtask para evitar setState sincrónico en un effect.
+      queueMicrotask(() => {
+        setChatPanelOpen(true);
+        // En iOS/Safari, no auto-abrir la videollamada porque getUserMedia
+        // requiere un gesto del usuario. Se muestra un botón "Unirse" en su lugar.
+        if (!requiresUserGesture) {
+          setVideoCallOpen(true);
+        }
+      });
     }
-  }, [session]);
+  }, [session, requiresUserGesture]);
 
   // El asegurado sigue al inspector automáticamente (sin navegación libre)
 
   // ── Log de conexión del asegurado ──
-  // Registra un evento "connecting" al cargar la sesión, y "disconnected" al desmontar.
+  // Registra un evento "connecting" solo cuando la sesión está activa (la videollamada se abre).
+  // Si la sesión está scheduled/completed/cancelled, el asegurado está esperando, no conectándose.
   useEffect(() => {
     if (!session?.id) return;
+    if (session.status !== "active") return;
     // Solo registrar una vez por sesión
     if (connectionLogIdRef.current) return;
     let cancelled = false;
@@ -272,7 +292,7 @@ export default function MagicLinkPage() {
         });
       }
     };
-  }, [session?.id, token]);
+  }, [session?.id, session?.status, token]);
 
   // ── Desconexión robusta al cerrar la pestaña ──
   useEffect(() => {
@@ -628,6 +648,20 @@ export default function MagicLinkPage() {
                 )}
               </div>
 
+              {/* Botón "Unirse" para iOS/Safari donde getUserMedia requiere gesto del usuario */}
+              {!videoCallOpen && session.status === "active" && session.inspection_type === "remote" && requiresUserGesture && !hasJoinedCall && (
+                <button
+                  onClick={() => {
+                    setHasJoinedCall(true);
+                    setVideoCallOpen(true);
+                  }}
+                  className="mb-3 w-full rounded-lg bg-violet-600 px-4 py-3 text-white font-semibold flex items-center justify-center gap-2 hover:bg-violet-500 transition-colors"
+                >
+                  <Video className="h-5 w-5" />
+                  Unirse a la videollamada
+                </button>
+              )}
+
               {videoCallOpen && session.status === "active" && session.inspection_type === "remote" && (
                 <div className="h-48 shrink-0 mb-3 rounded-lg overflow-hidden border border-slate-700">
                   <LiveVideoCall
@@ -638,6 +672,7 @@ export default function MagicLinkPage() {
                     compact
                     onHangup={() => {
                       setVideoCallOpen(false);
+                      setHasJoinedCall(false);
                       // Marcar log como desconectado y limpiar para permitir re-conexión
                       const logId = connectionLogIdRef.current;
                       if (logId) {
@@ -655,6 +690,7 @@ export default function MagicLinkPage() {
                     }}
                     onKicked={(reason) => {
                       setVideoCallOpen(false);
+                      setHasJoinedCall(false);
                       // Marcar log como kicked
                       const logId = connectionLogIdRef.current;
                       if (logId) {
@@ -700,6 +736,20 @@ export default function MagicLinkPage() {
                         details,
                         magicLinkToken: token,
                       });
+                      // Si la conexión falló, actualizar el log de conexión a "failed"
+                      if (eventType === "connection_failed") {
+                        const logId = connectionLogIdRef.current;
+                        if (logId) {
+                          logConnectionEvent({
+                            sessionId: session.id,
+                            magicLinkToken: token,
+                            role: "insured",
+                            status: "failed",
+                            logId,
+                            failureReason: (details?.reason as string) || "connection_failed",
+                          });
+                        }
+                      }
                     }}
                   />
                 </div>

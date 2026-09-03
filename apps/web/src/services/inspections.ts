@@ -1077,6 +1077,23 @@ export async function completeInspection(sessionId: string) {
   if (session.status !== "active") {
     throw new Error("Solo se puede completar una inspección en progreso");
   }
+
+  // Validar firmas en inspecciones remotas:
+  // El asegurado debe haber firmado O tener un waiver (exención de firma).
+  // En inspecciones presenciales (onsite) no se exige firma del asegurado via magic link.
+  if (session.inspection_type === "remote") {
+    const signatures = session.inspection_signatures || [];
+    const hasInsuredSignature = signatures.some((s) => s.role === "insured");
+    const hasWaiver = !!session.signature_waiver_reason;
+
+    if (!hasInsuredSignature && !hasWaiver) {
+      throw new Error(
+        "No se puede finalizar: la inspección remota no tiene firma del asegurado ni exención de firma. " +
+        "Solicita la firma desde el magic link o registra una exención de firma."
+      );
+    }
+  }
+
   await closeOpenWorkPeriod(sessionId);
   return updateRow<InspectionSession>("inspection_sessions", sessionId, {
     status: "completed",

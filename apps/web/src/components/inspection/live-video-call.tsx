@@ -344,6 +344,8 @@ export function LiveVideoCall({
           if (pc2 && pc2.connectionState === "failed" && !hasFrame) {
             setState("failed");
             setError("Conexión fallida. Verifica tu conexión a internet.");
+            logWebrtcEvent("connection_failed", { reason: "connection_state_failed_no_remote_frame", iceState: pc2.iceConnectionState });
+            onWebrtcEvent?.("connection_failed", { reason: "connection_state_failed_no_remote_frame" });
           }
         }, 5000);
       } else if (s === "closed") {
@@ -359,6 +361,8 @@ export function LiveVideoCall({
           console.error("[LiveVideoCall] ICE restart falló 3 veces consecutivas — conexión inestable");
           setState("failed");
           setError("Conexión inestable. Verifica tu conexión a internet e intenta nuevamente.");
+          logWebrtcEvent("connection_failed", { reason: "ice_restart_exhausted", attempts: restartCount, iceState: pc.iceConnectionState });
+          onWebrtcEvent?.("connection_failed", { reason: "ice_restart_exhausted", attempts: restartCount });
           return;
         }
         const delay = Math.min(2000 * Math.pow(2, restartCount), 16000);
@@ -398,6 +402,7 @@ export function LiveVideoCall({
     };
 
     return pc;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, role, logWebrtcEvent]);
 
   // ── Manejar mensaje de signaling ──
