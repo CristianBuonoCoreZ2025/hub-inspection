@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { HubiMascot, type HubiState } from "./hubi-mascot";
+import { HubiMascotOpus as HubiMascot3D, type HubiState3D as HubiState } from "./hubi-opus-mascot-3d";
 import { X, Send, Loader2 } from "lucide-react";
 import "./hubi-widget.css";
 
@@ -197,7 +197,7 @@ export function HubiWidget({ userRole = "inspector", userName = "" }: HubiWidget
           aria-label="Abrir asistente Hubi"
         >
           <div className="hubi-fab-mascot">
-            <HubiMascot state="idle" size={44} />
+            <HubiMascot3D state="idle" size={40} />
           </div>
           <span className="hubi-fab-pulse" />
           <span className="hubi-fab-badge" />
@@ -211,7 +211,7 @@ export function HubiWidget({ userRole = "inspector", userName = "" }: HubiWidget
           <div className="hubi-panel-header">
             <div className="hubi-panel-header-left">
               <div className="hubi-panel-avatar">
-                <HubiMascot state={hubiState} size={28} />
+                <HubiMascot3D state={hubiState} size={26} />
               </div>
               <div className="hubi-panel-titles">
                 <span className="hubi-panel-name">Hubi</span>
@@ -228,7 +228,7 @@ export function HubiWidget({ userRole = "inspector", userName = "" }: HubiWidget
               className="hubi-panel-close"
               aria-label="Cerrar"
             >
-              <X className="h-4 w-4" />
+              <X className="h-3.5 w-3.5" />
             </button>
           </div>
 
@@ -238,7 +238,7 @@ export function HubiWidget({ userRole = "inspector", userName = "" }: HubiWidget
               <div key={i} className={`hubi-msg hubi-msg-${msg.role}`}>
                 {msg.role === "assistant" && (
                   <div className="hubi-msg-avatar">
-                    <HubiMascot state={msg.content ? "idle" : "thinking"} size={20} />
+                    <HubiMascot3D state={msg.content ? "idle" : "thinking"} size={18} />
                   </div>
                 )}
                 <div className="hubi-msg-bubble">
@@ -291,9 +291,9 @@ export function HubiWidget({ userRole = "inspector", userName = "" }: HubiWidget
               aria-label="Enviar"
             >
               {isStreaming ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <Send className="h-4 w-4" />
+                <Send className="h-3.5 w-3.5" />
               )}
             </button>
           </div>

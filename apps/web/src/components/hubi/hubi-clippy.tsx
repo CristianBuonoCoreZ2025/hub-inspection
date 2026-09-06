@@ -2,8 +2,9 @@
 
 import { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
 import { usePathname } from "next/navigation";
-import { HubiMascot, type HubiState } from "./hubi-mascot";
-import { X, Send } from "lucide-react";
+import { HubiMascotOpus, type HubiState3D as HubiState } from "./hubi-opus-mascot-3d";
+import { X, Send, Sparkles, Music, ArrowUp, RotateCw, Clapperboard, Trophy, StretchHorizontal, Heart, PartyPopper, Wand2, ThumbsUp, Moon, Zap, HelpCircle, AlertCircle, HandHeart, Sparkle, Eye, Star, Crown, Shield } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import "./hubi-clippy.css";
 
 interface HubiClippyProps {
@@ -18,6 +19,30 @@ const GRATEFUL_WORDS = ["muy bien", "excelente", "genial", "perfecto", "increíb
 const QUESTION_WORDS = ["?", "qué", "como", "cómo", "por que", "por qué", "porque", "cuando", "cuándo", "donde", "dónde", "cual", "cuál", "quien", "quién", "puedes", "podrias", "podrías", "como puedo", "cómo puedo", "necesito saber", "ayudame", "ayúdame", "explique", "explica"];
 const CONFUSED_WORDS = ["no lo se", "no lo sé", "no estoy seguro", "no entiendo", "no tengo acceso", "no tengo informacion", "no tengo información", "no puedo", "no se", "no sé", "desconozco"];
 const SURPRISED_WORDS = ["wow", "no puede ser", "en serio", "de verdad", "sorprendente", "impresionante", "qué raro", "qué extraño", "extraño", "error", "ups", "rayos", "maldicion", "maldición"];
+
+// Palabras para movimientos especiales
+const DANCE_WORDS = ["baila", "baile", "bailar", "danza", "danzar", "dame un baile", "dame una danza", "muevete", "muévete"];
+const JUMP_WORDS = ["salta", "salto", "saltar", "brinca", "brinco"];
+const SPIN_WORDS = ["gira", "giro", "girar", "dale vuelta", "vueltas", "espin"];
+const CLAP_WORDS = ["aplaude", "aplauso", "aplausos", "aplaudir", "applause", "clap"];
+const VICTORY_WORDS = ["victoria", "ganamos", "ganaste", "gane", "gané", "fiesta", "celebra", "celebracion", "celebración", "champion", "campeon", "campeón", "exito", "éxito", "lo logre", "lo logré", "victory"];
+
+// Detectar si una respuesta de la IA es afirmativa o negativa
+function detectYesNo(text: string): "nod" | "shake" | null {
+  const t = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  const firstWords = t.slice(0, 50); // analizar solo el inicio
+  // Palabras afirmativas al inicio
+  const yesPatterns = ["si", "si.", "si,", "si!", "claro", "por supuesto", "afirmativo", "correcto", "asi es", "así es", "exacto", "efectivamente", "cierto", "verdad"];
+  // Palabras negativas al inicio
+  const noPatterns = ["no", "no.", "no,", "no!", "negativo", "para nada", "en absoluto", "no es correcto", "no es asi", "no es así", "falso", "incorrecto"];
+  for (const p of yesPatterns) {
+    if (firstWords.startsWith(p)) return "nod";
+  }
+  for (const p of noPatterns) {
+    if (firstWords.startsWith(p)) return "shake";
+  }
+  return null;
+}
 
 // Respuestas locales para agradecimientos, cumplidos y saludos: sin gastar tokens de IA
 function getLocalResponse(text: string, userName: string): { text: string; mood: HubiState } | null {
@@ -53,6 +78,30 @@ function getLocalResponse(text: string, userName: string): { text: string; mood:
   if (["no gracias", "nada", "no", "nop", "todo bien"].includes(t)) {
     return { text: `Perfecto${mentionName}. Aquí estaré si me necesitas.`, mood: "idle" };
   }
+
+  // ── Movimientos especiales ──
+  // Baile (unificado: baila / danza)
+  if (DANCE_WORDS.some(w => t.includes(w))) {
+    return { text: `¡A bailar${mentionName}! 🎵`, mood: "dance" };
+  }
+  // Salto
+  if (JUMP_WORDS.some(w => t.includes(w))) {
+    return { text: `¡Allá voy${mentionName}! 🤸`, mood: "jump" };
+  }
+  // Giro completo
+  if (SPIN_WORDS.some(w => t.includes(w))) {
+    return { text: `¡Mirame${mentionName}! 🌀`, mood: "spin" };
+  }
+  // Aplaudir
+  if (CLAP_WORDS.some(w => t.includes(w))) {
+    return { text: `¡Bravo${mentionName}! 👏`, mood: "clap" };
+  }
+  // Victoria / celebración
+  if (VICTORY_WORDS.some(w => t.includes(w))) {
+    return { text: `¡Victoria${mentionName}! 🎉`, mood: "fistPump" };
+  }
+  // Preguntas de sí/no → ya no se interceptan, las procesa la IA
+  // La animación se aplica después según la respuesta de la IA
 
   return null;
 }
@@ -109,6 +158,7 @@ export function HubiClippy({ userRole = "inspector", userName = "" }: HubiClippy
   const [answer, setAnswer] = useState("");
   const [hubiState, setHubiState] = useState<HubiState>("idle");
   const [hidden, setHidden] = useState(getHiddenFromStorage);
+  const [showEmotions, setShowEmotions] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const robotRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number; active: boolean } | null>(null);
@@ -193,19 +243,50 @@ export function HubiClippy({ userRole = "inspector", userName = "" }: HubiClippy
     const tick = setInterval(() => {
       const idleMs = Date.now() - lastActivityRef.current;
       setHubiState((s) => {
-        if (s === "charging") return s; // ya está al máximo de inactividad
+        if (s === "charging") return s;
         if (idleMs >= 3 * 60 * 1000) return "charging";
-        if (idleMs >= 60 * 1000 && s !== "sleepy") return "sleepy";
+        if (idleMs >= 60 * 1000 && s !== "sleepy" && s !== "stretch") return "sleepy";
         return s;
       });
     }, 5000);
     return () => clearInterval(tick);
   }, []);
 
-  const bumpActivity = () => { lastActivityRef.current = Date.now(); };
+  // Movimientos aleatorios cuando está idle (TEMPORAL: desactivado para probar despertar)
+  useEffect(() => {
+    const tick = setInterval(() => {
+      setHubiState((s) => {
+        if (s !== "idle") return s;
+        if (Math.random() > 0.08) return s;
+        const moves: HubiState[] = ["spin", "jump", "fistPump", "shrug", "lookAround"];
+        const move = moves[Math.floor(Math.random() * moves.length)];
+        setTimeout(() => setHubiState("idle"), move === "spin" ? 1800 : move === "jump" ? 1500 : 2000);
+        return move;
+      });
+    }, 8000);
+    return () => clearInterval(tick);
+  }, []);
+
+  const hubiStateRef = useRef<HubiState>("idle");
+  useEffect(() => { hubiStateRef.current = hubiState; }, [hubiState]);
+  const wakingRef = useRef(false);
+
+  const bumpActivity = useCallback(() => {
+    const wasInactive = hubiStateRef.current === "sleepy" || hubiStateRef.current === "charging";
+    lastActivityRef.current = Date.now();
+    if (wasInactive && !wakingRef.current) {
+      wakingRef.current = true;
+      setHubiState("stretch");
+      setTimeout(() => {
+        wakingRef.current = false;
+        setHubiState("idle");
+      }, 2500);
+    }
+  }, []);
 
   const toggleRobot = () => {
     bumpActivity();
+    if (wakingRef.current) return; // Si está despertando, no abrir panel todavía
     if (open) {
       setOpen(false);
       setHubiState("idle");
@@ -318,10 +399,16 @@ export function HubiClippy({ userRole = "inspector", userName = "" }: HubiClippy
   const sendQuestion = useCallback(async (text: string) => {
     if (!text.trim()) return;
     bumpActivity();
+    if (wakingRef.current) return; // Si está despertando, esperar
 
     // Respuesta local para agradecimientos, cumplidos, saludos — sin gastar tokens
     const local = getLocalResponse(text, userName);
     if (local) {
+      // Si el estado actual ya es el mismo mood, forzar reset pasando por idle
+      if (hubiStateRef.current === local.mood) {
+        setHubiState("idle");
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
       setHubiState(local.mood);
       setView("thinking");
       setAnswer("");
@@ -329,6 +416,17 @@ export function HubiClippy({ userRole = "inspector", userName = "" }: HubiClippy
       setAnswer(local.text);
       setView("answering");
       setHubiState(local.mood);
+      // Volver a idle después de la animación (3s para movimientos largos)
+      const movementDurations: Record<string, number> = {
+        fistPump: 3000, clap: 3000, dance: 4000, jump: 2000,
+        spin: 2000, stretch: 2800, shrug: 2000, nod: 3000, shake: 3000,
+        lookAround: 3000, love: 3500, grateful: 3500,
+        birthday: 5000, magic: 4000, bow: 2000, thumbsUp: 2500, wink: 1500,
+      };
+      const duration = movementDurations[local.mood] ?? 2000;
+      setTimeout(() => {
+        setHubiState((s) => (s === local.mood ? "idle" : s));
+      }, duration);
       return;
     }
 
@@ -383,7 +481,12 @@ export function HubiClippy({ userRole = "inspector", userName = "" }: HubiClippy
       // Si el usuario nos agradeció o halagó, mantenemos esa cara tierna.
       const finalAnswer = contentAcc || reasoningAcc;
       const answerMood = detectMood(finalAnswer, false);
-      if (answerMood) {
+      // Detectar si la respuesta es sí/no para animar con nod/shake
+      const yesNoMood = detectYesNo(finalAnswer);
+      if (yesNoMood) {
+        setHubiState(yesNoMood);
+        setTimeout(() => setHubiState("idle"), 3000);
+      } else if (answerMood) {
         setHubiState(answerMood);
       } else if (userMoodRef.current === "love" || userMoodRef.current === "grateful") {
         setHubiState(userMoodRef.current);
@@ -393,9 +496,37 @@ export function HubiClippy({ userRole = "inspector", userName = "" }: HubiClippy
       setHubiState("error");
       setView("answering");
     }
-  }, [userRole, userName]);
+  }, [userRole, userName, bumpActivity]);
 
   const salutation = (userName ? `Hola ${userName.split(" ")[0]}, ` : "Hola, ") + (SALUTATIONS[userRole] || SALUTATIONS.inspector).replace(/^Hola, /, "");
+
+  // Disparar un movimiento/emoción directamente desde el menú
+  const triggerEmotion = (mood: HubiState, label: string) => {
+    bumpActivity();
+    if (wakingRef.current) return;
+    // Forzar reset si ya está en el mismo mood
+    if (hubiStateRef.current === mood) {
+      setHubiState("idle");
+      setTimeout(() => setHubiState(mood), 50);
+    } else {
+      setHubiState(mood);
+    }
+    setView("answering");
+    setAnswer(label);
+    setShowEmotions(false);
+    // Volver a idle después de la animación
+    const durations: Record<string, number> = {
+      dance: 4000, jump: 2000, spin: 2000, clap: 3000, fistPump: 3000,
+      shrug: 2000, lookAround: 3000, nod: 3000, shake: 3000, stretch: 2800,
+      love: 3500, grateful: 3500,
+      birthday: 5000, magic: 4000, bow: 2000, thumbsUp: 2500, wink: 1500,
+      error: 2600, surprised: 2000, thinking: 4000, sleepy: 5000, charging: 4000,
+    };
+    const dur = durations[mood] ?? 2500;
+    setTimeout(() => {
+      setHubiState((s) => (s === mood ? "idle" : s));
+    }, dur);
+  };
 
   const handleSend = () => {
     if (!question.trim()) return;
@@ -405,7 +536,7 @@ export function HubiClippy({ userRole = "inspector", userName = "" }: HubiClippy
   };
 
   return (
-    <>
+    <div className="hubi-root-layer">
       {/* Robot — listeners nativos via useEffect, sin React synthetic events */}
       <div
         ref={robotRef}
@@ -417,7 +548,7 @@ export function HubiClippy({ userRole = "inspector", userName = "" }: HubiClippy
         aria-label="Hubi"
         draggable={false}
       >
-        <HubiMascot state={open ? hubiState : "idle"} size={100} />
+        <HubiMascotOpus state={open ? hubiState : "idle"} size={140} />
       </div>
 
       {/* Panel de chat — separado del robot, fixed */}
@@ -427,14 +558,62 @@ export function HubiClippy({ userRole = "inspector", userName = "" }: HubiClippy
             <span className="hubi-panel-title">
               {view === "thinking" ? "Pensando..." : "Hubi"}
             </span>
-            <button
-              className="hubi-panel-close"
-              onClick={() => { setOpen(false); setHidden(true); setHubiState("idle"); try { localStorage.setItem("hubi-robot-hidden", "true"); } catch {} }}
-              aria-label="Cerrar"
-            >
-              <X className="h-4 w-4" />
-            </button>
+            <div className="hubi-panel-header-actions">
+              <button
+                className="hubi-panel-emotions-btn"
+                onClick={() => setShowEmotions(!showEmotions)}
+                aria-label="Emociones"
+                title="Emociones"
+              >
+                <Sparkles className="h-4 w-4" />
+              </button>
+              <button
+                className="hubi-panel-close"
+                onClick={() => { setOpen(false); setHidden(true); setHubiState("idle"); try { localStorage.setItem("hubi-robot-hidden", "true"); } catch {} }}
+                aria-label="Cerrar"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           </div>
+
+          {showEmotions && (
+            <div className="hubi-emotions-menu">
+              <div className="hubi-emotions-grid">
+                {([
+                  { mood: "dance", label: "Bailar", icon: Music, text: "¡A bailar! 🎵" },
+                  { mood: "jump", label: "Saltar", icon: ArrowUp, text: "¡Allá voy! 🤸" },
+                  { mood: "spin", label: "Girar", icon: RotateCw, text: "¡Mírame! 🌀" },
+                  { mood: "clap", label: "Aplaudir", icon: Clapperboard, text: "¡Bravo! 👏" },
+                  { mood: "fistPump", label: "Victoria", icon: Trophy, text: "¡Victoria! 🎉" },
+                  { mood: "stretch", label: "Estirar", icon: StretchHorizontal, text: "¡Ahh! 🥱" },
+                  { mood: "love", label: "Amor", icon: Heart, text: "Te amo 💗" },
+                  { mood: "birthday", label: "Cumpleaños", icon: PartyPopper, text: "¡Cumpleaños! 🎂" },
+                  { mood: "magic", label: "Magia", icon: Wand2, text: "¡Magia! ✨" },
+                  { mood: "thumbsUp", label: "Bien", icon: ThumbsUp, text: "¡Genial! 👍" },
+                  { mood: "wink", label: "Guiño", icon: Eye, text: "😉" },
+                  { mood: "bow", label: "Saludo", icon: Sparkle, text: "Reverencia 🙇" },
+                  { mood: "sleepy", label: "Dormir", icon: Moon, text: "Zzz... 😴" },
+                  { mood: "charging", label: "Cargar", icon: Zap, text: "Cargando ⚡" },
+                  { mood: "thinking", label: "Pensar", icon: HelpCircle, text: "Pensando... 🤔" },
+                  { mood: "error", label: "Error", icon: AlertCircle, text: "¡Error! ⚠️" },
+                  { mood: "surprised", label: "Sorpresa", icon: Star, text: "¡Oh! 😲" },
+                  { mood: "grateful", label: "Gracias", icon: HandHeart, text: "¡Gracias! 🙏" },
+                  { mood: "presidential", label: "Presidente", icon: Crown, text: "¡Presidencial! 🎖️" },
+                  { mood: "superhero", label: "Super Hubi", icon: Shield, text: "¡Super Hubi! 🦸" },
+                ] as const).map(({ mood, label, icon: Icon, text }) => (
+                  <Tooltip key={mood}>
+                    <TooltipTrigger>
+                      <button className="hubi-emotion-chip" onClick={() => triggerEmotion(mood, text)}>
+                        <Icon className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">{label}</TooltipContent>
+                  </Tooltip>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="hubi-panel-body">
             {view === "greeting" && !answer && (
@@ -485,6 +664,6 @@ export function HubiClippy({ userRole = "inspector", userName = "" }: HubiClippy
         </div>
       )}
 
-    </>
+    </div>
   );
 }

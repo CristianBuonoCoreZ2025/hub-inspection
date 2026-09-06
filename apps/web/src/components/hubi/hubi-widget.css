@@ -1,6 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════
- * Hubi Widget — Panel de chat premium
- * Minimalista, centrado en conversación, no ruido visual
+ * Hubi Widget — Panel de chat alineado al Design System
+ * Usa variables CSS del tema: --card, --border, --foreground, --primary
+ * Tipografia: 11px body, 13px titulo, 12px labels
  * ═══════════════════════════════════════════════════════════════ */
 
 /* ── FAB ── */
@@ -8,22 +9,26 @@
   position: fixed;
   bottom: 20px;
   right: 20px;
-  width: 72px;
-  height: 72px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
-  border: none;
-  background: transparent;
+  border: 1px solid var(--border) !important;
+  background: var(--card) !important;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9998;
-  transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1);
+  transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 200ms ease;
   animation: hubi-fab-enter 400ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .hubi-fab:hover {
-  transform: scale(1.05);
+  transform: scale(1.06);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .hubi-fab:active {
@@ -39,19 +44,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  filter: drop-shadow(0 6px 18px rgba(56, 189, 248, 0.28));
+  filter: drop-shadow(0 4px 12px color-mix(in srgb, var(--primary) 25%, transparent));
   transition: filter 200ms ease-out;
 }
 
 .hubi-fab:hover .hubi-fab-mascot {
-  filter: drop-shadow(0 8px 24px rgba(56, 189, 248, 0.38));
+  filter: drop-shadow(0 6px 18px color-mix(in srgb, var(--primary) 35%, transparent));
 }
 
 .hubi-fab-pulse {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  border: 1.5px solid rgba(56, 189, 248, 0.35);
+  border: 1.5px solid color-mix(in srgb, var(--primary) 30%, transparent);
   animation: hubi-fab-pulse 3s ease-out infinite;
   pointer-events: none;
 }
@@ -65,29 +70,27 @@
   position: absolute;
   top: 2px;
   right: 2px;
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: #22c55e;
-  border: 2px solid var(--card, #fff);
+  border: 2px solid var(--card);
   box-shadow: 0 1px 4px rgba(34, 197, 94, 0.4);
 }
 
-/* ── Panel de chat ── */
+/* ── Panel de chat — estilo modal del design system ── */
 .hubi-panel {
   position: fixed;
   bottom: 20px;
   right: 20px;
-  width: 420px;
+  width: 400px;
   max-width: calc(100vw - 32px);
-  height: 620px;
+  height: 580px;
   max-height: calc(100vh - 40px);
-  border-radius: 20px;
-  border: 1px solid var(--border, rgba(0,0,0,0.08));
-  background: var(--card, #fff);
-  box-shadow:
-    0 20px 60px -12px rgba(0, 0, 0, 0.18),
-    0 8px 20px -4px rgba(0, 0, 0, 0.08);
+  border-radius: 18px !important;
+  border: 1px solid var(--border) !important;
+  background: var(--card) !important;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.24), 0 2px 8px rgba(0, 0, 0, 0.08) !important;
   display: flex;
   flex-direction: column;
   z-index: 9999;
@@ -101,27 +104,29 @@
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-/* ── Header ── */
+/* ── Header — glass con tinte primario (igual que modal-header) ── */
 .hubi-panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border, rgba(0,0,0,0.06));
-  background: var(--card, #fff);
+  padding: 14px 18px !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--primary) 20%, transparent) !important;
+  background: color-mix(in srgb, var(--primary) 6%, transparent) !important;
+  backdrop-filter: blur(16px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
   flex-shrink: 0;
 }
 
 .hubi-panel-header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .hubi-panel-avatar {
   flex-shrink: 0;
-  width: 52px;
-  height: 52px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -134,16 +139,16 @@
 }
 
 .hubi-panel-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--foreground, #1a1a2e);
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: var(--foreground) !important;
   letter-spacing: -0.01em;
-  line-height: 1.2;
+  line-height: 1.3;
 }
 
 .hubi-panel-status {
-  font-size: 11px;
-  color: var(--muted-foreground, #9ca3af);
+  font-size: 11px !important;
+  color: var(--muted-foreground) !important;
   display: flex;
   align-items: center;
   gap: 5px;
@@ -159,22 +164,25 @@
 }
 
 .hubi-panel-close {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: none;
-  background: transparent;
-  color: var(--muted-foreground, #9ca3af);
+  width: 30px;
+  height: 30px;
+  border-radius: 10px !important;
+  border: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent) !important;
+  background: color-mix(in srgb, var(--foreground) 5%, transparent) !important;
+  backdrop-filter: blur(12px) saturate(150%);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  color: var(--muted-foreground) !important;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 150ms ease-out, color 150ms ease-out;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
 }
 
 .hubi-panel-close:hover {
-  background: var(--muted, #f4f4f5);
-  color: var(--foreground, #1a1a2e);
+  background: color-mix(in srgb, var(--foreground) 10%, transparent) !important;
+  border-color: color-mix(in srgb, var(--foreground) 20%, transparent) !important;
+  color: var(--foreground) !important;
 }
 
 .hubi-panel-close:active {
@@ -188,8 +196,8 @@
   padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  background: var(--background, #fafafa);
+  gap: 12px;
+  background: var(--card) !important;
 }
 
 .hubi-panel-messages::-webkit-scrollbar {
@@ -201,14 +209,14 @@
 }
 
 .hubi-panel-messages::-webkit-scrollbar-thumb {
-  background: var(--muted-foreground, #d4d4d8);
+  background: var(--muted-foreground);
   border-radius: 2px;
   opacity: 0.3;
 }
 
 .hubi-msg {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   max-width: 92%;
   animation: hubi-msg-enter 260ms cubic-bezier(0.23, 1, 0.32, 1) both;
 }
@@ -225,8 +233,8 @@
 
 .hubi-msg-avatar {
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   margin-top: 2px;
   display: flex;
   align-items: center;
@@ -234,9 +242,9 @@
 }
 
 .hubi-msg-bubble {
-  padding: 11px 14px;
-  border-radius: 14px;
-  font-size: 13px;
+  padding: 10px 13px;
+  border-radius: 12px;
+  font-size: 11px !important;
   line-height: 1.55;
   word-break: break-word;
 }
@@ -244,14 +252,14 @@
 .hubi-msg-bubble h1,
 .hubi-msg-bubble h2,
 .hubi-msg-bubble h3 {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
-  margin: 0 0 8px 0;
+  margin: 0 0 6px 0;
   color: inherit;
 }
 
 .hubi-msg-bubble p {
-  margin: 0 0 8px 0;
+  margin: 0 0 6px 0;
 }
 
 .hubi-msg-bubble p:last-child {
@@ -260,12 +268,12 @@
 
 .hubi-msg-bubble ul,
 .hubi-msg-bubble ol {
-  margin: 0 0 8px 0;
-  padding-left: 18px;
+  margin: 0 0 6px 0;
+  padding-left: 16px;
 }
 
 .hubi-msg-bubble li {
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .hubi-msg-bubble strong {
@@ -273,77 +281,81 @@
 }
 
 .hubi-msg-bubble code {
-  background: rgba(0,0,0,0.06);
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
   padding: 1px 4px;
-  border-radius: 3px;
-  font-size: 90%;
-  font-family: monospace;
+  border-radius: 4px;
+  font-size: 10px;
+  font-family: ui-monospace, "SF Mono", monospace;
 }
 
 .hubi-msg-bubble a {
-  color: #0284C7;
+  color: var(--primary);
   text-decoration: underline;
 }
 
+/* Burbuja del asistente — estilo card del design system */
 .hubi-msg-assistant .hubi-msg-bubble {
-  background: var(--card, #fff);
-  color: var(--foreground, #1a1a2e);
-  border: 1px solid var(--border, rgba(0,0,0,0.06));
+  background: var(--card) !important;
+  color: var(--foreground) !important;
+  border: 1px solid var(--border) !important;
   border-top-left-radius: 4px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
+/* Burbuja del usuario — primario del sistema */
 .hubi-msg-user .hubi-msg-bubble {
-  background: #0EA5E9;
-  color: white;
-  border: none;
+  background: color-mix(in srgb, var(--primary) 90%, transparent) !important;
+  color: var(--primary-foreground) !important;
+  border: 1px solid color-mix(in srgb, var(--primary) 50%, transparent) !important;
   border-top-right-radius: 4px;
 }
 
 .hubi-msg-user .hubi-msg-bubble a {
-  color: #e0f2fe;
+  color: var(--primary-foreground);
+  opacity: 0.9;
 }
 
 .hubi-msg-typing {
   display: flex;
   align-items: center;
   gap: 4px;
-  color: var(--muted-foreground, #9ca3af);
+  color: var(--muted-foreground) !important;
 }
 
 /* ── Sugerencias ── */
 .hubi-suggestions {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 4px 0 4px 42px;
+  gap: 5px;
+  padding: 4px 0 4px 36px;
   animation: hubi-msg-enter 300ms ease-out 100ms both;
 }
 
 .hubi-suggestions-label {
-  font-size: 10px;
+  font-size: 10px !important;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--muted-foreground, #9ca3af);
+  color: var(--muted-foreground) !important;
 }
 
 .hubi-suggestion-chip {
-  padding: 8px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--border, rgba(0,0,0,0.06));
-  background: var(--card, #fff);
-  color: var(--foreground, #1a1a2e);
-  font-size: 12px;
+  padding: 7px 11px;
+  border-radius: 10px !important;
+  border: 1px solid var(--border) !important;
+  background: var(--card) !important;
+  color: var(--foreground) !important;
+  font-size: 11px !important;
   text-align: left;
   cursor: pointer;
-  transition: all 160ms ease-out;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  transition: all 160ms ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
 .hubi-suggestion-chip:hover {
-  background: var(--muted, #f4f4f5);
-  border-color: rgba(56, 189, 248, 0.3);
+  background: color-mix(in srgb, var(--primary) 8%, transparent) !important;
+  border-color: color-mix(in srgb, var(--primary) 25%, transparent) !important;
+  color: var(--primary) !important;
   transform: translateX(2px);
 }
 
@@ -351,64 +363,71 @@
   transform: scale(0.98);
 }
 
-/* ── Input ── */
+/* ── Input — estilo app-input del design system ── */
 .hubi-panel-input {
   display: flex;
   align-items: flex-end;
-  gap: 10px;
-  padding: 12px 14px;
-  border-top: 1px solid var(--border, rgba(0,0,0,0.06));
-  background: var(--card, #fff);
+  gap: 8px;
+  padding: 10px 14px !important;
+  border-top: 1px solid var(--border) !important;
+  background: var(--card) !important;
   flex-shrink: 0;
 }
 
 .hubi-input {
   flex: 1;
   resize: none;
-  border: 1px solid var(--border, rgba(0,0,0,0.08));
-  border-radius: 12px;
-  padding: 10px 12px;
-  font-size: 13px;
+  border: 1px solid var(--input, var(--border)) !important;
+  border-radius: 10px !important;
+  padding: 7px 10px !important;
+  font-size: 11px !important;
   font-family: inherit;
-  background: var(--background, #fafafa);
-  color: var(--foreground, #1a1a2e);
+  background: color-mix(in srgb, var(--card) 75%, transparent) !important;
+  color: var(--foreground) !important;
   outline: none;
-  max-height: 90px;
-  line-height: 1.45;
-  transition: border-color 160ms ease-out, box-shadow 160ms ease-out;
+  max-height: 80px;
+  line-height: 1.4;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .hubi-input:focus {
-  border-color: rgba(56, 189, 248, 0.4);
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent) !important;
 }
 
 .hubi-input::placeholder {
-  color: var(--muted-foreground, #9ca3af);
+  color: var(--muted-foreground) !important;
 }
 
 .hubi-input:disabled {
   opacity: 0.5;
 }
 
+/* ── Boton enviar — estilo pg-btn-platinum del design system ── */
 .hubi-send-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  border: none;
-  background: #0EA5E9;
-  color: white;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px !important;
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent) !important;
+  background: color-mix(in srgb, var(--primary) 15%, transparent) !important;
+  backdrop-filter: blur(12px) saturate(150%);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  color: var(--primary) !important;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: transform 160ms ease-out, background 160ms ease-out;
-  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.25);
+  transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  box-shadow: 0 1px 0 0.5px rgba(255, 255, 255, 0.1) inset;
 }
 
 .hubi-send-btn:hover:not(:disabled) {
-  background: #0284C7;
+  background: color-mix(in srgb, var(--primary) 25%, transparent) !important;
+  border-color: color-mix(in srgb, var(--primary) 45%, transparent) !important;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 20%, transparent), 0 1px 0 0.5px rgba(255, 255, 255, 0.15) inset;
 }
 
 .hubi-send-btn:active:not(:disabled) {
@@ -420,31 +439,25 @@
   cursor: not-allowed;
 }
 
-/* ── Dark mode ── */
+/* ── Dark mode — sombras mas pronunciadas ── */
 .dark .hubi-panel {
-  box-shadow:
-    0 20px 60px -12px rgba(0, 0, 0, 0.35),
-    0 8px 20px -4px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.2) !important;
 }
 
-.dark .hubi-panel-messages {
-  background: color-mix(in srgb, var(--background, #000) 100%, transparent);
+.dark .hubi-fab {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .dark .hubi-msg-assistant .hubi-msg-bubble {
-  background: var(--card, #18181b);
+  background: var(--card) !important;
 }
 
 .dark .hubi-suggestion-chip {
-  background: var(--card, #18181b);
+  background: var(--card) !important;
 }
 
 .dark .hubi-suggestion-chip:hover {
-  background: var(--muted, #27272a);
-}
-
-.dark .hubi-input {
-  background: color-mix(in srgb, var(--background, #000) 100%, transparent);
+  background: color-mix(in srgb, var(--primary) 12%, var(--card)) !important;
 }
 
 /* ── Responsive ── */
@@ -456,13 +469,15 @@
     max-width: 100vw;
     height: 100vh;
     max-height: 100vh;
-    border-radius: 0;
-    border: none;
+    border-radius: 0 !important;
+    border: none !important;
   }
 
   .hubi-fab {
     bottom: 12px;
     right: 12px;
+    width: 56px;
+    height: 56px;
   }
 }
 
