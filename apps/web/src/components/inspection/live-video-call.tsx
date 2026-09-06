@@ -300,7 +300,7 @@ export function LiveVideoCall({
     // Estrategia: intentar video+audio primero. Si la cámara falla (ej: en uso
     // por otro navegador), hacer fallback a solo audio para no bloquear la cámara
     // del asegurado si están en el mismo equipo.
-    let stream: MediaStream;
+    let stream: MediaStream = new MediaStream();
     let cameraPerm: "granted" | "denied" | "error" = "error";
     let microphonePerm: "granted" | "denied" | "error" = "error";
     let userMessage: string | null = null;
@@ -365,7 +365,7 @@ export function LiveVideoCall({
           if (cameraPerm !== "denied") cameraPerm = "error";
         } catch {
           // 3. Entrar sin media local para que el peer se conecte igual
-          stream = new MediaStream();
+          // stream ya esta inicializado como MediaStream vacio
         }
       }
     }
