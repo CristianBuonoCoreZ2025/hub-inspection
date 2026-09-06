@@ -59,6 +59,21 @@ type Step = "upload" | "preview" | "staging" | "done";
 const DEFAULT_ADJUSTER_ID = "2c525f76-f23d-450d-9e16-154b9fbdbf53"; // Andrea Celis Rico
 const DEFAULT_INSPECTOR_ID = "2c525f76-f23d-450d-9e16-154b9fbdbf53"; // Andrea Celis Rico
 const DEFAULT_PRODUCT_ID = "b694bd82-6fc9-eb77-e518-b028f6d7d985"; // Hogar
+const DEFAULT_CLAIM_TYPE_ID = "55555555-5555-5555-5555-555555555555"; // Property
+const DEFAULT_BUSINESS_LINE_ID = "582c29fe-dc89-b815-97b2-0de7f0ee544c"; // Hogar
+
+/**
+ * Derivación automática: cuando el ramo de producto es "Hogar",
+ * el tipo de siniestro debe ser "Property" y la línea de negocio "Hogar".
+ * Esto asegura que los 3 campos queden consistentes sin que el usuario
+ * tenga que mapearlos manualmente en el Excel.
+ */
+const PRODUCT_DERIVATION: Record<string, { claimTypeId: string; businessLineId: string }> = {
+  [DEFAULT_PRODUCT_ID]: {
+    claimTypeId: DEFAULT_CLAIM_TYPE_ID,
+    businessLineId: DEFAULT_BUSINESS_LINE_ID,
+  },
+};
 
 export default function CargaCasosPage() {
   const { canCreate } = usePermissions();
@@ -422,10 +437,35 @@ export default function CargaCasosPage() {
       // Analizar todas las filas válidas
       const allData = validRows.map(r => r.data);
 
-      // 1. Línea de negocio: si claimType es "property" y area ≠ "COMERCIAL" → Hogar
-      //    Si area es "COMERCIAL" → Comercial
+      // 1. Línea de negocio y tipo de siniestro: derivar desde el ramo de producto.
+      //    Regla: si el ramo de producto es "Hogar" → tipo siniestro "Property" + línea "Hogar".
+      //    Si el Excel trae claimType "property" y area ≠ "COMERCIAL" → línea "Hogar".
+      //    Si el area es "COMERCIAL" → línea "Comercial".
       const hasBusinessLine = allData.some(d => String(d.businessLine || "").trim() !== "");
-      if (!hasBusinessLine && businessLines) {
+      const hasClaimType = allData.some(d => String(d.claimType || "").trim() !== "");
+      const hasProduct = allData.some(d => String(d.insuranceProduct || "").trim() !== "");
+
+      // 1a. Derivación desde ramo de producto "Hogar"
+      if (!hasBusinessLine || !hasClaimType) {
+        const products = allData.map(d => String(d.insuranceProduct || "").toLowerCase().trim()).filter(Boolean);
+        const esHogar = hasProduct
+          ? products.some(p => p === "hogar")
+          : true; // si no viene producto, el default es Hogar
+
+        if (esHogar) {
+          if (!hasBusinessLine && businessLines) {
+            const bl = businessLines.find(b => b.name.toLowerCase().includes("hogar"));
+            if (bl) suggested.businessLine = { value: bl.name, catalogUuid: bl.id };
+          }
+          if (!hasClaimType && claimTypes) {
+            const ct = claimTypes.find(c => c.name.toLowerCase().includes("property"));
+            if (ct) suggested.claimType = { value: ct.name, catalogUuid: ct.id };
+          }
+        }
+      }
+
+      // 1b. Fallback: si no hay producto pero hay claimType, derivar línea desde claimType
+      if (!hasBusinessLine && !suggested.businessLine && businessLines) {
         const tipRie = allData.map(d => String(d.claimType || "").toLowerCase().trim()).filter(Boolean);
         const areas = allData.map(d => String(d.area || "").toLowerCase().trim()).filter(Boolean);
         const esComercial = areas.some(a => a === "comercial");
@@ -537,13 +577,19 @@ export default function CargaCasosPage() {
           }
           // Sin broker por defecto en carga de Casos
           const brokerId = null;
-          const businessLineId = isUuid(String(d.businessLine || "")) ? String(d.businessLine)
-            : resolveByName(businessLines, String(d.businessLine || "")) || fv.businessLine?.catalogUuid || null;
           // Producto: si no viene en Excel, default a "Hogar"
           const insuranceProductId = isUuid(String(d.insuranceProduct || "")) ? String(d.insuranceProduct)
             : resolveByName(insuranceProducts, String(d.insuranceProduct || "")) || fv.insuranceProduct?.catalogUuid || DEFAULT_PRODUCT_ID;
+          // Derivación automática: si el ramo de producto es "Hogar",
+          // el tipo de siniestro es "Property" y la línea de negocio es "Hogar".
+          // Solo se aplica si el Excel no trae explícitamente esos campos.
+          const derivation = PRODUCT_DERIVATION[insuranceProductId];
+          const businessLineId = isUuid(String(d.businessLine || "")) ? String(d.businessLine)
+            : resolveByName(businessLines, String(d.businessLine || "")) || fv.businessLine?.catalogUuid
+            || derivation?.businessLineId || null;
           const claimTypeId = isUuid(String(d.claimType || "")) ? String(d.claimType)
-            : resolveByName(claimTypes, String(d.claimType || "")) || fv.claimType?.catalogUuid || null;
+            : resolveByName(claimTypes, String(d.claimType || "")) || fv.claimType?.catalogUuid
+            || derivation?.claimTypeId || null;
           const claimCauseId = isUuid(String(d.claimCause || "")) ? String(d.claimCause)
             : resolveByName(claimCauses, String(d.claimCause || "")) || fv.claimCause?.catalogUuid || null;
           const eventId = isUuid(String(d.event || "")) ? String(d.event)
@@ -559,10 +605,12 @@ export default function CargaCasosPage() {
 
           // Resolver destination_housing_id desde el tipo de riesgo:
           // "property" → Habitacional, "comercial" → Comercial
+          // Prioriza el texto del Excel; si no viene, usa el claimTypeId derivado
           const tipRie = String(d.claimType || "").toLowerCase().trim();
+          const isDerivedProperty = !tipRie && claimTypeId === DEFAULT_CLAIM_TYPE_ID;
           const destinationHousingId =
             tipRie === "comercial" ? "26187e83-ac09-5367-c8f4-1367dd3a78eb" :
-            tipRie === "property" || tipRie === "propiedad" ? "14b456b5-8edb-8d29-51d9-32faceb1dfea" :
+            tipRie === "property" || tipRie === "propiedad" || isDerivedProperty ? "14b456b5-8edb-8d29-51d9-32faceb1dfea" :
             null;
 
           const claim = await createClaimFromCaso({

@@ -25,7 +25,7 @@ import {
 interface LookupCatalogManagerProps {
  category: string;
  title: string;
- icon: React.ElementType;
+ icon: React.ComponentType<{ className?: string }>;
  section?: string;
 }
 
