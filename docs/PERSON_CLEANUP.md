@@ -1,7 +1,7 @@
 # Plan de limpieza de la tabla `persons`
 
-> Fecha: 2026-08-17
-> Estado: **SOLO MD — sin implementación ejecutada**
+> Fecha: 2026-08-17 (actualizado 2026-08-31)
+> Estado: **Diagnóstico ejecutado — ver `docs/PERSON_CLEANUP_DIAGNOSTIC.md`**
 > Objetivo: Dejar `persons` limpia y preparada para luego relacionarla con `claims_participants` (solo personas naturales).
 
 ---
@@ -205,12 +205,14 @@ WHERE cp.person_type = 'natural'
 
 ## 5. Checklist
 
-- [ ] Ejecutar scripts de diagnóstico (solo lectura).
-- [ ] Crear backups `persons_backup_20260817` y `person_addresses_backup_20260817`.
-- [ ] Normalizar `tax_id`.
-- [ ] Clasificar `person_type` (natural/legal).
-- [ ] Consolidar duplicados por `tax_id` (sin borrar, marcar/mapear).
-- [ ] Normalizar nombres.
+- [x] Ejecutar scripts de diagnóstico (solo lectura). → Ver `docs/PERSON_CLEANUP_DIAGNOSTIC.md`
+- [ ] Recibir archivo del rootificador del usuario.
+- [ ] Crear backups `persons_backup_20260831` y `person_addresses_backup_20260831`.
+- [ ] Normalizar `tax_id` (4 registros con guiones).
+- [ ] Clasificar `person_type` (natural/legal) — **no requiere cambios** según diagnóstico.
+- [ ] Consolidar duplicados por `tax_id` — **no hay duplicados** según diagnóstico.
+- [ ] Comparar con rootificador y corregir nombres.
+- [ ] Normalizar nombres (corregir apellidos duplicados en `first_name`).
 - [ ] Validar consistencia de datos.
 - [ ] Revisar con el usuario antes de relacionar con `claims_participants`.
 
@@ -218,11 +220,15 @@ WHERE cp.person_type = 'natural'
 
 ## 6. Preguntas pendientes
 
-1. **¿Podemos hacer backup de `persons` y `person_addresses` ahora?**
-2. **¿Eliminamos duplicados o solo los marcamos?**
-3. **¿Incluimos personas jurídicas en la limpieza o solo naturales?**
-4. **¿Se agrega `person_id` a `claims_participants` con una migración o se deja para una fase posterior?**
-5. **¿Existe una función `validate_rut` en la base o hay que usar la de TypeScript (`lib/validations/rut.ts`)?**
+1. **¿Dónde está el archivo del rootificador?** (CSV/Excel con RUT y nombres reales)
+2. **¿Qué columnas tiene el archivo del rootificador?** (rut, nombres, apellidos, dirección, etc.)
+3. **¿Queremos modificar `persons` ahora o solo generar el reporte?**
+4. **¿Eliminamos duplicados o solo los marcamos?** → _El diagnóstico muestra que no hay duplicados._
+5. **¿Incluimos personas jurídicas en la limpieza o solo naturales?**
+6. **¿Tienes acceso/credenciales a la base de datos?** → _Conectado a Supabase local (Docker)._
+7. **¿Podemos hacer backup de `persons` y `person_addresses` ahora?**
+8. **¿Se agrega `person_id` a `claims_participants` con una migración o se deja para una fase posterior?**
+9. **¿Existe una función `validate_rut` en la base o hay que usar la de TypeScript (`lib/validations/rut.ts`)?**
 
 ---
 
