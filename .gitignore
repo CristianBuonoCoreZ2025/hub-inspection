@@ -86,3 +86,8 @@ backups/
 apps/mobile/ios/
 apps/mobile/android/
 apps/mobile/out/
+
+# Hubi portable (paquete temporal, no se commitea)
+hubi-portable/
+hubi-portable.zip
+
