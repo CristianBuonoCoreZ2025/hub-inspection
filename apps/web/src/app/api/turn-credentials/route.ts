@@ -32,6 +32,29 @@ const FALLBACK_ICE_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun2.l.google.com:19302" },
 ];
 
+// P3: Segundo proveedor TURN de fallback (OpenRelay)
+// Se usa si Cloudflare no responde y hay credenciales configuradas.
+async function fetchFallbackTurnServers(): Promise<RTCIceServer[] | null> {
+  const turnUrl = process.env.FALLBACK_TURN_URL;
+  const turnUser = process.env.FALLBACK_TURN_USER;
+  const turnPass = process.env.FALLBACK_TURN_PASS;
+
+  if (!turnUrl || !turnUser || !turnPass) {
+    return null;
+  }
+
+  // Construir servidores ICE con credenciales estaticas del segundo proveedor
+  const urls = turnUrl.split(",").map((u) => u.trim()).filter(Boolean);
+  if (urls.length === 0) return null;
+
+  logger.info(`[turn-credentials] Usando TURN fallback con ${urls.length} URLs`);
+
+  return [
+    { urls, username: turnUser, credential: turnPass },
+    ...FALLBACK_ICE_SERVERS,
+  ];
+}
+
 async function fetchCloudflareIceServers(): Promise<RTCIceServer[] | null> {
   const keyId = process.env.CLOUDFLARE_TURN_KEY_ID;
   const apiToken = process.env.CLOUDFLARE_TURN_API_TOKEN;
@@ -153,6 +176,17 @@ export async function GET() {
     return NextResponse.json({ iceServers });
   }
 
-  // Fallback: STUN solo (sin TURN — puede fallar en NAT simétrico)
+  // P3: L4 — Segundo proveedor TURN (fallback)
+  const fallbackTurn = await fetchFallbackTurnServers();
+  if (fallbackTurn && fallbackTurn.length > 0) {
+    // No cachear credenciales estaticas por tanto tiempo — 1h
+    const expiresAt = Date.now() + 60 * 60 * 1000;
+    cached = { iceServers: fallbackTurn, expiresAt };
+    logger.info("[turn-credentials] Usando TURN fallback — Cloudflare no disponible");
+    return NextResponse.json({ iceServers: fallbackTurn });
+  }
+
+  // Fallback final: STUN solo (sin TURN — puede fallar en NAT simétrico)
+  logger.warn("[turn-credentials] Sin TURN disponible — usando STUN solo");
   return NextResponse.json({ iceServers: FALLBACK_ICE_SERVERS });
 }

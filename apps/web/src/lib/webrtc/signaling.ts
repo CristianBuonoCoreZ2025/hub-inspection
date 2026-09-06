@@ -109,14 +109,32 @@ export function joinSignalingChannel(
     });
 
   // Buffer para throttling de ICE candidates
+  // P2: Primer candidate se envía inmediato, siguientes en lotes de 150ms
   const iceBatchBuffer: RTCIceCandidateInit[] = [];
   let iceBatchTimer: ReturnType<typeof setTimeout> | null = null;
+  let iceFirstCandidateSent = false;
 
   return {
     send: (msg: SignalingMessage) => {
-      // Throttling de ICE candidates: agrupar en lotes de 500ms
+      // Throttling de ICE candidates: agrupar en lotes de 150ms
       // para reducir el número de mensajes en Supabase Realtime.
+      // El primer candidate se envía inmediato para acelerar la conexión.
       if (msg.type === "ice") {
+        if (!iceFirstCandidateSent) {
+          // Primer candidate — envío inmediato
+          iceFirstCandidateSent = true;
+          channel.send({
+            type: "broadcast",
+            event: "signal",
+            payload: {
+              type: "ice-batch",
+              from: userId,
+              role,
+              candidates: [msg.candidate],
+            } as SignalingMessage,
+          });
+          return;
+        }
         iceBatchBuffer.push(msg.candidate);
         if (!iceBatchTimer) {
           iceBatchTimer = setTimeout(() => {
@@ -133,7 +151,7 @@ export function joinSignalingChannel(
               });
             }
             iceBatchTimer = null;
-          }, 500);
+          }, 150);
         }
         return;
       }
@@ -196,6 +214,20 @@ export const ICE_SERVERS: RTCIceServer[] = [
 let cachedIceServers: RTCIceServer[] | null = null;
 let cacheExpiresAt = 0;
 const ICE_CACHE_TTL_MS = 20 * 60 * 60 * 1000; // 20 horas (las credenciales duran 24h)
+// Renovar anticipadamente: a los 18h (2h antes de expirar) para evitar
+// usar credenciales que expiren durante una llamada.
+const ICE_CACHE_RENEW_MS = 18 * 60 * 60 * 1000;
+
+/**
+ * Verifica si los ICE servers en cache tienen al menos un servidor TURN.
+ * STUN solo no es suficiente para NAT simétrico / redes restrictivas.
+ */
+export function hasTurnServer(iceServers: RTCIceServer[]): boolean {
+  return iceServers.some((s) => {
+    const urls = Array.isArray(s.urls) ? s.urls : [s.urls];
+    return urls.some((u) => u.startsWith("turn:") || u.startsWith("turns:"));
+  });
+}
 
 /**
  * Obtiene servidores ICE dinámicos desde el backend (Cloudflare TURN).
@@ -203,10 +235,12 @@ const ICE_CACHE_TTL_MS = 20 * 60 * 60 * 1000; // 20 horas (las credenciales dura
  * de corta duración. Si el backend no responde, hace fallback a STUN de Google.
  *
  * Debe llamarse antes de crear un RTCPeerConnection.
+ *
+ * @param forceRefresh — forzar renovación ignorando el cache
  */
-export async function fetchIceServers(): Promise<RTCIceServer[]> {
-  // Si tenemos caché válido, usarlo
-  if (cachedIceServers && Date.now() < cacheExpiresAt) {
+export async function fetchIceServers(forceRefresh = false): Promise<RTCIceServer[]> {
+  // Si tenemos caché válido y no forzamos renovación, usarlo
+  if (!forceRefresh && cachedIceServers && Date.now() < cacheExpiresAt - (ICE_CACHE_TTL_MS - ICE_CACHE_RENEW_MS)) {
     return cachedIceServers;
   }
 
@@ -221,6 +255,12 @@ export async function fetchIceServers(): Promise<RTCIceServer[]> {
     }
   } catch {
     // Silencioso — fallback a STUN estático
+  }
+
+  // Si teníamos cache aunque sea expirado, usarlo como fallback mejor que STUN solo
+  if (cachedIceServers) {
+    console.warn("[fetchIceServers] Usando cache expirado como fallback — credenciales TURN pueden no funcionar");
+    return cachedIceServers;
   }
 
   return ICE_SERVERS;

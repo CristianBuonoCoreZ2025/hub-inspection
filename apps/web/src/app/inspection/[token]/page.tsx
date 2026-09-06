@@ -1933,7 +1933,7 @@ function Field({ label, value, mono }: { label: string; value: string; mono?: bo
   );
 }
 
-function EmptyState({ icon: Icon, text }: { icon: React.ElementType; text: string }) {
+function EmptyState({ icon: Icon, text }: { icon: React.ComponentType<{ className?: string }>; text: string }) {
   return (
     <Panel>
       <div className="text-center py-8">
