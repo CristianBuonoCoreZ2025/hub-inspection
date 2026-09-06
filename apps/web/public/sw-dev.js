@@ -1,7 +1,7 @@
 // Service worker para desarrollo.
-// Estrategia: cachea todo lo que se carga exitosamente (stale-while-revalidate).
-// Cuando offline, sirve desde cache. Cuando online, actualiza en background.
-const CACHE = "dev-cache-v5";
+// Estrategia: NO cachea assets de Next.js (/_next/*) para que HMR y Turbopack
+// siempre sirvan código fresco. Solo cachea offline.html para modo offline.
+const CACHE = "dev-cache-v6";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -20,10 +20,11 @@ self.addEventListener("message", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
+  // Borrar TODOS los caches viejos (incluido dev-cache-v5 y anteriores)
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(
-        keys.filter((k) => k !== CACHE && k.startsWith("dev-")).map((k) => caches.delete(k))
+        keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))
       )
     ).then(() => self.clients.claim())
   );
@@ -44,7 +45,14 @@ self.addEventListener("fetch", (event) => {
   // Ignorar dominios externos (Supabase, R2, Mapbox, etc.)
   if (url.origin !== self.location.origin) return;
 
-  // Navegaciones (HTML)
+  // ── NO interceptar assets de Next.js en desarrollo ──
+  // Dejar que Turbopack/Webpack manejen sus propios chunks sin caché del SW.
+  // Esto evita que el SW sirva chunks viejos cuando el código cambia.
+  if (url.pathname.startsWith("/_next/")) {
+    return; // El navegador hace el fetch normal, sin pasar por el SW
+  }
+
+  // Navegaciones (HTML) — network-first, fallback a cache
   if (req.mode === "navigate") {
     event.respondWith(
       fetch(req)
@@ -56,13 +64,10 @@ self.addEventListener("fetch", (event) => {
         .catch(() =>
           caches.match(req).then((cached) => {
             if (cached) return cached;
-            // Fallback: probar solo el pathname (sin query)
-            return caches.match(url.pathname).then((c) =>
-              c || caches.match("/offline.html").then((o) =>
-                o || new Response(
-                  '<html><body><h1>Sin conexión</h1><p>Revisa tu conexión.</p></body></html>',
-                  { headers: { "Content-Type": "text/html" } }
-                )
+            return caches.match("/offline.html").then((o) =>
+              o || new Response(
+                '<html><body><h1>Sin conexión</h1><p>Revisa tu conexión.</p></body></html>',
+                { headers: { "Content-Type": "text/html" } }
               )
             );
           })
@@ -71,20 +76,17 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Todo lo demás (JS, CSS, imágenes, API GET) — stale-while-revalidate
+  // API GET y otros recursos locales — network-first (no stale-while-revalidate)
+  // En desarrollo siempre queremos datos frescos.
   event.respondWith(
-    caches.match(req).then((cached) => {
-      const fetchPromise = fetch(req)
-        .then((res) => {
-          if (res.ok) {
-            const clone = res.clone();
-            caches.open(CACHE).then((cache) => cache.put(req, clone));
-          }
-          return res;
-        })
-        .catch(() => cached || Response.error());
-      // Devolver cache inmediatamente si existe, sino esperar a la red
-      return cached || fetchPromise;
-    })
+    fetch(req)
+      .then((res) => {
+        if (res.ok && res.type === "basic") {
+          const clone = res.clone();
+          caches.open(CACHE).then((cache) => cache.put(req, clone));
+        }
+        return res;
+      })
+      .catch(() => caches.match(req).then((cached) => cached || Response.error()))
   );
 });
