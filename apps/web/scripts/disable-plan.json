@@ -1,0 +1,469 @@
+{
+  "reason": "Carga errónea — desactivación solicitada por usuario",
+  "references_requested": [
+    "202504152",
+    "202600212",
+    "202601844",
+    "202602132",
+    "202602231",
+    "202602570",
+    "202602676",
+    "202602752",
+    "202602763",
+    "202602835",
+    "202602910",
+    "202603017",
+    "202603052",
+    "202603314",
+    "202603437",
+    "202603442",
+    "202603503",
+    "202603504",
+    "202603513",
+    "202603521",
+    "202603873",
+    "202604003",
+    "202604112",
+    "202604113",
+    "202604155",
+    "202604207",
+    "202604222",
+    "202604232",
+    "202604281",
+    "202604319",
+    "202604425",
+    "202604483",
+    "202604601",
+    "202604619",
+    "202604625",
+    "202604634",
+    "202604659",
+    "202604747",
+    "202604750",
+    "202604786",
+    "202604797",
+    "202604798",
+    "202604802",
+    "202604803",
+    "202604812",
+    "202604836",
+    "202604844",
+    "202604845",
+    "202604866",
+    "202605085",
+    "202605117",
+    "202605124",
+    "202605137",
+    "202605357",
+    "202605377",
+    "202605407",
+    "202605438",
+    "202605509",
+    "202605796"
+  ],
+  "references_not_found": [
+    "202602570",
+    "202604802"
+  ],
+  "claims_to_disable": [
+    {
+      "id": "802589ef-165a-43b7-ba80-e49f21f182f3",
+      "client_reference": "202504152",
+      "claim_number": "1021764",
+      "liquidation_number": "L-000001641",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "00f8541b-b612-405e-a4a3-2345b871eafd",
+      "client_reference": "202600212",
+      "claim_number": "10633536",
+      "liquidation_number": "L-000001642",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "d4609a97-bf9d-4e45-84db-21f38d4df210",
+      "client_reference": "202601844",
+      "claim_number": "101089/01/2025/001",
+      "liquidation_number": "L-000001643",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "37f231cc-2431-4661-bf85-ade15c43d042",
+      "client_reference": "202602132",
+      "claim_number": "46646-01",
+      "liquidation_number": "L-000001644",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "b9adac1f-0efa-469b-a075-aad6ef3d962c",
+      "client_reference": "202602231",
+      "claim_number": "13226000000994",
+      "liquidation_number": "L-000001491",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "f828bfaa-0f8f-4dc0-b90b-dfdf7badd478",
+      "client_reference": "202602676",
+      "claim_number": "226007799",
+      "liquidation_number": "L-000001645",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "208c0e32-94af-4765-85c7-6a72a8836d3e",
+      "client_reference": "202602752",
+      "claim_number": "449454",
+      "liquidation_number": "L-000001646",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "b42af05e-b661-43da-861c-c7b59b5fa84e",
+      "client_reference": "202602763",
+      "claim_number": "13226000001239",
+      "liquidation_number": "L-000001647",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "2dff6422-00cc-4943-b7b3-eea53a05d6b4",
+      "client_reference": "202602835",
+      "claim_number": "13226000001270",
+      "liquidation_number": "L-000001648",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "738e9dbc-3fa5-44be-b5c4-73c7e066fc9c",
+      "client_reference": "202602910",
+      "claim_number": "450019",
+      "liquidation_number": "L-000001583",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "a587e2d6-2a97-4ade-ae2d-0dc1c301a41a",
+      "client_reference": "202603017",
+      "claim_number": "226008633",
+      "liquidation_number": "L-000001649",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "cb4f9321-136f-4db9-8833-4b2bb2ee0ca5",
+      "client_reference": "202603052",
+      "claim_number": "126259616",
+      "liquidation_number": "L-000001650",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "e2020e3d-1111-4c7c-be45-5f5770a5df1c",
+      "client_reference": "202603314",
+      "claim_number": "450622",
+      "liquidation_number": "L-000001651",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "d8a459b0-2b59-4402-ade0-ef0f3b29e104",
+      "client_reference": "202603437",
+      "claim_number": "2621020216",
+      "liquidation_number": "L-000001586",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "c3cf792e-8267-4775-9d29-601350790191",
+      "client_reference": "202603442",
+      "claim_number": "2650020263",
+      "liquidation_number": "L-000001652",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "db39cee5-77cf-4a67-8143-e56348c06c92",
+      "client_reference": "202603503",
+      "claim_number": "90226080020021",
+      "liquidation_number": "L-000001653",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "dc8d9c59-afc6-4952-b4a3-2be890bf0b56",
+      "client_reference": "202603504",
+      "claim_number": "14-527426",
+      "liquidation_number": "L-000001654",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "8b9e7f18-8cbb-4c34-969c-528622dc1b6b",
+      "client_reference": "202603513",
+      "claim_number": "13226000001473",
+      "liquidation_number": "L-000001655",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "fbc7e72e-a57a-4eda-9ec6-d940300c4326",
+      "client_reference": "202603521",
+      "claim_number": "3108199028",
+      "liquidation_number": "L-000001588",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "a43746d6-e36c-43d4-a822-5fd610d6818a",
+      "client_reference": "202603873",
+      "claim_number": "13226000001617",
+      "liquidation_number": "L-000001656",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "e5b9fd33-9f17-461c-aebb-a0e1ad5266fd",
+      "client_reference": "202604003",
+      "claim_number": "226011059",
+      "liquidation_number": "L-000001657",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "f427881f-bb7e-47a6-a2c9-d21168264590",
+      "client_reference": "202604112",
+      "claim_number": "3108199386",
+      "liquidation_number": "L-000001658",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "020e8c0b-be8e-41e0-b01c-e61031155fed",
+      "client_reference": "202604113",
+      "claim_number": "25756-2026",
+      "liquidation_number": "L-000001584",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "a7a78a91-efc7-45b4-9090-2a8edf86a5c6",
+      "client_reference": "202604155",
+      "claim_number": "2611021463",
+      "liquidation_number": "L-000001659",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "83c9e9f5-86f7-42ca-ad81-2c2eb1aa2aa6",
+      "client_reference": "202604207",
+      "claim_number": "13226000001743",
+      "liquidation_number": "L-000001660",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "6ca41b62-9d12-4068-b258-a86a43c475be",
+      "client_reference": "202604222",
+      "claim_number": "14-528173",
+      "liquidation_number": "L-000001661",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "1a5cee9c-5179-4528-88c0-7b65bf0728cd",
+      "client_reference": "202604232",
+      "claim_number": "2611021579",
+      "liquidation_number": "L-000001662",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "28be6b26-32ad-4736-ae74-bde177c081c7",
+      "client_reference": "202604281",
+      "claim_number": "226012222",
+      "liquidation_number": "L-000001519",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "db4d6cdf-af16-4eb4-833a-80d80e94a00e",
+      "client_reference": "202604319",
+      "claim_number": "226012277",
+      "liquidation_number": "L-000001663",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "a306d9d1-a8b6-460f-8373-5a1108fe7106",
+      "client_reference": "202604425",
+      "claim_number": "452017",
+      "liquidation_number": "L-000001664",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "42c58514-4d15-427a-b1b2-8cb79e136d29",
+      "client_reference": "202604483",
+      "claim_number": "2611021785",
+      "liquidation_number": "L-000001665",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "7a8f7d13-a820-45c5-8d71-c9692846e8ce",
+      "client_reference": "202604601",
+      "claim_number": "13226000001886",
+      "liquidation_number": "L-000001504",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "8d3d247c-70a6-45ae-9c78-e0d039a22cd3",
+      "client_reference": "202604619",
+      "claim_number": "13226000001863",
+      "liquidation_number": "L-000001666",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "3665e0d0-2a20-4edf-91ee-b93e4bc1a5d7",
+      "client_reference": "202604625",
+      "claim_number": "226012889",
+      "liquidation_number": "L-000001667",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "92df8408-9217-4040-9e1e-7dbf7e7de9f2",
+      "client_reference": "202604634",
+      "claim_number": "13226000001700",
+      "liquidation_number": "L-000001668",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "d21eb1d0-0f14-451e-88df-e6482471bd9a",
+      "client_reference": "202604659",
+      "claim_number": "13226000001876",
+      "liquidation_number": "L-000001669",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "2b096a1e-ce86-4231-903b-8e099d9b8c48",
+      "client_reference": "202604747",
+      "claim_number": "01-529371",
+      "liquidation_number": "L-000001589",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "4ae0f541-045a-4d28-8b0c-78815dc0fc72",
+      "client_reference": "202604750",
+      "claim_number": "01-529372",
+      "liquidation_number": "L-000001670",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "555c122d-396d-4a90-86f3-9658bbff2d6f",
+      "client_reference": "202604786",
+      "claim_number": "226013229",
+      "liquidation_number": "L-000001671",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "c6256007-121b-44cc-96f7-c7081735bd4e",
+      "client_reference": "202604797",
+      "claim_number": "13226000001853",
+      "liquidation_number": "L-000001672",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "9205dc32-0e7a-4b3b-8803-53b88d396adb",
+      "client_reference": "202604798",
+      "claim_number": "13226000001854",
+      "liquidation_number": "L-000001582",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "f5b62b5f-7a5b-428f-a35f-d6a47be625fe",
+      "client_reference": "202604803",
+      "claim_number": "13226000001946",
+      "liquidation_number": "L-000001674",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "b9cbb434-ca3e-4b35-8347-22932426dcab",
+      "client_reference": "202604812",
+      "claim_number": "13226000002107",
+      "liquidation_number": "L-000001675",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "e37712cc-1a6b-43bf-b34f-68b4d5b97b57",
+      "client_reference": "202604836",
+      "claim_number": "13226000001729",
+      "liquidation_number": "L-000001673",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "595cad4f-a8eb-4606-8f64-71afa7bb4187",
+      "client_reference": "202604844",
+      "claim_number": "13226000001941",
+      "liquidation_number": "L-000001585",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "e6bdaf59-c41a-4508-875d-15b66fe75236",
+      "client_reference": "202604845",
+      "claim_number": "13226000001942",
+      "liquidation_number": "L-000001676",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "4467393d-b08c-4274-9fa9-0d8ecf327f1c",
+      "client_reference": "202604866",
+      "claim_number": "13226000001975",
+      "liquidation_number": "L-000001677",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "bcc1a2e4-6f4a-4b49-a1a3-d281a0ffc688",
+      "client_reference": "202605085",
+      "claim_number": "13226000002142",
+      "liquidation_number": "L-000001678",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "a159d8e0-a856-4b3c-ad37-3cff19199786",
+      "client_reference": "202605117",
+      "claim_number": "10126000000718",
+      "liquidation_number": "L-000001679",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "59a6c160-592f-48a2-97bb-602857f52399",
+      "client_reference": "202605124",
+      "claim_number": "2678023291",
+      "liquidation_number": "L-000001486",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "81c893c8-2d16-45bc-b4f1-f9d8de9696b7",
+      "client_reference": "202605137",
+      "claim_number": "13226000002022",
+      "liquidation_number": "L-000001680",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "c6eef838-897f-4f2a-911e-af3b87d20c34",
+      "client_reference": "202605357",
+      "claim_number": "3108200373",
+      "liquidation_number": "L-000001681",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "72a65aff-5f90-472d-a9b0-537bbc1be361",
+      "client_reference": "202605377",
+      "claim_number": "13226000002235",
+      "liquidation_number": "L-000001682",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "fa801cda-eb55-4345-9199-c4139be0c6da",
+      "client_reference": "202605407",
+      "claim_number": "226014980",
+      "liquidation_number": "L-000001683",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "a805d75b-aeaa-4aea-a0a1-510e2d8a5593",
+      "client_reference": "202605438",
+      "claim_number": "226015013",
+      "liquidation_number": "L-000001684",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "ad1f52c9-78da-4ee7-b46f-3cab7930cf1d",
+      "client_reference": "202605509",
+      "claim_number": "226015065",
+      "liquidation_number": "L-000001590",
+      "gestiones_activas": 1
+    },
+    {
+      "id": "19a32d68-4dcd-4c46-a223-eeaa3de2a6c2",
+      "client_reference": "202605796",
+      "claim_number": "50075-01",
+      "liquidation_number": "L-000001685",
+      "gestiones_activas": 1
+    }
+  ]
+}
