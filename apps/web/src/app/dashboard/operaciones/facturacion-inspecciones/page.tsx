@@ -61,6 +61,9 @@ export default function FacturacionInspeccionesPage() {
   const [selectedGroupId, setSelectedGroupId] = useState<string>("");
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
   const [showDistribution, setShowDistribution] = useState(false);
+  // Fecha de corte: por defecto hoy. Solo se facturan inspecciones
+  // con ended_at <= fin del dia de corte.
+  const [cutoffDate, setCutoffDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
 
   // ── Agrupaciones ──
   const { data: groups } = useQuery({
@@ -76,13 +79,13 @@ export default function FacturacionInspeccionesPage() {
 
   // ── Pendientes por agrupación ──
   const { data: pendingCount } = useQuery({
-    queryKey: ["inspection-billing-pending-count", selectedGroupId],
-    queryFn: () => countPendingInspectionBilling(selectedGroupId),
+    queryKey: ["inspection-billing-pending-count", selectedGroupId, cutoffDate],
+    queryFn: () => countPendingInspectionBilling(selectedGroupId, cutoffDate),
     enabled: !!selectedGroupId,
   });
 
   const generateMutation = useMutation({
-    mutationFn: () => generateInspectionBillingBatch(selectedGroupId),
+    mutationFn: () => generateInspectionBillingBatch(selectedGroupId, cutoffDate),
     onSuccess: (batch) => {
       toast.success("Nómina generada");
       queryClient.invalidateQueries({ queryKey: ["inspection-billing-batches"] });
@@ -308,6 +311,12 @@ export default function FacturacionInspeccionesPage() {
               <span className="app-data-label">{isSent ? "No autorizadas" : "Excluidas"}</span>
               <span className="app-title text-muted-foreground">{allItems.length - includedCount}</span>
             </div>
+            {batch.cutoff_date && (
+              <div className="flex items-center gap-2">
+                <span className="app-data-label">Corte</span>
+                <span className="app-body text-foreground">{new Date(batch.cutoff_date + "T00:00:00").toLocaleDateString("es-CL")}</span>
+              </div>
+            )}
             {batch.sent_at && (
               <div className="flex items-center gap-2">
                 <span className="app-data-label">Enviada</span>
@@ -416,6 +425,16 @@ export default function FacturacionInspeccionesPage() {
               ))}
             </SelectContent>
           </Select>
+          <div className="flex items-center gap-2">
+            <label htmlFor="cutoff-date-inspection" className="app-data-label whitespace-nowrap">Corte</label>
+            <input
+              id="cutoff-date-inspection"
+              type="date"
+              value={cutoffDate}
+              onChange={(e) => setCutoffDate(e.target.value)}
+              className="app-input"
+            />
+          </div>
           <Button
             onClick={() => generateMutation.mutate()}
             disabled={!selectedGroupId || generateMutation.isPending}
@@ -448,6 +467,7 @@ export default function FacturacionInspeccionesPage() {
                 <th className="min-w-40">Nómina</th>
                 <th className="min-w-28">Agrupación</th>
                 <th className="min-w-20 text-center">Estado</th>
+                <th className="min-w-24 hidden md:table-cell">Corte</th>
                 <th className="min-w-16 text-center">Items</th>
                 <th className="min-w-24 hidden sm:table-cell">Generada</th>
                 <th className="min-w-24 hidden md:table-cell">Enviada</th>
@@ -456,10 +476,10 @@ export default function FacturacionInspeccionesPage() {
             </thead>
             <tbody>
               {isLoading ? (
-                <TableSkeleton rows={6} columns={7} />
+                <TableSkeleton rows={6} columns={8} />
               ) : (batches || []).length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-muted-foreground">
+                  <td colSpan={8} className="py-8 text-center text-muted-foreground">
                     No hay nóminas. Selecciona una agrupación y genera una.
                   </td>
                 </tr>
@@ -476,6 +496,9 @@ export default function FacturacionInspeccionesPage() {
                       <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusBadgeClass[batch.status]}`}>
                         {statusLabels[batch.status]}
                       </span>
+                    </td>
+                    <td className="whitespace-nowrap hidden md:table-cell">
+                      {batch.cutoff_date ? new Date(batch.cutoff_date + "T00:00:00").toLocaleDateString("es-CL") : "—"}
                     </td>
                     <td className="text-center">{batch.item_count}</td>
                     <td className="whitespace-nowrap hidden sm:table-cell">

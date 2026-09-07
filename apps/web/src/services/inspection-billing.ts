@@ -12,7 +12,7 @@ import type { InspectionBillingBatch, InspectionBillingBatchItem } from "@/types
 //   - Una inspección puede estar en ambos procesos
 // ═══════════════════════════════════════════════════════════════
 
-const BATCH_SELECT = "id, group_id, name, status, generated_at, sent_at, approved_at, approved_by, item_count, created_at, updated_at";
+const BATCH_SELECT = "id, group_id, name, status, cutoff_date, generated_at, sent_at, approved_at, approved_by, item_count, created_at, updated_at";
 const ITEM_SELECT = "id, batch_id, session_id, claim_id, inspector_id, include_for_billing, billed, liquidation_number, case_code, inspection_number, client_reference, inspector_name, insured_name, claim_address, inspection_date, inspection_type, created_at";
 
 // ── Listar nóminas (con nombre de agrupación) ──
@@ -34,6 +34,7 @@ export async function getInspectionBillingBatches() {
     approved_at: b.approved_at as string | null,
     approved_by: b.approved_by as string | null,
     item_count: b.item_count as number,
+    cutoff_date: (b.cutoff_date as string | null) ?? null,
     created_at: b.created_at as string,
     updated_at: b.updated_at as string,
   })) as InspectionBillingBatch[];
@@ -66,7 +67,9 @@ export async function getInspectionBillingBatchItems(batchId: string) {
 // ── Generar nueva nómina por agrupación ──
 // Trae inspecciones completadas de los inspectores de la agrupación
 // que no estén ya facturadas (billed=true) en inspection_billing_batch_items
-export async function generateInspectionBillingBatch(groupId: string) {
+// cutoffDate: fecha de corte YYYY-MM-DD — solo incluye inspecciones
+// con ended_at <= fin del día de corte. Si es null, no hay limite.
+export async function generateInspectionBillingBatch(groupId: string, cutoffDate?: string | null) {
   const supabase = getSupabaseClient();
 
   // 1. Obtener IDs de inspectores de la agrupación
@@ -83,7 +86,7 @@ export async function generateInspectionBillingBatch(groupId: string) {
   const billedSessionIds = (billedItems || []).map((i: { session_id: string }) => i.session_id);
 
   // 3. Traer inspecciones completadas de los inspectores de la agrupación
-  const { data: sessions, error } = await supabase
+  let query = supabase
     .from("inspection_sessions")
     .select(
       "id, claim_id, inspector_id, status, inspection_type, inspection_date, ended_at, inspection_number, inspector:profiles!inspection_sessions_inspector_id_fkey(full_name), claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(liquidation_number, client_reference, claim_address, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name))"
@@ -91,6 +94,14 @@ export async function generateInspectionBillingBatch(groupId: string) {
     .eq("status", "completed")
     .in("inspector_id", inspectorIds)
     .order("ended_at", { ascending: false });
+
+  // Fecha de corte: ended_at <= cutoffDate 23:59:59.999
+  if (cutoffDate) {
+    const cutoff = new Date(`${cutoffDate}T23:59:59.999Z`);
+    query = query.lte("ended_at", cutoff.toISOString());
+  }
+
+  const { data: sessions, error } = await query;
 
   if (error) throw new Error(error.message);
 
@@ -100,7 +111,7 @@ export async function generateInspectionBillingBatch(groupId: string) {
   );
 
   if (available.length === 0) {
-    throw new Error("No hay inspecciones completadas pendientes de facturación para esta agrupación");
+    throw new Error("No hay inspecciones completadas pendientes de facturación para esta agrupación" + (cutoffDate ? ` hasta el ${cutoffDate}` : ""));
   }
 
   // 4. Crear la nómina
@@ -112,12 +123,15 @@ export async function generateInspectionBillingBatch(groupId: string) {
     .eq("id", groupId)
     .single();
   const groupName = groupData?.name || "Agrupación";
-  const batchName = `Nómina ${groupName} ${dateStr}`;
+  const batchName = cutoffDate
+    ? `Nómina ${groupName} corte ${cutoffDate}`
+    : `Nómina ${groupName} ${dateStr}`;
 
   const batch = await insertRow<InspectionBillingBatch>("inspection_billing_batches", {
     group_id: groupId,
     name: batchName,
     status: "pendiente_revision",
+    cutoff_date: cutoffDate || null,
     generated_at: now.toISOString(),
     item_count: available.length,
   }, BATCH_SELECT);
@@ -200,7 +214,8 @@ export async function approveInspectionBatch(id: string, approvedBy: string) {
 }
 
 // ── Contar inspecciones pendientes por agrupación ──
-export async function countPendingInspectionBilling(groupId: string): Promise<number> {
+// cutoffDate: si se pasa, cuenta solo las de ended_at <= fin del día de corte
+export async function countPendingInspectionBilling(groupId: string, cutoffDate?: string | null): Promise<number> {
   const supabase = getSupabaseClient();
 
   const inspectorIds = await getGroupInspectorIds(groupId);
@@ -212,11 +227,17 @@ export async function countPendingInspectionBilling(groupId: string): Promise<nu
     .eq("billed", true);
   const billedSessionIds = (billedItems || []).map((i: { session_id: string }) => i.session_id);
 
-  const { data: sessions } = await supabase
+  let query = supabase
     .from("inspection_sessions")
     .select("id")
     .eq("status", "completed")
     .in("inspector_id", inspectorIds);
+
+  if (cutoffDate) {
+    query = query.lte("ended_at", new Date(`${cutoffDate}T23:59:59.999Z`).toISOString());
+  }
+
+  const { data: sessions } = await query;
 
   const available = (sessions || []).filter(
     (s: { id: string }) => !billedSessionIds.includes(s.id)

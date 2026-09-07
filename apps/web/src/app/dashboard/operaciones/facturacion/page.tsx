@@ -53,6 +53,9 @@ export default function FacturacionPage() {
   const queryClient = useQueryClient();
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
   const [showDistribution, setShowDistribution] = useState(false);
+  // Fecha de corte: por defecto hoy. Solo se facturan inspecciones
+  // con ended_at <= fin del dia de corte.
+  const [cutoffDate, setCutoffDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
 
   // ── Vista: Listado de nóminas ──
   const { data: batches, isLoading } = useQuery({
@@ -61,12 +64,12 @@ export default function FacturacionPage() {
   });
 
   const { data: pendingCount } = useQuery({
-    queryKey: ["billing-pending-count"],
-    queryFn: () => countPendingBilling(),
+    queryKey: ["billing-pending-count", cutoffDate],
+    queryFn: () => countPendingBilling(undefined, cutoffDate),
   });
 
   const generateMutation = useMutation({
-    mutationFn: () => generateBillingBatch(),
+    mutationFn: () => generateBillingBatch(undefined, cutoffDate),
     onSuccess: (batch) => {
       toast.success("Nómina generada");
       queryClient.invalidateQueries({ queryKey: ["billing-batches"] });
@@ -295,6 +298,12 @@ export default function FacturacionPage() {
               <span className="app-data-label">{isSent ? "No autorizadas" : "Excluidas"}</span>
               <span className="app-title text-muted-foreground">{allItems.length - includedCount}</span>
             </div>
+            {batch.cutoff_date && (
+              <div className="flex items-center gap-2">
+                <span className="app-data-label">Corte</span>
+                <span className="app-body text-foreground">{new Date(batch.cutoff_date + "T00:00:00").toLocaleDateString("es-CL")}</span>
+              </div>
+            )}
             {batch.sent_at && (
               <div className="flex items-center gap-2">
                 <span className="app-data-label">Enviada</span>
@@ -399,6 +408,16 @@ export default function FacturacionPage() {
           </div>
         </div>
         <div className="app-grid-header-right">
+          <div className="flex items-center gap-2">
+            <label htmlFor="cutoff-date" className="app-data-label whitespace-nowrap">Corte</label>
+            <input
+              id="cutoff-date"
+              type="date"
+              value={cutoffDate}
+              onChange={(e) => setCutoffDate(e.target.value)}
+              className="app-input"
+            />
+          </div>
           {pendingCount !== undefined && pendingCount > 0 && (
             <span className="app-body text-muted-foreground mr-2">
               {pendingCount} pendientes
@@ -424,6 +443,7 @@ export default function FacturacionPage() {
             <tr>
               <th className="min-w-40 sm:w-48">Nombre</th>
               <th className="min-w-20 sm:w-24">Estado</th>
+              <th className="min-w-24 sm:w-28 hidden md:table-cell">Corte</th>
               <th className="min-w-20 sm:w-24 text-right">Inspec.</th>
               <th className="min-w-24 sm:w-28 hidden sm:table-cell">Generada</th>
               <th className="min-w-24 sm:w-28 hidden md:table-cell">Enviada</th>
@@ -432,10 +452,10 @@ export default function FacturacionPage() {
           </thead>
           <tbody>
             {isLoading ? (
-              <TableSkeleton rows={6} columns={6} />
+              <TableSkeleton rows={6} columns={7} />
             ) : (batches || []).length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-12 text-center text-muted-foreground">
+                <td colSpan={7} className="py-12 text-center text-muted-foreground">
                   <Receipt className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
                   No hay nóminas generadas. Haz clic en &quot;Generar&quot; para crear la primera.
                 </td>
@@ -452,6 +472,9 @@ export default function FacturacionPage() {
                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusBadgeClass[batch.status]}`}>
                       {statusLabels[batch.status]}
                     </span>
+                  </td>
+                  <td className="whitespace-nowrap hidden md:table-cell">
+                    {batch.cutoff_date ? new Date(batch.cutoff_date + "T00:00:00").toLocaleDateString("es-CL") : "—"}
                   </td>
                   <td className="whitespace-nowrap text-right">{batch.item_count}</td>
                   <td className="whitespace-nowrap hidden sm:table-cell">

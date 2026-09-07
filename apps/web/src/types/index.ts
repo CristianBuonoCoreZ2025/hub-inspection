@@ -1059,6 +1059,7 @@ export interface BillingBatch {
   company_id: string | null;
   name: string;
   status: "pendiente_revision" | "enviada_revision" | "aprobada";
+  cutoff_date: string | null;
   generated_at: string;
   sent_at: string | null;
   approved_at: string | null;
@@ -1113,6 +1114,7 @@ export interface InspectionBillingBatch {
   group_name?: string | null;
   name: string;
   status: "pendiente_revision" | "enviada_revision" | "aprobada";
+  cutoff_date: string | null;
   generated_at: string;
   sent_at: string | null;
   approved_at: string | null;

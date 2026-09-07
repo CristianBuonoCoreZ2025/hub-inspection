@@ -5,7 +5,7 @@ import type { BillingBatch, BillingBatchItem } from "@/types";
 // Servicio para nóminas de facturación de inspecciones
 // ═══════════════════════════════════════════════════════════════
 
-const BATCH_SELECT = "id, company_id, name, status, generated_at, sent_at, approved_at, approved_by, item_count, created_at, updated_at";
+const BATCH_SELECT = "id, company_id, name, status, cutoff_date, generated_at, sent_at, approved_at, approved_by, item_count, created_at, updated_at";
 const ITEM_SELECT = "id, batch_id, session_id, claim_id, include_for_billing, billed, liquidation_number, case_code, inspection_number, client_reference, inspector_name, insured_name, claim_address, inspection_date, inspection_type, created_at";
 
 // ── Listar nóminas ──
@@ -32,7 +32,9 @@ export async function getBillingBatchItems(batchId: string) {
 
 // ── Generar nueva nómina ──
 // Trae inspecciones completed que no estén ya facturadas (billed=true)
-export async function generateBillingBatch(companyId?: string | null) {
+// cutoffDate: fecha de corte YYYY-MM-DD — solo incluye inspecciones
+// con ended_at <= fin del día de corte. Si es null, no hay limite.
+export async function generateBillingBatch(companyId?: string | null, cutoffDate?: string | null) {
   const supabase = getSupabaseClient();
 
   // 1. Traer session_ids que ya están facturadas
@@ -56,6 +58,12 @@ export async function generateBillingBatch(companyId?: string | null) {
     query = query.eq("company_id", companyId);
   }
 
+  // Fecha de corte: ended_at <= cutoffDate 23:59:59.999
+  if (cutoffDate) {
+    const cutoff = new Date(`${cutoffDate}T23:59:59.999Z`);
+    query = query.lte("ended_at", cutoff.toISOString());
+  }
+
   const { data: sessions, error } = await query;
   if (error) throw new Error(error.message);
 
@@ -65,18 +73,19 @@ export async function generateBillingBatch(companyId?: string | null) {
   );
 
   if (available.length === 0) {
-    throw new Error("No hay inspecciones completadas pendientes de facturación");
+    throw new Error("No hay inspecciones completadas pendientes de facturación" + (cutoffDate ? ` hasta el ${cutoffDate}` : ""));
   }
 
   // 3. Crear la nómina
   const now = new Date();
   const dateStr = now.toISOString().slice(0, 10);
-  const batchName = `Nómina ${dateStr}`;
+  const batchName = cutoffDate ? `Nómina corte ${cutoffDate}` : `Nómina ${dateStr}`;
 
   const batch = await insertRow<BillingBatch>("billing_batches", {
     company_id: companyId || null,
     name: batchName,
     status: "pendiente_revision",
+    cutoff_date: cutoffDate || null,
     generated_at: now.toISOString(),
     item_count: available.length,
   }, BATCH_SELECT);
@@ -159,7 +168,8 @@ export async function approveBatch(id: string, approvedBy: string) {
 }
 
 // ── Contar inspecciones pendientes de facturación ──
-export async function countPendingBilling(companyId?: string | null): Promise<number> {
+// cutoffDate: si se pasa, cuenta solo las de ended_at <= fin del día de corte
+export async function countPendingBilling(companyId?: string | null, cutoffDate?: string | null): Promise<number> {
   const supabase = getSupabaseClient();
 
   const { data: billedItems } = await supabase
@@ -178,8 +188,23 @@ export async function countPendingBilling(companyId?: string | null): Promise<nu
     query = query.eq("company_id", companyId);
   }
 
+  if (cutoffDate) {
+    const cutoff = new Date(`${cutoffDate}T23:59:59.999Z`);
+    query = query.lte("ended_at", cutoff.toISOString());
+  }
+
   const { count } = await query;
 
-  // Restar las ya facturadas
-  return Math.max(0, (count || 0) - billedSessionIds.length);
+  // Restar las ya facturadas — si hay cutoff, hay que filtrar los billed tambien
+  if (!cutoffDate) {
+    return Math.max(0, (count || 0) - billedSessionIds.length);
+  }
+  // Con cutoff: contar solo las billed que caen dentro del rango
+  if (billedSessionIds.length === 0) return count || 0;
+  const { data: billedSessions } = await supabase
+    .from("inspection_sessions")
+    .select("id")
+    .in("id", billedSessionIds)
+    .lte("ended_at", new Date(`${cutoffDate}T23:59:59.999Z`).toISOString());
+  return Math.max(0, (count || 0) - (billedSessions || []).length);
 }
