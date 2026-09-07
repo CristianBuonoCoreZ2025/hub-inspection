@@ -110,17 +110,12 @@ function captureVideoThumb(video: HTMLVideoElement | null, w: number, h: number)
   }
 }
 
-/** Devuelve un mensaje útil según el error de getUserMedia y el dispositivo. */
+/** Devuelve un mensaje útil según el error de getUserMedia. */
 function getMediaErrorMessage(err: unknown): string {
   const domErr = err instanceof DOMException ? err : null;
   const raw = err instanceof Error ? err.message : "";
-  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
-  const isIOS = /iPhone|iPad|iPod/i.test(ua);
-  const isAndroid = /Android/i.test(ua);
 
   if (domErr?.name === "NotAllowedError" || domErr?.name === "SecurityError" || raw.toLowerCase().includes("permission")) {
-    if (isIOS) return "Permiso denegado. Toca el icono de cámara/micrófono en la barra de direcciones de Safari o ve a Ajustes > Safari > Cámara y Micrófono > Permitir.";
-    if (isAndroid) return "Permiso denegado. En Android: Configuración del navegador > Permisos > Cámara y micrófono > Permitir.";
     return "Permiso denegado. Habilite cámara y micrófono en la barra de direcciones o configuración del navegador.";
   }
   if (domErr?.name === "NotFoundError") return "No se encontró cámara o micrófono. Conecte uno o use subir fotos.";
@@ -389,7 +384,7 @@ export function LiveVideoCall({
       microphone: microphonePerm,
     });
 
-    if (userMessage && stream.getTracks().length === 0) {
+    if (userMessage && stream.getTracks().length === 0 && cameraPerm === "denied") {
       setError(userMessage);
     }
 
