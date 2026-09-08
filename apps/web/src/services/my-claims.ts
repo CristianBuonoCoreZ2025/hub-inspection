@@ -1,4 +1,4 @@
-import { getSupabaseClient } from "@/lib/supabase/db";
+import { getSupabaseClient, fetchAllPages } from "@/lib/supabase/db";
 import type { UserRole } from "@/types";
 
 // ═══════════════════════════════════════════════════════════════
@@ -92,31 +92,28 @@ export async function getMyClaims(
     inspection_sessions:inspection_sessions(id, status)
   `;
 
-  let query = supabase
-    .from("claims")
-    .select(select)
-    .eq("disabled", false);
-
-  if (closedId) {
-    query = query.neq("status_id", closedId);
-  }
-
   // Filtro por rol del claim
   const fields = ROLE_FIELD_MAP[claimRole];
-  if (fields.length === 1) {
-    query = query.eq(fields[0], pid);
-  } else {
-    query = query.or(fields.map((f) => `${f}.eq.${pid}`).join(","));
-  }
+  const roleOr = fields.length === 1 ? null : fields.map((f) => `${f}.eq.${pid}`).join(",");
 
-  const { data, error } = await query.order("claim_date", { ascending: false });
+  // Paginar: un usuario puede tener mas de 1000 casos asignados
+  const data = await fetchAllPages<Record<string, unknown>>((from, to) => {
+    let q = supabase
+      .from("claims")
+      .select(select)
+      .eq("disabled", false)
+      .order("claim_date", { ascending: false })
+      .range(from, to);
+    if (closedId) q = q.neq("status_id", closedId);
+    if (fields.length === 1) q = q.eq(fields[0], pid);
+    else q = q.or(roleOr!);
+    return q;
+  }).catch((err: Error) => {
+    console.error("[getMyClaims] error en query de claims:", err.message, { claimRole, pid });
+    return [] as Record<string, unknown>[];
+  });
 
-  if (error) {
-    console.error("[getMyClaims] error en query de claims:", error.message, { claimRole, pid });
-  }
-  if (error || !data) return [];
-
-  const rows = data as Array<{
+  const rows = data as unknown as Array<{
     id: string;
     claim_number: string | null;
     liquidation_number: string | null;

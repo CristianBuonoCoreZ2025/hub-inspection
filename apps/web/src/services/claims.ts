@@ -1205,16 +1205,20 @@ export async function checkCasosDuplicates(
   }
 
   // 2. Buscar claims existentes por client_reference (en la empresa)
+  // Batches de 150 para no exceder el largo de URL en .in()
   const existingByRef: Map<string, string> = new Map();
   if (references.length > 0) {
-    const { data: refMatches } = await supabase
-      .from("claims")
-      .select("id, client_reference")
-      .eq("company_id", companyId)
-      .in("client_reference", references);
-    if (refMatches) {
-      for (const c of refMatches as Array<{ id: string; client_reference: string }>) {
-        existingByRef.set(c.client_reference, c.id);
+    for (let i = 0; i < references.length; i += 150) {
+      const batch = references.slice(i, i + 150);
+      const { data: refMatches } = await supabase
+        .from("claims")
+        .select("id, client_reference")
+        .eq("company_id", companyId)
+        .in("client_reference", batch);
+      if (refMatches) {
+        for (const c of refMatches as Array<{ id: string; client_reference: string }>) {
+          existingByRef.set(c.client_reference, c.id);
+        }
       }
     }
   }
@@ -1224,15 +1228,18 @@ export async function checkCasosDuplicates(
   // y luego filtramos por insurance_company_id en memoria
   const existingByClaimCompany: Map<string, string> = new Map(); // key = "claimNumber::insuranceCompanyId"
   if (claimNumbers.length > 0) {
-    const { data: claimMatches } = await supabase
-      .from("claims")
-      .select("id, claim_number, insurance_company_id")
-      .eq("company_id", companyId)
-      .in("claim_number", claimNumbers);
-    if (claimMatches) {
-      for (const c of claimMatches as Array<{ id: string; claim_number: string; insurance_company_id: string | null }>) {
-        const key = `${c.claim_number}::${c.insurance_company_id || ""}`;
-        existingByClaimCompany.set(key, c.id);
+    for (let i = 0; i < claimNumbers.length; i += 150) {
+      const batch = claimNumbers.slice(i, i + 150);
+      const { data: claimMatches } = await supabase
+        .from("claims")
+        .select("id, claim_number, insurance_company_id")
+        .eq("company_id", companyId)
+        .in("claim_number", batch);
+      if (claimMatches) {
+        for (const c of claimMatches as Array<{ id: string; claim_number: string; insurance_company_id: string | null }>) {
+          const key = `${c.claim_number}::${c.insurance_company_id || ""}`;
+          existingByClaimCompany.set(key, c.id);
+        }
       }
     }
   }

@@ -61,9 +61,9 @@ export default function FacturacionInspeccionesPage() {
   const [selectedGroupId, setSelectedGroupId] = useState<string>("");
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
   const [showDistribution, setShowDistribution] = useState(false);
-  // Fecha de corte: por defecto hoy. Solo se facturan inspecciones
-  // con ended_at <= fin del dia de corte.
-  const [cutoffDate, setCutoffDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  // Fecha de corte OBLIGATORIA: solo se facturan inspecciones
+  // con ended_at <= fin del dia de corte. Sin fecha no se puede generar.
+  const [cutoffDate, setCutoffDate] = useState<string>("");
 
   // ── Agrupaciones ──
   const { data: groups } = useQuery({
@@ -80,8 +80,8 @@ export default function FacturacionInspeccionesPage() {
   // ── Pendientes por agrupación ──
   const { data: pendingCount } = useQuery({
     queryKey: ["inspection-billing-pending-count", selectedGroupId, cutoffDate],
-    queryFn: () => countPendingInspectionBilling(selectedGroupId, cutoffDate),
-    enabled: !!selectedGroupId,
+    queryFn: () => countPendingInspectionBilling(selectedGroupId, cutoffDate || null),
+    enabled: !!selectedGroupId && !!cutoffDate,
   });
 
   const generateMutation = useMutation({
@@ -426,18 +426,19 @@ export default function FacturacionInspeccionesPage() {
             </SelectContent>
           </Select>
           <div className="flex items-center gap-2">
-            <label htmlFor="cutoff-date-inspection" className="app-data-label whitespace-nowrap">Corte</label>
+            <label htmlFor="cutoff-date-inspection" className="app-data-label whitespace-nowrap">Corte *</label>
             <input
               id="cutoff-date-inspection"
               type="date"
               value={cutoffDate}
               onChange={(e) => setCutoffDate(e.target.value)}
+              required
               className="app-input"
             />
           </div>
           <Button
             onClick={() => generateMutation.mutate()}
-            disabled={!selectedGroupId || generateMutation.isPending}
+            disabled={!selectedGroupId || !cutoffDate || generateMutation.isPending}
             className="pg-btn-platinum"
           >
             {generateMutation.isPending ? (
@@ -449,7 +450,7 @@ export default function FacturacionInspeccionesPage() {
         </div>
       </div>
 
-      {selectedGroupId && pendingCount !== undefined && pendingCount > 0 && (
+      {selectedGroupId && cutoffDate && pendingCount !== undefined && pendingCount > 0 && (
         <div className="app-panel">
           <div className="flex items-center gap-2">
             <span className="app-data-label">Pendientes</span>

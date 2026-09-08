@@ -53,9 +53,9 @@ export default function FacturacionPage() {
   const queryClient = useQueryClient();
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
   const [showDistribution, setShowDistribution] = useState(false);
-  // Fecha de corte: por defecto hoy. Solo se facturan inspecciones
-  // con ended_at <= fin del dia de corte.
-  const [cutoffDate, setCutoffDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  // Fecha de corte OBLIGATORIA: solo se facturan inspecciones
+  // con ended_at <= fin del dia de corte. Sin fecha no se puede generar.
+  const [cutoffDate, setCutoffDate] = useState<string>("");
 
   // ── Vista: Listado de nóminas ──
   const { data: batches, isLoading } = useQuery({
@@ -65,7 +65,8 @@ export default function FacturacionPage() {
 
   const { data: pendingCount } = useQuery({
     queryKey: ["billing-pending-count", cutoffDate],
-    queryFn: () => countPendingBilling(undefined, cutoffDate),
+    queryFn: () => countPendingBilling(undefined, cutoffDate || null),
+    enabled: !!cutoffDate,
   });
 
   const generateMutation = useMutation({
@@ -409,23 +410,24 @@ export default function FacturacionPage() {
         </div>
         <div className="app-grid-header-right">
           <div className="flex items-center gap-2">
-            <label htmlFor="cutoff-date" className="app-data-label whitespace-nowrap">Corte</label>
+            <label htmlFor="cutoff-date" className="app-data-label whitespace-nowrap">Corte *</label>
             <input
               id="cutoff-date"
               type="date"
               value={cutoffDate}
               onChange={(e) => setCutoffDate(e.target.value)}
+              required
               className="app-input"
             />
           </div>
-          {pendingCount !== undefined && pendingCount > 0 && (
+          {cutoffDate && pendingCount !== undefined && pendingCount > 0 && (
             <span className="app-body text-muted-foreground mr-2">
               {pendingCount} pendientes
             </span>
           )}
           <Button
             onClick={() => generateMutation.mutate()}
-            disabled={generateMutation.isPending || (pendingCount ?? 0) === 0}
+            disabled={!cutoffDate || generateMutation.isPending || (pendingCount ?? 0) === 0}
             className="pg-btn-platinum"
           >
             {generateMutation.isPending ? (

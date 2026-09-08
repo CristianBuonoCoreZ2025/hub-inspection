@@ -1,6 +1,7 @@
 "use server";
 
 import { createServerClient } from "@/lib/supabase/server";
+import { fetchAllPages } from "@/lib/supabase/db";
 
 /**
  * Contacto de la libreta de direcciones del email.
@@ -193,12 +194,16 @@ export async function getClaimContacts(claimId: string): Promise<EmailContact[]>
   }
 
   // ─── 5. Directorio global (todos los profiles activos, excluyendo los del equipo) ───
-  const { data: allProfiles } = await supabase
-    .from("profiles")
-    .select("id, full_name, email")
-    .neq("email", "")
-    .eq("is_active", true)
-    .is("deleted_at", null);
+  // Paginado: el directorio puede superar 1000 perfiles
+  const allProfiles = await fetchAllPages<{ id: string; full_name: string | null; email: string | null }>((from, to) =>
+    supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .neq("email", "")
+      .eq("is_active", true)
+      .is("deleted_at", null)
+      .range(from, to)
+  ).catch(() => [] as { id: string; full_name: string | null; email: string | null }[]);
 
   // Emails ya incluidos en participantes/equipo/asesor — no duplicar en directorio
   const existingEmails = new Set(byEmail.keys());

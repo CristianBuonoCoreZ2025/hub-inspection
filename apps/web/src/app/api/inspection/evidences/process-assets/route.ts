@@ -1,6 +1,7 @@
 import { after } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
+import { fetchAllPages } from "@/lib/supabase/db";
 import {
   resolveInspectionStorageContext,
   reuploadInspectionFileOptimized,
@@ -47,13 +48,20 @@ export async function POST(request: NextRequest) {
       try {
         const ctx = await resolveInspectionStorageContext(sessionId);
 
-        const { data: evidences } = await supabase
-          .from("inspection_evidences")
-          .select("id, url, type, metadata, source")
-          .eq("session_id", sessionId)
-          .neq("source", "live_video");
+        // Paginar: una sesion puede tener mas de 1000 evidencias
+        const evidences = await fetchAllPages<{
+          id: string; url: string; type: string;
+          metadata: Record<string, unknown> | null; source: string | null;
+        }>((from, to) =>
+          supabase
+            .from("inspection_evidences")
+            .select("id, url, type, metadata, source")
+            .eq("session_id", sessionId)
+            .neq("source", "live_video")
+            .range(from, to)
+        );
 
-        if (!evidences || evidences.length === 0) return;
+        if (evidences.length === 0) return;
 
         for (const evidence of evidences) {
           const metadata = (evidence.metadata as Record<string, unknown>) || {};

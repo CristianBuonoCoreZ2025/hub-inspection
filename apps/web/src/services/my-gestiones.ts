@@ -1,4 +1,4 @@
-import { getSupabaseClient } from "@/lib/supabase/db";
+import { getSupabaseClient, fetchAllPages } from "@/lib/supabase/db";
 import type { UserRole } from "@/types";
 
 // ═══════════════════════════════════════════════════════════════
@@ -64,26 +64,33 @@ export async function getMyGestiones(
     )
   `;
 
-  let query = supabase
-    .from("claim_actions")
-    .select(select)
-    .eq("is_active", true);
+  // Filtro por rol (guardado como closure para paginar)
+  const applyRoleFilter = <T extends { or: (f: string) => T; eq: (c: string, v: string) => T }>(q: T): T | null => {
+    if (profile.role === "adjuster" || !profile.company_id) {
+      return q.or(`issuer_id.eq.${pid},reviewer_id.eq.${pid},approver_id.eq.${pid},dispatcher_id.eq.${pid}`);
+    } else if (profile.role === "inspector") {
+      return q.eq("issuer_id", pid);
+    } else if (profile.role === "assistant") {
+      return q.or(`issuer_id.eq.${pid},reviewer_id.eq.${pid}`);
+    }
+    return null;
+  };
 
-  // Filtro por rol
-  if (profile.role === "adjuster" || !profile.company_id) {
-    query = query.or(`issuer_id.eq.${pid},reviewer_id.eq.${pid},approver_id.eq.${pid},dispatcher_id.eq.${pid}`);
-  } else if (profile.role === "inspector") {
-    query = query.eq("issuer_id", pid);
-  } else if (profile.role === "assistant") {
-    query = query.or(`issuer_id.eq.${pid},reviewer_id.eq.${pid}`);
-  } else {
-    return [];
-  }
+  // Paginar: gestiones activas pueden superar 1000
+  const data = await fetchAllPages<Record<string, unknown>>((from, to) => {
+    let q = supabase
+      .from("claim_actions")
+      .select(select)
+      .eq("is_active", true)
+      .order("created_on", { ascending: true })
+      .range(from, to);
+    const filtered = applyRoleFilter(q);
+    if (!filtered) throw new Error("rol sin acceso a gestiones");
+    q = filtered;
+    return q;
+  }).catch(() => [] as Record<string, unknown>[]);
 
-  const { data, error } = await query.order("created_on", { ascending: true });
-  if (error || !data) return [];
-
-  const rows = data as Array<{
+  const rows = data as unknown as Array<{
     id: string;
     claim_id: string;
     name: string;

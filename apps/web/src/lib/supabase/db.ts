@@ -10,6 +10,32 @@ import { startMeasure } from "@/lib/perf-metrics";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyObj = Record<string, any>;
 
+// PostgREST limita cada request a ~1000 filas (max-rows del servidor).
+// Toda lectura "trae todo" DEBE paginar para no truncar silenciosamente.
+const PAGE_SIZE = 1000;
+
+/**
+ * Ejecuta una query de Supabase paginando con .range() hasta agotar resultados.
+ * Recibe una factory que construye la query FRESCA en cada iteracion
+ * (el builder se muta al ejecutarse, no se puede reutilizar).
+ */
+export async function fetchAllPages<T>(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  buildQuery: (from: number, to: number) => PromiseLike<{ data: any; error: any }>
+): Promise<T[]> {
+  const all: T[] = [];
+  let offset = 0;
+  while (true) {
+    const { data, error } = await buildQuery(offset, offset + PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    const page = (data as T[] | null) ?? [];
+    all.push(...page);
+    if (page.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
+  }
+  return all;
+}
+
 /**
  * SELECT una fila por ID (equivalente a table_by_pk)
  */
@@ -61,58 +87,64 @@ export async function fetchAll<T = AnyObj>(
   }
 ): Promise<T[]> {
   const supabase = getSupabaseClient();
-  let query = supabase.from(table).select(options?.select ?? "*");
 
-  if (options?.eq) {
-    for (const [k, v] of Object.entries(options.eq)) {
-      query = query.eq(k, v);
+  // Construye la query con todos los filtros aplicados (builder fresco por pagina)
+  const buildQuery = () => {
+    let query = supabase.from(table).select(options?.select ?? "*");
+
+    if (options?.eq) {
+      for (const [k, v] of Object.entries(options.eq)) {
+        query = query.eq(k, v);
+      }
     }
-  }
-  if (options?.neq) {
-    for (const [k, v] of Object.entries(options.neq)) {
-      query = query.neq(k, v);
+    if (options?.neq) {
+      for (const [k, v] of Object.entries(options.neq)) {
+        query = query.neq(k, v);
+      }
     }
-  }
-  if (options?.in) {
-    for (const [k, v] of Object.entries(options.in)) {
-      query = query.in(k, v);
+    if (options?.in) {
+      for (const [k, v] of Object.entries(options.in)) {
+        query = query.in(k, v);
+      }
     }
-  }
-  if (options?.ilike) {
-    for (const [k, v] of Object.entries(options.ilike)) {
-      query = query.ilike(k, v);
+    if (options?.ilike) {
+      for (const [k, v] of Object.entries(options.ilike)) {
+        query = query.ilike(k, v);
+      }
     }
-  }
-  if (options?.gte) {
-    for (const [k, v] of Object.entries(options.gte)) {
-      query = query.gte(k, v);
+    if (options?.gte) {
+      for (const [k, v] of Object.entries(options.gte)) {
+        query = query.gte(k, v);
+      }
     }
-  }
-  if (options?.lte) {
-    for (const [k, v] of Object.entries(options.lte)) {
-      query = query.lte(k, v);
+    if (options?.lte) {
+      for (const [k, v] of Object.entries(options.lte)) {
+        query = query.lte(k, v);
+      }
     }
-  }
-  if (options?.is) {
-    for (const [k, v] of Object.entries(options.is)) {
-      query = query.is(k, v);
+    if (options?.is) {
+      for (const [k, v] of Object.entries(options.is)) {
+        query = query.is(k, v);
+      }
     }
-  }
-  if (options?.order) {
-    query = query.order(options.order.column, {
-      ascending: options.order.ascending ?? true,
-    });
-  }
-  if (options?.limit) {
-    query = query.limit(options.limit);
-  }
-  if (options?.range) {
-    query = query.range(options.range.from, options.range.to);
-  }
+    if (options?.order) {
+      query = query.order(options.order.column, {
+        ascending: options.order.ascending ?? true,
+      });
+    }
+    if (options?.limit) {
+      query = query.limit(options.limit);
+    }
+    if (options?.range) {
+      query = query.range(options.range.from, options.range.to);
+    }
+    return query;
+  };
+
   if (options?.single) {
     const end = startMeasure(table, "select_all");
     try {
-      const { data, error } = await query.maybeSingle();
+      const { data, error } = await buildQuery().maybeSingle();
       if (error) throw new Error(error.message);
       end({ success: true, rowsAffected: data ? 1 : 0 });
       return [data as T];
@@ -120,11 +152,19 @@ export async function fetchAll<T = AnyObj>(
       end({ success: false, errorMessage: err instanceof Error ? err.message : String(err) });
       throw err;
     }
-  }
+    }
+
+  // Sin limit/range explicitos: paginar automaticamente para no truncar en 1000
+  const shouldPaginate = !options?.limit && !options?.range;
 
   const end = startMeasure(table, "select_all");
   try {
-    const { data, error } = await query;
+    if (shouldPaginate) {
+      const data = await fetchAllPages<T>((from, to) => buildQuery().range(from, to));
+      end({ success: true, rowsAffected: data.length });
+      return data;
+    }
+    const { data, error } = await buildQuery();
     if (error) throw new Error(error.message);
     end({ success: true, rowsAffected: data?.length ?? 0 });
     return (data as T[]) ?? [];

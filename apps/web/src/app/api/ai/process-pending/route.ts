@@ -1,6 +1,7 @@
 import { after } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
+import { fetchAllPages } from "@/lib/supabase/db";
 import { summarizeFile } from "@/lib/ai/openrouter";
 import { logger } from "@/lib/logger";
 
@@ -205,46 +206,46 @@ export async function POST(request: NextRequest) {
       selectParts.push("created_at");
       const selectCols = selectParts.join(", ");
 
-      let query = supabase
-        .from(cfg.table)
-        .select(selectCols)
-        .eq(cfg.filterColumn, cfg.filterValue)
-        .order("created_at", { ascending: true });
+      // Paginar: una entidad puede tener mas de 1000 archivos pendientes
+      const pendingRecords = await fetchAllPages<Record<string, unknown>>((from, to) => {
+        let q = supabase
+          .from(cfg.table)
+          .select(selectCols)
+          .eq(cfg.filterColumn, cfg.filterValue)
+          .order("created_at", { ascending: true })
+          .range(from, to);
 
-      // Solo registros activos (no eliminados)
-      if (cfg.hasIsActive) {
-        query = query.eq("is_active", true);
-      }
-
-      // Filtro de "pending"
-      if (cfg.hasAiStatus) {
-        if (cfg.table === "inspection_evidences") {
-          // Las evidencias de inspección se marcan como "deferred" al subir
-          // y se analizan al cerrar la sesión. Re-análisis manual usa "pending".
-          query = query.in("ai_status", ["pending", "deferred"]);
-        } else {
-          query = query.eq("ai_status", "pending");
+        // Solo registros activos (no eliminados)
+        if (cfg.hasIsActive) {
+          q = q.eq("is_active", true);
         }
-      } else {
-        // policy_documents: no tiene ai_status, usar ai_summary IS NULL
-        query = query.is("ai_summary", null);
-      }
 
-      if (cfg.excludeLiveVideo) {
-        query = query.neq("source", "live_video");
-      }
+        // Filtro de "pending"
+        if (cfg.hasAiStatus) {
+          if (cfg.table === "inspection_evidences") {
+            // Las evidencias de inspección se marcan como "deferred" al subir
+            // y se analizan al cerrar la sesión. Re-análisis manual usa "pending".
+            q = q.in("ai_status", ["pending", "deferred"]);
+          } else {
+            q = q.eq("ai_status", "pending");
+          }
+        } else {
+          // policy_documents: no tiene ai_status, usar ai_summary IS NULL
+          q = q.is("ai_summary", null);
+        }
 
-      const { data: pendingRecords, error: fetchErr } = await query;
-
-      if (fetchErr) {
-        logger.error("process-pending: error buscando registros", new Error(fetchErr.message), {
+        if (cfg.excludeLiveVideo) {
+          q = q.neq("source", "live_video");
+        }
+        return q;
+      }).catch((fetchErr: Error) => {
+        logger.error("process-pending: error buscando registros", fetchErr, {
           component: "ai-process-pending",
           action: "fetch.pending",
           metadata: { table: cfg.table, error: fetchErr.message },
         });
-        allResults.push({ table: cfg.table, processed: 0, success: 0, fail: 0 });
-        continue;
-      }
+        return null;
+      });
 
       if (!pendingRecords || pendingRecords.length === 0) {
         allResults.push({ table: cfg.table, processed: 0, success: 0, fail: 0 });

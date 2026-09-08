@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient, createAdminClient } from "@/lib/supabase/server";
+import { fetchAllPages } from "@/lib/supabase/db";
 import { logger } from "@/lib/logger";
 
 /**
@@ -142,14 +143,17 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = createAdminClient();
-    const { data, error } = await supabase
-      .from("webrtc_events")
-      .select("*")
-      .eq("session_id", sessionId)
-      .order("created_at", { ascending: true });
+    // Paginar: una sesion larga puede acumular mas de 1000 eventos
+    const events = await fetchAllPages<Record<string, unknown>>((from, to) =>
+      supabase
+        .from("webrtc_events")
+        .select("*")
+        .eq("session_id", sessionId)
+        .order("created_at", { ascending: true })
+        .range(from, to)
+    );
 
-    if (error) throw new Error(error.message);
-    return NextResponse.json({ events: data || [] });
+    return NextResponse.json({ events });
   } catch (err) {
     logger.error("API /api/inspection/webrtc-event GET error", err as Error, {
       component: "webrtc-event",

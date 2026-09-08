@@ -1,4 +1,5 @@
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { fetchAllPages } from "@/lib/supabase/db";
 
 /**
  * Servicio optimizado para el dashboard.
@@ -71,41 +72,44 @@ const PROFILE_LIGHT_SELECT = "id, full_name, is_active";
 
 export async function getDashboardClaims(): Promise<LightClaim[]> {
   const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from("claims")
-    .select(CLAIM_LIGHT_SELECT)
-    .eq("disabled", false)
-    .order("created_at", { ascending: false });
-  if (error) throw new Error(error.message);
-  return (data as LightClaim[]) ?? [];
+  return fetchAllPages<LightClaim>((from, to) =>
+    supabase
+      .from("claims")
+      .select(CLAIM_LIGHT_SELECT)
+      .eq("disabled", false)
+      .order("created_at", { ascending: false })
+      .range(from, to)
+  );
 }
 
 export async function getDashboardSessions(): Promise<LightSession[]> {
   const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from("inspection_sessions")
-    .select(SESSION_LIGHT_SELECT)
-    .order("created_at", { ascending: false });
-  if (error) throw new Error(error.message);
-  const sessions = (data as LightSession[]) ?? [];
+  const allSessions = await fetchAllPages<LightSession>((from, to) =>
+    supabase
+      .from("inspection_sessions")
+      .select(SESSION_LIGHT_SELECT)
+      .order("created_at", { ascending: false })
+      .range(from, to)
+  );
   // Setear inspection_number desde claim_action.code (estándar de gestiones)
-  for (const s of sessions) {
+  for (const s of allSessions) {
     if (s.claim_action?.code) {
       s.inspection_number = s.claim_action.code;
     }
   }
-  return sessions;
+  return allSessions;
 }
 
 export async function getDashboardProfiles(): Promise<LightProfile[]> {
   const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from("profiles")
-    .select(PROFILE_LIGHT_SELECT)
-    .is("deleted_at", null)
-    .order("full_name", { ascending: true });
-  if (error) throw new Error(error.message);
-  return (data as LightProfile[]) ?? [];
+  return fetchAllPages<LightProfile>((from, to) =>
+    supabase
+      .from("profiles")
+      .select(PROFILE_LIGHT_SELECT)
+      .is("deleted_at", null)
+      .order("full_name", { ascending: true })
+      .range(from, to)
+  );
 }
 
 export async function getDashboardCompaniesCount(): Promise<number> {

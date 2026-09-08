@@ -1,4 +1,4 @@
-import { getSupabaseClient } from "@/lib/supabase/db";
+import { getSupabaseClient, fetchAllPages } from "@/lib/supabase/db";
 import type { UserRole } from "@/types";
 
 // ═══════════════════════════════════════════════════════════════
@@ -88,25 +88,27 @@ export async function getTopbarStats(
     }
 
     // Todos los roles (incluido internal): filtrar por asignación directa
+    // Paginar: un usuario puede tener mas de 1000 casos asignados
     {
-      const { data: myClaims, error: claimsError } = await buildClaimsQuery()
-        .or(`assigned_adjuster_id.eq.${pid},adjuster_id.eq.${pid},inspector_id.eq.${pid},dispatcher_id.eq.${pid},auditor_id.eq.${pid},assistant_id.eq.${pid}`);
+      const myClaims = await fetchAllPages<{
+        id: string;
+        assigned_adjuster_id: string | null;
+        adjuster_id: string | null;
+        inspector_id: string | null;
+        dispatcher_id: string | null;
+        auditor_id: string | null;
+        assistant_id: string | null;
+      }>((from, to) =>
+        buildClaimsQuery()
+          .or(`assigned_adjuster_id.eq.${pid},adjuster_id.eq.${pid},inspector_id.eq.${pid},dispatcher_id.eq.${pid},auditor_id.eq.${pid},assistant_id.eq.${pid}`)
+          .range(from, to)
+      ).catch(() => [] as never[]);
 
-      if (!claimsError && myClaims) {
-        for (const c of myClaims as Array<{
-          id: string;
-          assigned_adjuster_id: string | null;
-          adjuster_id: string | null;
-          inspector_id: string | null;
-          dispatcher_id: string | null;
-          auditor_id: string | null;
-          assistant_id: string | null;
-        }>) {
-          if (c.assigned_adjuster_id === pid || c.adjuster_id === pid) liquidations++;
-          if (c.inspector_id === pid) inspections++;
-          if (c.dispatcher_id === pid) dispatches++;
-          if (c.auditor_id === pid) audits++;
-        }
+      for (const c of myClaims) {
+        if (c.assigned_adjuster_id === pid || c.adjuster_id === pid) liquidations++;
+        if (c.inspector_id === pid) inspections++;
+        if (c.dispatcher_id === pid) dispatches++;
+        if (c.auditor_id === pid) audits++;
       }
     }
 
@@ -119,29 +121,37 @@ export async function getTopbarStats(
     let alert = 0;
     let overdue = 0;
 
-    // Query base: claim_actions activas
-    let actionsQuery = supabase
-      .from("claim_actions")
-      .select(
-        "id, issuer_id, reviewer_id, approver_id, dispatcher_id, expected_date, action_status_id, is_active, action_status:lookup_catalog!claim_actions_action_status_id_fkey(id, code)"
-      )
-      .eq("is_active", true);
-
-    // Filtro por rol
-    {
-      // adjuster, usuarios globales (sin compañía), inspector, assistant, auditor, dispatcher — filtrar por asignación
+    // Query base: claim_actions activas (paginada)
+    const buildActionsQuery = () => {
+      let q = supabase
+        .from("claim_actions")
+        .select(
+          "id, issuer_id, reviewer_id, approver_id, dispatcher_id, expected_date, action_status_id, is_active, action_status:lookup_catalog!claim_actions_action_status_id_fkey(id, code)"
+        )
+        .eq("is_active", true);
       if (profile.role === "adjuster" || !profile.company_id) {
-        actionsQuery = actionsQuery.or(`issuer_id.eq.${pid},reviewer_id.eq.${pid},approver_id.eq.${pid},dispatcher_id.eq.${pid}`);
+        q = q.or(`issuer_id.eq.${pid},reviewer_id.eq.${pid},approver_id.eq.${pid},dispatcher_id.eq.${pid}`);
       } else if (profile.role === "inspector") {
-        actionsQuery = actionsQuery.eq("issuer_id", pid);
+        q = q.eq("issuer_id", pid);
       } else if (profile.role === "assistant") {
-        actionsQuery = actionsQuery.or(`issuer_id.eq.${pid},reviewer_id.eq.${pid}`);
+        q = q.or(`issuer_id.eq.${pid},reviewer_id.eq.${pid}`);
       }
-    }
+      return q;
+    };
 
-    const { data: actions, error: actionsError } = await actionsQuery;
+    const actions = await fetchAllPages<{
+      id: string;
+      issuer_id: string | null;
+      reviewer_id: string | null;
+      approver_id: string | null;
+      dispatcher_id: string | null;
+      expected_date: string | null;
+      action_status_id: string | null;
+      action_status: { id: string; code: string } | null;
+    }>((from, to) => buildActionsQuery().range(from, to))
+      .catch(() => [] as never[]);
 
-    if (!actionsError && actions) {
+    {
       const nowMs = Date.now();
 
       for (const action of actions as Array<{

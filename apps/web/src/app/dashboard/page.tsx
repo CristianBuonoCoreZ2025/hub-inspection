@@ -553,7 +553,7 @@ export default function DashboardPage() {
     });
     const avgTimeByInspector = Object.entries(timeByInspectorMap)
       .map(([name, times]) => ({ name, value: Math.round(times.reduce((a, b) => a + b, 0) / times.length) }))
-      .sort((a, b) => b.value - a.value)
+      .sort((a, b) => a.value - b.value)
       .slice(0, 8);
 
     // Siniestros por región

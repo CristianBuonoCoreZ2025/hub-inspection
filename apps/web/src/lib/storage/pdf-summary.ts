@@ -16,15 +16,19 @@ export async function summarizePdf(
   maxPages = 10
 ): Promise<{ text: string; summary: string; pageCount: number } | null> {
   try {
-    const { PDFParse } = await import("pdf-parse");
-    const uint8 = new Uint8Array(buffer);
-    const parser = new PDFParse(uint8);
-    const result = await parser.getText();
+    // pdf-parse v1: exporta una funcion que recibe el buffer y devuelve
+    // { numpages, text, ... } — el texto completo viene unido.
+    const pdfParse = (await import("pdf-parse")).default as unknown as (
+      data: Buffer
+    ) => Promise<{ numpages: number; text: string }>;
+    const result = await pdfParse(buffer);
 
-    const total = result.total || 0;
-    const pages = result.pages || [];
-    const analyzedPages = pages.slice(0, maxPages);
-    const analyzedText = analyzedPages.map((p: { text: string }) => p.text).join("\n\n");
+    const total = result.numpages || 0;
+    const fullText = result.text || "";
+
+    // v1 no separa paginas: aproximamos por caracteres (~3000 por pagina)
+    const maxChars = maxPages * 3000;
+    const analyzedText = fullText.length > maxChars ? fullText.slice(0, maxChars) : fullText;
 
     const summary = buildSummary(analyzedText, total, maxPages);
 

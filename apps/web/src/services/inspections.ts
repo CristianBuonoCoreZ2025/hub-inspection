@@ -1,4 +1,4 @@
-import { fetchAll, fetchById, insertRow, updateRow, deleteRow, getSupabaseClient } from "@/lib/supabase/db";
+import { fetchAll, fetchAllPages, fetchById, insertRow, updateRow, deleteRow, getSupabaseClient } from "@/lib/supabase/db";
 import { formatUserDateTime, getUserTimeZone, BUSINESS_TIME_ZONE } from "@/lib/timezone";
 import type {
   InspectionSession, PropertyRisk, PropertyMateriality,
@@ -605,64 +605,72 @@ export async function getInspectorSchedule(
 ) {
   const supabase = getSupabaseClient();
 
-  // 1. Buscar sesiones directamente por inspector_id
-  const { data: directData, error: directError } = await supabase
-    .from("inspection_sessions")
-    .select(`
+  type ScheduleSession = {
+    id: string;
+    scheduled_at: string;
+    inspection_type: "onsite" | "remote";
+    status: string;
+    claim: { claim_number: string; claim_address: string | null; claims_participants: { type: string; full_name: string | null }[] } | null;
+  };
+
+  // 1. Buscar sesiones directamente por inspector_id (paginado)
+  const scheduleSelect = `
       id, scheduled_at, inspection_type, status, claim_id,
       claim:claims!inspection_sessions_claim_id_fkey(claim_number, claim_address, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name))
-    `)
-    .eq("inspector_id", inspectorId)
-    .gte("scheduled_at", dateStart)
-    .lt("scheduled_at", dateEnd)
-    .in("status", ["scheduled", "active"])
-    .order("scheduled_at", { ascending: true });
-
-  if (directError) throw new Error(directError.message);
-
-  // 2. Buscar también por claims.inspector_id (sesiones sin inspector_id propio)
-  const { data: claimsData, error: claimsError } = await supabase
-    .from("claims")
-    .select("id, claim_number, claim_address")
-    .eq("inspector_id", inspectorId);
-
-  if (claimsError) throw new Error(claimsError.message);
-  const claims = (claimsData as { id: string; claim_number: string; claim_address: string }[]) || [];
-  const claimIds = claims.map(c => c.id);
-
-  let legacySessions: typeof directData = [];
-  if (claimIds.length > 0) {
-    const { data: legacyData, error: legacyError } = await supabase
+    `;
+  const directData = await fetchAllPages<ScheduleSession>((from, to) =>
+    supabase
       .from("inspection_sessions")
-      .select(`
-        id, scheduled_at, inspection_type, status, claim_id,
-        claim:claims!inspection_sessions_claim_id_fkey(claim_number, claim_address, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name))
-      `)
-      .in("claim_id", claimIds)
-      .is("inspector_id", null)
+      .select(scheduleSelect)
+      .eq("inspector_id", inspectorId)
       .gte("scheduled_at", dateStart)
       .lt("scheduled_at", dateEnd)
       .in("status", ["scheduled", "active"])
-      .order("scheduled_at", { ascending: true });
+      .order("scheduled_at", { ascending: true })
+      .range(from, to)
+  );
 
-    if (legacyError) throw new Error(legacyError.message);
-    legacySessions = legacyData ?? [];
+  // 2. Buscar también por claims.inspector_id (sesiones sin inspector_id propio)
+  //    Paginado: un inspector puede tener muchos claims historicos
+  const claims = await fetchAllPages<{ id: string; claim_number: string; claim_address: string }>((from, to) =>
+    supabase
+      .from("claims")
+      .select("id, claim_number, claim_address")
+      .eq("inspector_id", inspectorId)
+      .range(from, to)
+  );
+  const claimIds = claims.map(c => c.id);
+
+  const legacySessions: ScheduleSession[] = [];
+  if (claimIds.length > 0) {
+    // Batches de 100 para no exceder el largo de URL en .in()
+    const batches: string[][] = [];
+    for (let i = 0; i < claimIds.length; i += 100) batches.push(claimIds.slice(i, i + 100));
+    for (const batch of batches) {
+      const legacyData = await fetchAllPages<ScheduleSession>((from, to) =>
+        supabase
+          .from("inspection_sessions")
+          .select(scheduleSelect)
+          .in("claim_id", batch)
+          .is("inspector_id", null)
+          .gte("scheduled_at", dateStart)
+          .lt("scheduled_at", dateEnd)
+          .in("status", ["scheduled", "active"])
+          .order("scheduled_at", { ascending: true })
+          .range(from, to)
+      );
+      legacySessions.push(...legacyData);
+    }
   }
 
   // Combinar y deduplicar
-  const allSessions = [...(directData ?? []), ...legacySessions];
+  const allSessions = [...directData, ...legacySessions];
   const seen = new Set<string>();
   const sessions = allSessions.filter((s) => {
     if (seen.has(s.id)) return false;
     seen.add(s.id);
     return true;
-  }) as {
-    id: string;
-    scheduled_at: string;
-    inspection_type: "onsite" | "remote";
-    status: string;
-    claim: { claim_number: string; claim_address: string | null; claims_participants: { type: string; full_name: string | null }[] };
-  }[];
+  });
 
   // Filtrar claims_participants client-side: solo insured, limit 1
   for (const s of sessions) {
@@ -1966,13 +1974,14 @@ export async function forceReleaseOfflineSession(
  */
 export async function getOfflineDownloadedSessions() {
   const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from("inspection_sessions")
-    .select(`${SESSION_SELECT}, inspector:profiles!offline_downloaded_by(full_name), claim:claims(liquidation_number, client_reference)`)
-    .not("offline_downloaded_by", "is", null)
-    .order("offline_downloaded_at", { ascending: false });
-  if (error) throw new Error(error.message);
-  return (data || []) as (InspectionSession & { inspector?: { full_name: string }; claim?: { liquidation_number: string | null; client_reference: string | null } })[];
+  return fetchAllPages<InspectionSession & { inspector?: { full_name: string }; claim?: { liquidation_number: string | null; client_reference: string | null } }>((from, to) =>
+    supabase
+      .from("inspection_sessions")
+      .select(`${SESSION_SELECT}, inspector:profiles!offline_downloaded_by(full_name), claim:claims(liquidation_number, client_reference)`)
+      .not("offline_downloaded_by", "is", null)
+      .order("offline_downloaded_at", { ascending: false })
+      .range(from, to)
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════

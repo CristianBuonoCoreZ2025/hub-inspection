@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient, createAdminClient } from "@/lib/supabase/server";
+import { fetchAllPages } from "@/lib/supabase/db";
 import { logger } from "@/lib/logger";
 
 /**
@@ -339,14 +340,17 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = createAdminClient();
-    const { data, error } = await supabase
-      .from("magic_link_connection_logs")
-      .select("*")
-      .eq("session_id", sessionId)
-      .order("connected_at", { ascending: false });
+    // Paginar: una sesion puede acumular mas de 1000 logs de conexion
+    const logs = await fetchAllPages<Record<string, unknown>>((from, to) =>
+      supabase
+        .from("magic_link_connection_logs")
+        .select("*")
+        .eq("session_id", sessionId)
+        .order("connected_at", { ascending: false })
+        .range(from, to)
+    );
 
-    if (error) throw new Error(error.message);
-    return NextResponse.json({ logs: data || [] });
+    return NextResponse.json({ logs });
   } catch (err) {
     logger.error("API /api/inspection/connection-log GET error", err as Error, {
       component: "connection-log",

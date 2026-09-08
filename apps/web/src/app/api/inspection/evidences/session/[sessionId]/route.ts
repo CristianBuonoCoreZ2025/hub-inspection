@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
+import { fetchAllPages } from "@/lib/supabase/db";
 import { presignEvidenceUrls } from "@/lib/supabase/storage-presigned";
 import { logger } from "@/lib/logger";
 
@@ -22,18 +23,19 @@ export async function GET(
 
     const supabase = createAdminClient();
 
-    const { data: evidences, error } = await supabase
-      .from("inspection_evidences")
-      .select(
-        "id, url, type, description, category, include_in_report, captured_at, created_at, metadata, captured_by, lat, lng, exif_lat, exif_lng, ai_summary, ai_model, ai_status, source, uploader:profiles!inspection_evidences_captured_by_fkey(id, full_name, email)"
-      )
-      .eq("session_id", sessionId)
-      .order("created_at", { ascending: false });
+    // Paginar: una sesion puede tener mas de 1000 evidencias
+    const evs = await fetchAllPages<Record<string, unknown>>((from, to) =>
+      supabase
+        .from("inspection_evidences")
+        .select(
+          "id, url, type, description, category, include_in_report, captured_at, created_at, metadata, captured_by, lat, lng, exif_lat, exif_lng, ai_summary, ai_model, ai_status, source, uploader:profiles!inspection_evidences_captured_by_fkey(id, full_name, email)"
+        )
+        .eq("session_id", sessionId)
+        .order("created_at", { ascending: false })
+        .range(from, to)
+    );
 
-    if (error) throw new Error(error.message);
-
-    const evs = evidences || [];
-    await presignEvidenceUrls(evs);
+    await presignEvidenceUrls(evs as never[]);
 
     return NextResponse.json({ evidences: evs });
   } catch (err) {

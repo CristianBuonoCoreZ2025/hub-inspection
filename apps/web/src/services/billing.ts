@@ -1,4 +1,4 @@
-import { fetchAll, fetchById, insertRow, insertMany, updateRow, getSupabaseClient } from "@/lib/supabase/db";
+import { fetchAll, fetchById, insertRow, insertMany, updateRow, getSupabaseClient, fetchAllPages } from "@/lib/supabase/db";
 import type { BillingBatch, BillingBatchItem } from "@/types";
 
 // ═══════════════════════════════════════════════════════════════
@@ -7,6 +7,30 @@ import type { BillingBatch, BillingBatchItem } from "@/types";
 
 const BATCH_SELECT = "id, company_id, name, status, cutoff_date, generated_at, sent_at, approved_at, approved_by, item_count, created_at, updated_at";
 const ITEM_SELECT = "id, batch_id, session_id, claim_id, include_for_billing, billed, liquidation_number, case_code, inspection_number, client_reference, inspector_name, insured_name, claim_address, inspection_date, inspection_type, created_at";
+
+const SESSION_SELECT = "id, company_id, claim_id, status, inspection_type, inspection_date, ended_at, inspection_number, inspector:profiles!inspection_sessions_inspector_id_fkey(full_name), claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(liquidation_number, client_reference, claim_address, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name))";
+
+// Fin del día de corte en la zona horaria LOCAL del navegador (sin sufijo Z)
+function cutoffEndOfDay(cutoffDate: string): Date {
+  return new Date(`${cutoffDate}T23:59:59.999`);
+}
+
+interface SessionRow {
+  id: string;
+  claim_id: string;
+  inspection_type: string;
+  inspection_date: string | null;
+  ended_at: string | null;
+  inspection_number: string | null;
+  inspector?: { full_name: string | null } | null;
+  claim_action?: { code: string | null } | null;
+  claim?: {
+    liquidation_number?: string;
+    client_reference?: string;
+    claim_address?: string;
+    claims_participants?: { type: string; full_name?: string }[];
+  };
+}
 
 // ── Listar nóminas ──
 export async function getBillingBatches() {
@@ -37,40 +61,28 @@ export async function getBillingBatchItems(batchId: string) {
 export async function generateBillingBatch(companyId?: string | null, cutoffDate?: string | null) {
   const supabase = getSupabaseClient();
 
-  // 1. Traer session_ids que ya están facturadas
-  const { data: billedItems } = await supabase
-    .from("billing_batch_items")
-    .select("session_id")
-    .eq("billed", true);
+  // 1. Traer session_ids que ya están facturadas (paginado)
+  const billedItems = await fetchAllPages<{ session_id: string }>((from, to) =>
+    supabase.from("billing_batch_items").select("session_id").eq("billed", true).range(from, to)
+  );
+  const billedSessionIds = new Set(billedItems.map((i) => i.session_id));
 
-  const billedSessionIds = (billedItems || []).map((i: { session_id: string }) => i.session_id);
-
-  // 2. Traer inspecciones completadas, excluyendo las ya facturadas
-  let query = supabase
-    .from("inspection_sessions")
-    .select(
-      "id, company_id, claim_id, status, inspection_type, inspection_date, ended_at, inspection_number, inspector:profiles!inspection_sessions_inspector_id_fkey(full_name), claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code), claim:claims!inspection_sessions_claim_id_fkey(liquidation_number, client_reference, claim_address, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name))"
-    )
-    .eq("status", "completed")
-    .order("ended_at", { ascending: false });
-
-  if (companyId) {
-    query = query.eq("company_id", companyId);
-  }
-
-  // Fecha de corte: ended_at <= cutoffDate 23:59:59.999
-  if (cutoffDate) {
-    const cutoff = new Date(`${cutoffDate}T23:59:59.999Z`);
-    query = query.lte("ended_at", cutoff.toISOString());
-  }
-
-  const { data: sessions, error } = await query;
-  if (error) throw new Error(error.message);
+  // 2. Traer inspecciones completadas dentro del corte (paginado)
+  const cutoffIso = cutoffDate ? cutoffEndOfDay(cutoffDate).toISOString() : null;
+  const sessions = await fetchAllPages<SessionRow>((from, to) => {
+    let query = supabase
+      .from("inspection_sessions")
+      .select(SESSION_SELECT)
+      .eq("status", "completed")
+      .order("ended_at", { ascending: false })
+      .range(from, to);
+    if (companyId) query = query.eq("company_id", companyId);
+    if (cutoffIso) query = query.lte("ended_at", cutoffIso);
+    return query;
+  });
 
   // Filtrar las ya facturadas client-side
-  const available = (sessions || []).filter(
-    (s: { id: string }) => !billedSessionIds.includes(s.id)
-  );
+  const available = sessions.filter((s) => !billedSessionIds.has(s.id));
 
   if (available.length === 0) {
     throw new Error("No hay inspecciones completadas pendientes de facturación" + (cutoffDate ? ` hasta el ${cutoffDate}` : ""));
@@ -91,22 +103,7 @@ export async function generateBillingBatch(companyId?: string | null, cutoffDate
   }, BATCH_SELECT);
 
   // 4. Crear los items con snapshot de datos
-  const items = available.map((s: {
-    id: string;
-    claim_id: string;
-    inspection_type: string;
-    inspection_date: string | null;
-    ended_at: string | null;
-    inspection_number: string | null;
-    inspector?: { full_name: string | null } | null;
-    claim_action?: { code: string | null } | null;
-    claim?: {
-      liquidation_number?: string;
-      client_reference?: string;
-      claim_address?: string;
-      claims_participants?: { type: string; full_name?: string }[];
-    };
-  }) => {
+  const items = available.map((s) => {
     const insured = s.claim?.claims_participants?.find((p) => p.type === "insured");
     return {
       batch_id: batch.id,
@@ -172,39 +169,22 @@ export async function approveBatch(id: string, approvedBy: string) {
 export async function countPendingBilling(companyId?: string | null, cutoffDate?: string | null): Promise<number> {
   const supabase = getSupabaseClient();
 
-  const { data: billedItems } = await supabase
-    .from("billing_batch_items")
-    .select("session_id")
-    .eq("billed", true);
+  const billedItems = await fetchAllPages<{ session_id: string }>((from, to) =>
+    supabase.from("billing_batch_items").select("session_id").eq("billed", true).range(from, to)
+  );
+  const billedSessionIds = new Set(billedItems.map((i) => i.session_id));
 
-  const billedSessionIds = (billedItems || []).map((i: { session_id: string }) => i.session_id);
+  const cutoffIso = cutoffDate ? cutoffEndOfDay(cutoffDate).toISOString() : null;
+  const sessions = await fetchAllPages<{ id: string }>((from, to) => {
+    let query = supabase
+      .from("inspection_sessions")
+      .select("id")
+      .eq("status", "completed")
+      .range(from, to);
+    if (companyId) query = query.eq("company_id", companyId);
+    if (cutoffIso) query = query.lte("ended_at", cutoffIso);
+    return query;
+  });
 
-  let query = supabase
-    .from("inspection_sessions")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "completed");
-
-  if (companyId) {
-    query = query.eq("company_id", companyId);
-  }
-
-  if (cutoffDate) {
-    const cutoff = new Date(`${cutoffDate}T23:59:59.999Z`);
-    query = query.lte("ended_at", cutoff.toISOString());
-  }
-
-  const { count } = await query;
-
-  // Restar las ya facturadas — si hay cutoff, hay que filtrar los billed tambien
-  if (!cutoffDate) {
-    return Math.max(0, (count || 0) - billedSessionIds.length);
-  }
-  // Con cutoff: contar solo las billed que caen dentro del rango
-  if (billedSessionIds.length === 0) return count || 0;
-  const { data: billedSessions } = await supabase
-    .from("inspection_sessions")
-    .select("id")
-    .in("id", billedSessionIds)
-    .lte("ended_at", new Date(`${cutoffDate}T23:59:59.999Z`).toISOString());
-  return Math.max(0, (count || 0) - (billedSessions || []).length);
+  return sessions.filter((s) => !billedSessionIds.has(s.id)).length;
 }

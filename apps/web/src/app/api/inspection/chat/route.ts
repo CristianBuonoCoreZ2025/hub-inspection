@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
+import { fetchAllPages } from "@/lib/supabase/db";
 import { logger } from "@/lib/logger";
 
 /**
@@ -30,15 +31,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
-    const { data: messages, error } = await supabase
-      .from("inspection_chat_messages")
-      .select("id, content, sender_name, sender_role, created_at")
-      .eq("session_id", sessionId)
-      .order("created_at", { ascending: true });
+    // Paginar: sesiones largas pueden acumular mas de 1000 mensajes
+    const messages = await fetchAllPages<Record<string, unknown>>((from, to) =>
+      supabase
+        .from("inspection_chat_messages")
+        .select("id, content, sender_name, sender_role, created_at")
+        .eq("session_id", sessionId)
+        .order("created_at", { ascending: true })
+        .range(from, to)
+    );
 
-    if (error) throw new Error(error.message);
-
-    return NextResponse.json({ messages: messages || [] });
+    return NextResponse.json({ messages });
   } catch (err) {
     logger.error("API /api/inspection/chat error", err as Error, {
       component: "inspection-chat-route",
