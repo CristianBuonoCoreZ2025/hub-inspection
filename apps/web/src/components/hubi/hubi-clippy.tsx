@@ -146,8 +146,12 @@ function formatHubiResponse(text: string): string {
 }
 
 function getHiddenFromStorage(): boolean {
-  if (typeof window === "undefined") return false;
-  try { return localStorage.getItem("hubi-robot-hidden") === "true"; } catch { return false; }
+  if (typeof window === "undefined") return true;
+  try {
+    const v = localStorage.getItem("hubi-robot-hidden");
+    // Por defecto oculto — solo aparece si el usuario lo llama desde el top-bar
+    return v === null ? true : v === "true";
+  } catch { return true; }
 }
 
 export function HubiClippy({ userRole = "inspector", userName = "" }: HubiClippyProps) {
@@ -190,17 +194,9 @@ export function HubiClippy({ userRole = "inspector", userName = "" }: HubiClippy
     try { localStorage.setItem("hubi-robot-hidden", String(hidden)); } catch {}
   }, [hidden]);
 
-  // Auto-aparecer (no si está oculto)
-  useEffect(() => {
-    if (hidden) return;
-    const t = setTimeout(() => {
-      setOpen(true);
-      setView("greeting");
-      setHubiState("talking");
-      setTimeout(() => setHubiState("idle"), 1200);
-    }, 1500);
-    return () => clearTimeout(t);
-  }, [pathname, hidden]);
+  // Hubi NO auto-aparece. Solo aparece cuando el usuario lo llama
+  // desde el botón del top-bar (evento "hubi-open") o con Ctrl+Shift+H.
+  // Al cerrar, se oculta y no vuelve hasta que el usuario lo llame.
 
   // Focus input al abrir
   useEffect(() => {
