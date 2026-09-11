@@ -2,7 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useState, useMemo, useCallback } from "react";
-import { getDashboardClaims, getDashboardSessions, getDashboardProfiles, getDashboardCompaniesCount } from "@/services/dashboard";
+import { getDashboardClaims, getDashboardSessions, getDashboardProfiles, getDashboardCompaniesCount, getDashboardDetail } from "@/services/dashboard";
+import type { DashboardDetailItem } from "@/services/dashboard";
 import { getCountries } from "@/services/catalogs";
 import { userTypeLabels } from "@/services/permissions";
 import { useAuth } from "@/hooks/use-auth";
@@ -117,14 +118,6 @@ type KpiDetailRow = {
   ended?: string | null;
   duration?: number;
 };
-
-function isToday(d: string) {
-  const date = new Date(d);
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-  return date >= start && date <= end;
-}
 
 function formatDuration(minutes: number): string {
   const totalMinutes = Math.max(0, Math.round(minutes));
@@ -985,89 +978,41 @@ export default function DashboardPage() {
   // Modal de detalle de KPI
   const [kpiModal, setKpiModal] = useState<{ title: string; key: string } | null>(null);
 
+  const { data: kpiDetailData, isLoading: kpiDetailLoading } = useQuery({
+    queryKey: ["dashboard-detail", kpiModal?.key],
+    queryFn: () => kpiModal ? getDashboardDetail(kpiModal.key, 10) : Promise.resolve([]),
+    enabled: !!kpiModal,
+  });
+
   const kpiDetailRows = useMemo<KpiDetailRow[]>(() => {
-    if (!kpiModal) return [];
-    const claimMap = new Map(myClaims.map((c) => [c.id, c]));
-    const getName = (id: string | null) =>
-      users?.find((u) => u.id === id)?.full_name || "Sin asignar";
-
-    const sessions = sessionList;
-
+    if (!kpiModal || !kpiDetailData) return [];
     const fmtDate = (d: string) => new Date(d).toLocaleDateString("es-CL", { timeZone: getUserTimeZone() });
-    const fmtTime = (d: string) =>
-      new Date(d).toLocaleTimeString("es-CL", { timeZone: getUserTimeZone(), hour: "2-digit", minute: "2-digit" });
-    const getBase = (s: (typeof sessions)[number]) => {
-      const claim = s.claim_id ? claimMap.get(s.claim_id) : undefined;
-      const date = s.scheduled_at || s.started_at || s.ended_at;
-      const liq = claim?.liquidation_number || "—";
-      const shortLiq = liq.startsWith("L-") ? liq.slice(2) : liq;
-      const insured = claim?.claims_participants?.find((p) => p.type === "insured")?.full_name || "—";
-      // Regla AGENTS.md: si la liquidación se muestra en el mismo contexto,
-      // el código de gestión debe ser el CORTO (solo gestión, sin prefijo de liquidación)
+    const fmtTime = (d: string) => new Date(d).toLocaleTimeString("es-CL", { timeZone: getUserTimeZone(), hour: "2-digit", minute: "2-digit" });
+
+    return (kpiDetailData as DashboardDetailItem[]).map((s) => {
       const rawCode = s.inspection_number || `I-${s.id.slice(0, 4)}`;
       const shortCode = rawCode.match(/^L-\d+-/) ? rawCode.replace(/^L-\d+-/, "") : rawCode;
+      const liq = s.liquidation_number || "—";
+      const shortLiq = liq.startsWith("L-") ? liq.slice(2) : liq;
+      const date = s.scheduled_at || s.started_at || s.ended_at;
+
       return {
         id: s.id,
         inspectionCode: shortCode,
         liquidation: shortLiq,
-        insured,
-        address: claim?.claim_address || "—",
-        inspector: getName(s.inspector_id),
+        insured: s.insured_name || "—",
+        address: s.claim_address || "—",
+        inspector: s.inspector_name || "Sin asignar",
         status: s.status,
         date: date ? fmtDate(date) : "—",
         time: date ? fmtTime(date) : "—",
+        scheduled: ["today", "my-total", "scheduled-today", "overdue"].includes(kpiModal.key) ? s.scheduled_at : undefined,
+        started: ["active", "my-active"].includes(kpiModal.key) ? s.started_at : undefined,
+        ended: ["completed-today", "my-completed", "avg-time"].includes(kpiModal.key) ? s.ended_at : undefined,
+        duration: s.duration_minutes ? Math.round(s.duration_minutes) : undefined,
       };
-    };
-
-    switch (kpiModal.key) {
-      case "today":
-      case "my-total":
-        return sessions
-          .filter((s) =>
-            (s.scheduled_at && isToday(s.scheduled_at)) ||
-            (s.started_at && isToday(s.started_at)) ||
-            (s.ended_at && isToday(s.ended_at))
-          )
-          .map((s) => ({ ...getBase(s), scheduled: s.scheduled_at }));
-      case "active":
-      case "my-active":
-        return sessions
-          .filter((s) => s.status === "active")
-          .map((s) => ({ ...getBase(s), started: s.started_at }));
-      case "scheduled-today":
-      case "my-scheduled":
-        return sessions
-          .filter((s) => s.status === "scheduled" && s.scheduled_at && isToday(s.scheduled_at))
-          .map((s) => ({ ...getBase(s), scheduled: s.scheduled_at }));
-      case "completed-today":
-      case "my-completed":
-        return sessions
-          .filter((s) => s.status === "completed" && s.ended_at && isToday(s.ended_at))
-          .map((s) => ({
-            ...getBase(s),
-            ended: s.ended_at,
-            duration:
-              s.started_at && s.ended_at
-                ? Math.round((new Date(s.ended_at).getTime() - new Date(s.started_at).getTime()) / 60000)
-                : 0,
-          }));
-      case "overdue":
-        return sessions
-          .filter((s) => (s.status === "scheduled" || s.status === "active") && s.scheduled_at && new Date(s.scheduled_at) < new Date())
-          .map((s) => ({ ...getBase(s), scheduled: s.scheduled_at }));
-      case "avg-time":
-        return sessions
-          .filter((s) => s.status === "completed" && s.started_at && s.ended_at)
-          .map((s) => ({
-            ...getBase(s),
-            ended: s.ended_at,
-            duration: Math.round((new Date(s.ended_at!).getTime() - new Date(s.started_at!).getTime()) / 60000),
-          }))
-          .sort((a, b) => b.duration - a.duration);
-      default:
-        return [];
-    }
-  }, [kpiModal, myClaims, sessionList, users]);
+    });
+  }, [kpiModal, kpiDetailData]);
 
   return (
     <div className="space-y-4">
@@ -1564,7 +1509,9 @@ export default function DashboardPage() {
             </DialogTitle>
           </div>
           <div className="modal-body modal-body-flush">
-            {kpiDetailRows.length === 0 ? (
+            {kpiDetailLoading ? (
+              <div className="py-12 text-center text-[11px] text-muted-foreground">Cargando...</div>
+            ) : kpiDetailRows.length === 0 ? (
               <div className="py-12 text-center text-[11px] text-muted-foreground">Sin datos para mostrar</div>
             ) : (
               <div className="app-data-table-wrap modal-grid-wrap">
@@ -1583,7 +1530,7 @@ export default function DashboardPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {kpiDetailRows.slice(0, 10).map((row) => (
+                    {kpiDetailRows.map((row) => (
                       <tr key={row.id}>
                         <td className="font-mono whitespace-nowrap">{row.inspectionCode}</td>
                         <td className="font-mono whitespace-nowrap">{row.liquidation}</td>
@@ -1621,13 +1568,9 @@ export default function DashboardPage() {
             )}
           </div>
           <div className="modal-footer">
-            {kpiDetailRows.length > 10 ? (
+            {kpiDetailRows.length > 0 ? (
               <span className="text-[11px] text-muted-foreground mr-auto">
-                Muestra parcial — primeros 10 registros de {kpiDetailRows.length}
-              </span>
-            ) : kpiDetailRows.length > 0 ? (
-              <span className="text-[11px] text-muted-foreground mr-auto">
-                {kpiDetailRows.length} registro{kpiDetailRows.length !== 1 ? "s" : ""}
+                Mostrando {kpiDetailRows.length} registro{kpiDetailRows.length !== 1 ? "s" : ""} (máx. 10)
               </span>
             ) : null}
             <button type="button" className="pg-btn-platinum" onClick={() => setKpiModal(null)}>

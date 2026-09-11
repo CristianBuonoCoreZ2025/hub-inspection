@@ -58,6 +58,71 @@ interface LightProfile {
   is_active: boolean;
 }
 
+export interface DashboardSummary {
+  claims: {
+    total: number;
+    open: number;
+    closed: number;
+    created: number;
+    adjustment: number;
+    dispatchment: number;
+    reopened: number;
+  };
+  sessions: {
+    total: number;
+    scheduled: number;
+    active: number;
+    completed: number;
+    cancelled: number;
+  };
+  today: {
+    scheduled_today: number;
+    completed_today: number;
+    inspections_today: number;
+    overdue: number;
+    avg_minutes: number;
+  };
+  months: Array<{ name: string; value: number; value2: number }>;
+  personal: {
+    total: number;
+    active: number;
+    scheduled: number;
+    completed: number;
+  };
+  top_ramos: Array<{ name: string; value: number; color: string | null }>;
+  top_companies: Array<{ id: string; name: string; value: number; inspections: number }>;
+  top_inspectors: Array<{
+    id: string;
+    name: string;
+    total: number;
+    completed: number;
+    scheduled: number;
+    active: number;
+    avg_minutes: number;
+  }>;
+  claims_by_day: Array<{ name: string; value: number }>;
+  inspections_by_day: Array<{ name: string; value: number }>;
+  inspections_by_status: Array<{ name: string; value: number; color: string }>;
+  recent_sessions: DashboardDetailItem[];
+}
+
+export interface DashboardDetailItem {
+  id: string;
+  status: string;
+  scheduled_at: string | null;
+  started_at: string | null;
+  ended_at: string | null;
+  inspector_id: string | null;
+  claim_id: string | null;
+  liquidation_number: string | null;
+  claim_address: string | null;
+  inspection_number: string | null;
+  insured_name: string | null;
+  inspector_name: string | null;
+  duration_minutes?: number | null;
+}
+
+
 // ── SELECT ligeros ──
 
 const CLAIM_LIGHT_SELECT =
@@ -119,6 +184,26 @@ export async function getDashboardCompaniesCount(): Promise<number> {
     .select("id", { count: "exact", head: true });
   if (error) throw new Error(error.message);
   return count ?? 0;
+}
+
+export async function getDashboardSummary(): Promise<DashboardSummary> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase.rpc("get_dashboard_summary");
+  if (error) throw new Error(error.message);
+  return (data ?? {}) as DashboardSummary;
+}
+
+export async function getDashboardDetail(
+  key: string,
+  limit = 10
+): Promise<DashboardDetailItem[]> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase.rpc("get_dashboard_detail", {
+    p_key: key,
+    p_limit: limit,
+  });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as DashboardDetailItem[];
 }
 
 export type { LightClaim, LightSession, LightProfile };
