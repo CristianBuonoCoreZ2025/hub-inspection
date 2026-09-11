@@ -311,7 +311,7 @@ export function TopBar() {
                 type="button"
                 onClick={() => {
                   try { localStorage.setItem("hubi-robot-hidden", "false"); } catch {}
-                  window.dispatchEvent(new CustomEvent("hubi-open"));
+                  window.dispatchEvent(new CustomEvent("hubi-open", { detail: { source: "top-bar" } }));
                 }}
                 className="topbar-hubi-btn dock-item"
                 aria-label="Abrir Hubi"

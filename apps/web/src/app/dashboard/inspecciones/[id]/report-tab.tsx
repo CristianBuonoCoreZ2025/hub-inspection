@@ -4,6 +4,7 @@ import { useRef, useCallback, useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { getReport, createReport, updateReport, completeInspection } from "@/services/inspections";
+import type { InspectionReport } from "@/types";
 import { getPropertyClassifications, getHousingDestinations } from "@/services/catalogs";
 import { resolveFieldConfig, getSortedVisibleFields } from "@/lib/field-config";
 import { issueClaimAction } from "@/services/claim-actions";
@@ -168,7 +169,7 @@ export default function ReportTab({
     enabled: !offlineMode,
   });
 
-  const { data: report, isLoading, isError, error: reportError } = useQuery({
+  const { data: report, isLoading, isError, error: reportError } = useQuery<InspectionReport | null>({
     queryKey: ["report", sessionId],
     queryFn: () => getReport(sessionId),
     enabled: !offlineMode,
@@ -256,7 +257,7 @@ export default function ReportTab({
       if (report) {
         return updateReport(report.id, {
           status,
-          generated_at: new Date().toISOString(),
+          generated_at: report.generated_at,
           report_type: reportType,
           ...(reportUrl ? { report_url: reportUrl } : {}),
         });
@@ -460,7 +461,7 @@ export default function ReportTab({
 
       // 4. Marcar el reporte como final con la URL del PDF
       if (report) {
-        await updateReport(report.id, { status: "final", generated_at: new Date().toISOString(), report_url: reportUrl });
+        await updateReport(report.id, { status: "final", generated_at: report.generated_at, report_url: reportUrl });
       } else {
         await createReport({
           session_id: sessionId,
@@ -530,7 +531,7 @@ export default function ReportTab({
 
       // Actualizar o crear el reporte con la nueva URL
       if (report) {
-        await updateReport(report.id, { status: "final", generated_at: new Date().toISOString(), report_url: reportUrl });
+        await updateReport(report.id, { status: "final", generated_at: report.generated_at, report_url: reportUrl });
       } else {
         await createReport({
           session_id: sessionId,
