@@ -1,8 +1,11 @@
 -- ═══════════════════════════════════════════════════════════════
--- Migration 366: Dashboard agregado server-side (versión 2)
+-- Migration 366: Dashboard agregado server-side (versión 3)
 --
--- Devuelve conteos y rankings ya calculados en Postgres, respetando RLS.
--- Las funciones son SECURITY INVOKER con SET search_path = public.
+-- Reemplaza el patrón de traer TODOS los claims/sessions al navegador.
+-- SECURITY DEFINER + filtro manual de acceso para evitar el costo de
+-- ejecutar is_claim_accessible/is_session_accessible fila a fila.
+--
+-- SET search_path = public (regla AGENTS.md).
 -- ═══════════════════════════════════════════════════════════════
 
 DROP FUNCTION IF EXISTS get_dashboard_summary(TEXT, INT);
@@ -15,19 +18,51 @@ CREATE OR REPLACE FUNCTION get_dashboard_summary(
 RETURNS JSONB
 LANGUAGE plpgsql
 STABLE
-SECURITY INVOKER
+SECURITY DEFINER
 SET search_path = public
 AS $func$
 DECLARE
   v_profile_id UUID;
+  v_is_internal BOOLEAN;
   v_now TIMESTAMPTZ;
   v_today DATE;
   v_result JSONB;
 BEGIN
-  SELECT id INTO v_profile_id FROM profiles WHERE user_id = auth.uid() LIMIT 1;
+  -- Perfil del usuario autenticado (una sola vez)
+  SELECT id, COALESCE(role = 'internal', false)
+  INTO v_profile_id, v_is_internal
+  FROM profiles
+  WHERE user_id = auth.uid()
+  LIMIT 1;
+
   v_now := timezone(p_timezone, now());
   v_today := v_now::date;
 
+  -- Filtro manual equivalente a is_claim_accessible / is_session_accessible.
+  -- Evita que RLS ejecute la función por cada fila.
+  WITH
+    accessible_claims AS (
+      SELECT c.*
+      FROM claims c
+      WHERE c.disabled = false
+        AND (
+          v_is_internal
+          OR c.assigned_adjuster_id = v_profile_id
+          OR c.adjuster_id = v_profile_id
+          OR c.inspector_id = v_profile_id
+          OR c.dispatcher_id = v_profile_id
+          OR c.auditor_id = v_profile_id
+          OR c.assistant_id = v_profile_id
+        )
+    ),
+    accessible_sessions AS (
+      SELECT s.*
+      FROM inspection_sessions s
+      LEFT JOIN accessible_claims c ON c.id = s.claim_id
+      WHERE v_is_internal
+         OR s.inspector_id = v_profile_id
+         OR c.id IS NOT NULL
+    )
   SELECT jsonb_build_object(
     'claims', (
       SELECT jsonb_build_object(
@@ -39,9 +74,8 @@ BEGIN
         'dispatchment', COUNT(*) FILTER (WHERE lc.code = 'dispatchment'),
         'reopened', COUNT(*) FILTER (WHERE lc.code = 'reopened')
       )
-      FROM claims c
+      FROM accessible_claims c
       LEFT JOIN lookup_catalog lc ON lc.id = c.status_id AND lc.category = 'claim_status'
-      WHERE c.disabled = false
     ),
     'sessions', (
       SELECT jsonb_build_object(
@@ -51,7 +85,7 @@ BEGIN
         'completed', COUNT(*) FILTER (WHERE status = 'completed'),
         'cancelled', COUNT(*) FILTER (WHERE status = 'cancelled')
       )
-      FROM inspection_sessions
+      FROM accessible_sessions
     ),
     'today', (
       SELECT jsonb_build_object(
@@ -63,17 +97,16 @@ BEGIN
         'overdue', COUNT(*) FILTER (WHERE s.status IN ('scheduled','active') AND s.scheduled_at IS NOT NULL AND timezone(p_timezone, s.scheduled_at) < v_now),
         'avg_minutes', COALESCE(AVG(EXTRACT(EPOCH FROM (s.ended_at - s.started_at)) / 60) FILTER (WHERE s.status = 'completed' AND s.started_at IS NOT NULL AND s.ended_at IS NOT NULL), 0)
       )
-      FROM inspection_sessions s
+      FROM accessible_sessions s
     ),
     'top_companies', COALESCE((
       SELECT jsonb_agg(jsonb_build_object('id', t.id, 'name', t.name, 'value', t.claims, 'inspections', t.inspections) ORDER BY t.claims DESC)
       FROM (
         SELECT COALESCE(ic.id::text, 'unknown') AS id, COALESCE(ic.name, 'Sin compañía') AS name,
                COUNT(DISTINCT c.id) AS claims, COUNT(DISTINCT s.id) AS inspections
-        FROM claims c
+        FROM accessible_claims c
         LEFT JOIN insurance_companies ic ON ic.id = c.insurance_company_id
-        LEFT JOIN inspection_sessions s ON s.claim_id = c.id
-        WHERE c.disabled = false
+        LEFT JOIN accessible_sessions s ON s.claim_id = c.id
         GROUP BY ic.id, ic.name
         ORDER BY COUNT(DISTINCT c.id) DESC
         LIMIT 6
@@ -83,10 +116,9 @@ BEGIN
       SELECT jsonb_agg(jsonb_build_object('name', t.name, 'value', t.n, 'color', t.color) ORDER BY t.n DESC)
       FROM (
         SELECT COALESCE(bl.name, ct.name, 'Sin línea de negocio') AS name, COALESCE(MAX(bl.color), '#0095DA') AS color, COUNT(*) AS n
-        FROM claims c
+        FROM accessible_claims c
         LEFT JOIN business_lines bl ON bl.id = c.business_line_id
         LEFT JOIN claim_types ct ON ct.id = c.claim_type_id
-        WHERE c.disabled = false
         GROUP BY COALESCE(bl.name, ct.name, 'Sin línea de negocio')
         ORDER BY COUNT(*) DESC
         LIMIT 6
@@ -100,7 +132,7 @@ BEGIN
                COUNT(*) FILTER (WHERE s.status = 'scheduled') AS scheduled,
                COUNT(*) FILTER (WHERE s.status = 'active') AS active,
                COALESCE(AVG(EXTRACT(EPOCH FROM (s.ended_at - s.started_at)) / 60) FILTER (WHERE s.status = 'completed' AND s.started_at IS NOT NULL AND s.ended_at IS NOT NULL), 0) AS avg_minutes
-        FROM inspection_sessions s
+        FROM accessible_sessions s
         LEFT JOIN profiles p ON p.id = s.inspector_id
         GROUP BY p.id, p.full_name
         ORDER BY COUNT(*) FILTER (WHERE s.status = 'completed') DESC, COUNT(*) DESC
@@ -114,17 +146,17 @@ BEGIN
         jsonb_build_object('name', 'Completada', 'value', COUNT(*) FILTER (WHERE status = 'completed'), 'color', '#10b981'),
         jsonb_build_object('name', 'Cancelada', 'value', COUNT(*) FILTER (WHERE status = 'cancelled'), 'color', '#ef4444')
       )
-      FROM inspection_sessions
+      FROM accessible_sessions
     ),
     'months', COALESCE((
       SELECT jsonb_agg(jsonb_build_object('name', to_char(d.month_start, 'Mon'), 'value', COALESCE(c.n, 0), 'value2', COALESCE(i.n, 0)) ORDER BY d.month_start)
       FROM generate_series(date_trunc('month', v_today - interval '5 months'), date_trunc('month', v_today), interval '1 month') AS d(month_start)
       LEFT JOIN LATERAL (
-        SELECT COUNT(*) AS n FROM claims
-        WHERE disabled = false AND timezone(p_timezone, COALESCE(claim_date, created_at))::date BETWEEN d.month_start::date AND (d.month_start + interval '1 month' - interval '1 day')::date
+        SELECT COUNT(*) AS n FROM accessible_claims
+        WHERE COALESCE(claim_date, created_at) IS NOT NULL AND timezone(p_timezone, COALESCE(claim_date, created_at))::date BETWEEN d.month_start::date AND (d.month_start + interval '1 month' - interval '1 day')::date
       ) c ON true
       LEFT JOIN LATERAL (
-        SELECT COUNT(*) AS n FROM inspection_sessions
+        SELECT COUNT(*) AS n FROM accessible_sessions
         WHERE status = 'scheduled' AND timezone(p_timezone, scheduled_at)::date BETWEEN d.month_start::date AND (d.month_start + interval '1 month' - interval '1 day')::date
       ) i ON true
     ), '[]'::jsonb),
@@ -132,21 +164,21 @@ BEGIN
       SELECT jsonb_agg(jsonb_build_object('name', d.name, 'value', COALESCE(c.n, 0)) ORDER BY d.dow)
       FROM (VALUES (0,'Dom'),(1,'Lun'),(2,'Mar'),(3,'Mié'),(4,'Jue'),(5,'Vie'),(6,'Sáb')) AS d(dow, name)
       LEFT JOIN LATERAL (
-        SELECT COUNT(*) AS n FROM claims
-        WHERE disabled = false AND extract(dow FROM timezone(p_timezone, COALESCE(claim_date, created_at)))::int = d.dow
+        SELECT COUNT(*) AS n FROM accessible_claims
+        WHERE COALESCE(claim_date, created_at) IS NOT NULL AND extract(dow FROM timezone(p_timezone, COALESCE(claim_date, created_at)))::int = d.dow
       ) c ON true
     ), '[]'::jsonb),
     'inspections_by_day', COALESCE((
       SELECT jsonb_agg(jsonb_build_object('name', d.name, 'value', COALESCE(i.n, 0)) ORDER BY d.dow)
       FROM (VALUES (0,'Dom'),(1,'Lun'),(2,'Mar'),(3,'Mié'),(4,'Jue'),(5,'Vie'),(6,'Sáb')) AS d(dow, name)
       LEFT JOIN LATERAL (
-        SELECT COUNT(*) AS n FROM inspection_sessions
+        SELECT COUNT(*) AS n FROM accessible_sessions
         WHERE COALESCE(scheduled_at, started_at, ended_at) IS NOT NULL AND extract(dow FROM timezone(p_timezone, COALESCE(scheduled_at, started_at, ended_at)))::int = d.dow
       ) i ON true
     ), '[]'::jsonb),
     'personal', (
       SELECT jsonb_build_object('total', COUNT(*), 'active', COUNT(*) FILTER (WHERE status = 'active'), 'scheduled', COUNT(*) FILTER (WHERE status = 'scheduled'), 'completed', COUNT(*) FILTER (WHERE status = 'completed'))
-      FROM inspection_sessions
+      FROM accessible_sessions
       WHERE v_profile_id IS NOT NULL AND inspector_id = v_profile_id
     ),
     'recent_sessions', COALESCE((
@@ -160,10 +192,10 @@ BEGIN
       ) ORDER BY CASE s.status WHEN 'active' THEN 0 WHEN 'scheduled' THEN 1 WHEN 'completed' THEN 2 ELSE 3 END, GREATEST(s.scheduled_at, s.started_at, s.ended_at, s.created_at) DESC NULLS LAST)
       FROM (
         SELECT s.*, c.liquidation_number, c.claim_address, ca.code AS action_code
-        FROM inspection_sessions s
-        JOIN claims c ON c.id = s.claim_id
+        FROM accessible_sessions s
+        JOIN accessible_claims c ON c.id = s.claim_id
         LEFT JOIN claim_actions ca ON ca.id = s.claim_action_id
-        WHERE s.claim_id IS NOT NULL AND c.disabled = false
+        WHERE s.claim_id IS NOT NULL
         ORDER BY CASE s.status WHEN 'active' THEN 0 WHEN 'scheduled' THEN 1 WHEN 'completed' THEN 2 ELSE 3 END, GREATEST(s.scheduled_at, s.started_at, s.ended_at, s.created_at) DESC NULLS LAST
         LIMIT p_recent_limit
       ) s
@@ -187,16 +219,22 @@ CREATE OR REPLACE FUNCTION get_dashboard_detail(
 RETURNS JSONB
 LANGUAGE plpgsql
 STABLE
-SECURITY INVOKER
+SECURITY DEFINER
 SET search_path = public
 AS $func$
 DECLARE
   v_profile_id UUID;
+  v_is_internal BOOLEAN;
   v_now TIMESTAMPTZ;
   v_today DATE;
   v_result JSONB;
 BEGIN
-  SELECT id INTO v_profile_id FROM profiles WHERE user_id = auth.uid() LIMIT 1;
+  SELECT id, COALESCE(role = 'internal', false)
+  INTO v_profile_id, v_is_internal
+  FROM profiles
+  WHERE user_id = auth.uid()
+  LIMIT 1;
+
   v_now := timezone(p_timezone, now());
   v_today := v_now::date;
 
@@ -216,9 +254,23 @@ BEGIN
   FROM (
     SELECT s.*, c.liquidation_number, c.claim_address, ca.code AS action_code
     FROM inspection_sessions s
-    JOIN claims c ON c.id = s.claim_id
+    JOIN (
+      SELECT c.* FROM claims c
+      WHERE c.disabled = false
+        AND (
+          v_is_internal
+          OR c.assigned_adjuster_id = v_profile_id
+          OR c.adjuster_id = v_profile_id
+          OR c.inspector_id = v_profile_id
+          OR c.dispatcher_id = v_profile_id
+          OR c.auditor_id = v_profile_id
+          OR c.assistant_id = v_profile_id
+        )
+    ) c ON c.id = s.claim_id
     LEFT JOIN claim_actions ca ON ca.id = s.claim_action_id
-    WHERE c.disabled = false
+    WHERE v_is_internal
+       OR s.inspector_id = v_profile_id
+       OR c.id IS NOT NULL
       AND (
         (p_key = 'today' AND ((s.status = 'scheduled' AND timezone(p_timezone, s.scheduled_at)::date = v_today)
                               OR (s.status = 'completed' AND timezone(p_timezone, s.ended_at)::date = v_today)

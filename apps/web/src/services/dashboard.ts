@@ -58,52 +58,93 @@ interface LightProfile {
   is_active: boolean;
 }
 
-export interface DashboardSummary {
-  claims: {
-    total: number;
-    open: number;
-    closed: number;
-    created: number;
-    adjustment: number;
-    dispatchment: number;
-    reopened: number;
-  };
-  sessions: {
-    total: number;
-    scheduled: number;
-    active: number;
-    completed: number;
-    cancelled: number;
-  };
-  today: {
-    scheduled_today: number;
-    completed_today: number;
-    inspections_today: number;
-    overdue: number;
-    avg_minutes: number;
-  };
-  months: Array<{ name: string; value: number; value2: number }>;
-  personal: {
-    total: number;
-    active: number;
-    scheduled: number;
-    completed: number;
-  };
-  top_ramos: Array<{ name: string; value: number; color: string | null }>;
-  top_companies: Array<{ id: string; name: string; value: number; inspections: number }>;
-  top_inspectors: Array<{
+export interface DashboardStats {
+  totalClaims: number;
+  openClaims: number;
+  closedClaims: number;
+  createdClaims: number;
+  adjustmentClaims: number;
+  dispatchmentClaims: number;
+  reopenedClaims: number;
+  avgResolutionDays: number;
+  closeRate: number;
+
+  totalSessions: number;
+  scheduledSessions: number;
+  activeSessions: number;
+  completedSessions: number;
+  cancelledSessions: number;
+  inspectionCompletionRate: number;
+  unassignedInspections: number;
+  completionVsScheduledRate: number;
+
+  inspectionsToday: number;
+  scheduledToday: number;
+  completedToday: number;
+  overdueSessions: number;
+  avgInspectionMinutes: number;
+
+  claimsByStatus: Array<{ name: string; value: number; color: string }>;
+  topCompanies: Array<{ id: string; name: string; value: number; inspections: number }>;
+  topRamos: Array<{ name: string; value: number; color: string | null }>;
+  topAdjusters: Array<{ id: string; name: string; count: number }>;
+  topDispatchers: Array<{ id: string; name: string; count: number }>;
+  topAuditors: Array<{ id: string; name: string; count: number }>;
+  topInspectors: Array<{
     id: string;
     name: string;
     total: number;
     completed: number;
     scheduled: number;
     active: number;
-    avg_minutes: number;
+    avgMinutes: number;
   }>;
-  claims_by_day: Array<{ name: string; value: number }>;
-  inspections_by_day: Array<{ name: string; value: number }>;
-  inspections_by_status: Array<{ name: string; value: number; color: string }>;
-  recent_sessions: DashboardDetailItem[];
+  topCompaniesByInspections: Array<{ id: string; name: string; total: number }>;
+
+  inspectionsByStatus: Array<{ name: string; value: number; color: string }>;
+  monthsData: Array<{ name: string; value: number; value2: number }>;
+  claimsByDay: Array<{ name: string; value: number }>;
+  inspectionsByDay: Array<{ name: string; value: number }>;
+  inspectionsByRegion: Array<{ name: string; agendadas: number; enProceso: number; completadas: number; canceladas: number; country_id?: string | null }>;
+  inspectionsByCommune: Array<{ name: string; agendadas: number; enProceso: number; completadas: number; canceladas: number }>;
+  claimsByRegion: Array<{ name: string; value: number }>;
+  avgTimeByInspector: Array<{ name: string; value: number }>;
+
+  totalCompanies: number;
+  totalUsers: number;
+  activeUsers: number;
+  myTotalSessions: number;
+  myActiveSessions: number;
+  myScheduledSessions: number;
+  myCompletedSessions: number;
+
+  inspectionsByLocation: DashboardLocationInspection[];
+  claimsByLocation: DashboardLocationClaim[];
+  countries: Array<{ id: string; name: string }>;
+  recentSessions: DashboardDetailItem[];
+}
+
+export interface DashboardLocationInspection {
+  countryId: string;
+  country: string;
+  region: string;
+  city: string;
+  commune: string;
+  agendadas: number;
+  enProceso: number;
+  completadas: number;
+  canceladas: number;
+}
+
+export interface DashboardLocationClaim {
+  countryId: string;
+  country: string;
+  region: string;
+  city: string;
+  commune: string;
+  businessLine: string;
+  color: string | null;
+  count: number;
 }
 
 export interface DashboardDetailItem {
@@ -186,11 +227,11 @@ export async function getDashboardCompaniesCount(): Promise<number> {
   return count ?? 0;
 }
 
-export async function getDashboardSummary(): Promise<DashboardSummary> {
+export async function getDashboardSummary(): Promise<DashboardStats> {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase.rpc("get_dashboard_summary");
   if (error) throw new Error(error.message);
-  return (data ?? {}) as DashboardSummary;
+  return (data ?? {}) as DashboardStats;
 }
 
 export async function getDashboardDetail(
