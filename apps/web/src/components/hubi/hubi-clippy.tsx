@@ -208,7 +208,9 @@ export function HubiClippy({ userRole = "inspector", userName = "" }: HubiClippy
 
   // Teclado + evento custom para abrir desde el top-bar
   useEffect(() => {
-    const openHubi = () => {
+    const openHubi = (e?: Event) => {
+      // Si el evento no viene del top-bar, ignorarlo (evita aperturas accidentales desde otros componentes)
+      if (e instanceof CustomEvent && e.detail?.source !== "top-bar") return;
       if (hidden) setHidden(false);
       setOpen(true);
       setView("greeting");

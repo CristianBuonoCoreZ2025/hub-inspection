@@ -2,8 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useState, useMemo, useCallback } from "react";
-import { getDashboardClaims, getDashboardSessions, getDashboardProfiles, getDashboardCompaniesCount } from "@/services/dashboard";
-import { getCountries } from "@/services/catalogs";
+import { getDashboardSummary, getDashboardClaims, getDashboardSessions, getDashboardProfiles, getDashboardDetail } from "@/services/dashboard";
+import type { DashboardStats, DashboardDetailItem, DashboardLocationInspection, LightClaim, LightSession } from "@/services/dashboard";
 import { userTypeLabels } from "@/services/permissions";
 import { useAuth } from "@/hooks/use-auth";
 import { useRealtime } from "@/hooks/use-realtime";
@@ -28,7 +28,6 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 import { useClaimStatuses } from "@/hooks/use-claim-statuses";
 import { useUiThemeId } from "@/hooks/use-ui-theme-id";
 import type { UserRole } from "@/types";
-import type { LightClaim, LightSession } from "@/services/dashboard";
 import {
   Dialog,
   DialogContent,
@@ -118,14 +117,6 @@ type KpiDetailRow = {
   duration?: number;
 };
 
-function isToday(d: string) {
-  const date = new Date(d);
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-  return date >= start && date <= end;
-}
-
 function formatDuration(minutes: number): string {
   const totalMinutes = Math.max(0, Math.round(minutes));
 
@@ -191,33 +182,37 @@ export default function DashboardPage() {
   const isGlobalUser = profile?.role === "internal";
   const roleLabel = profile ? userTypeLabels[profile.role] : "";
 
-  // Realtime: solo claims y sessions (audit_logs se quitó por performance)
-  useRealtime("claims", [["dashboard-claims"]]);
-  useRealtime("inspection_sessions", [["dashboard-sessions"]]);
+  // Realtime: invalida el resumen server-side cuando cambian claims o sessions
+  useRealtime("claims", [["dashboard-summary"]]);
+  useRealtime("inspection_sessions", [["dashboard-summary"]]);
 
+  const { data: summary, isLoading: summaryLoading } = useQuery({
+    queryKey: ["dashboard-summary"],
+    queryFn: () => getDashboardSummary(),
+    enabled: !!profile,
+  });
+
+  // Legacy loaders — deshabilitados porque el dashboard ya usa getDashboardSummary.
+  // Se conservan las variables para compatibilidad con el resto del componente.
   const { data: claims, isLoading: claimsLoading } = useQuery({
     queryKey: ["dashboard-claims"],
     queryFn: () => getDashboardClaims(),
-    enabled: !!profile,
+    enabled: false,
   });
 
   const { data: sessions, isLoading: sessionsLoading } = useQuery({
     queryKey: ["dashboard-sessions"],
     queryFn: () => getDashboardSessions(),
-    enabled: !!profile,
+    enabled: false,
   });
 
-  const { data: companiesCount } = useQuery({
-    queryKey: ["dashboard-companies-count"],
-    queryFn: () => getDashboardCompaniesCount(),
-    enabled: !!profile,
+  const { data: users } = useQuery({
+    queryKey: ["dashboard-profiles"],
+    queryFn: () => getDashboardProfiles(),
+    enabled: false,
   });
 
-  const { data: countries } = useQuery({
-    queryKey: ["countries"],
-    queryFn: getCountries,
-    enabled: !!profile,
-  });
+  const companiesCount = 0;
 
   // Filtros para el dashboard de inspecciones por ubicación (3 nested donuts)
   const [selectedCountryId, setSelectedCountryId] = useState<string>("__all");
@@ -231,12 +226,6 @@ export default function DashboardPage() {
   const [selectedSiniestroCity, setSelectedSiniestroCity] = useState<string | null>(null);
   const [selectedSiniestroCommune, setSelectedSiniestroCommune] = useState<string | null>(null);
 
-  const { data: users } = useQuery({
-    queryKey: ["dashboard-profiles"],
-    queryFn: () => getDashboardProfiles(),
-    enabled: !!profile,
-  });
-
   // Filtrar claims según el rol del usuario
   const myClaims = useMemo(
     () => filterClaimsForUser((claims as LightClaim[]) ?? [], profile),
@@ -248,7 +237,7 @@ export default function DashboardPage() {
   // la vea aunque no tenga acceso al siniestro asociado.
   const sessionList = useMemo(() => (sessions as LightSession[]) ?? [], [sessions]);
 
-  const stats = useMemo(() => {
+  const stats = useMemo(() => { return summary ?? ({} as DashboardStats);
     const allClaims = myClaims;
     const allSessions = sessionList;
 
@@ -463,7 +452,7 @@ export default function DashboardPage() {
 
     // Metrics personales
     const personalSessions = !isGlobalUser && profile
-      ? allSessions.filter((s) => s.inspector_id === profile.id)
+      ? allSessions.filter((s) => s.inspector_id === profile?.id)
       : allSessions;
     const myTotalSessions = personalSessions.length;
     const myActiveSessions = personalSessions.filter((s) => s.status === "active").length;
@@ -621,7 +610,8 @@ export default function DashboardPage() {
       myScheduledSessions,
       myCompletedSessions,
     };
-  }, [myClaims, sessionList, companiesCount, users, statusCode, isGlobalUser, profile, STATUS_COLORS, isAurora, LOCATION_COLORS]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [summary]);
 
   // Setear el país inicial al primero que tenga inspecciones
   // Patrón render-time (evita setState-in-effect): ajustamos el estado cuando
@@ -629,10 +619,10 @@ export default function DashboardPage() {
   const [prevCountryInit, setPrevCountryInit] = useState<string>("__all");
   if (
     selectedCountryId === "__all" &&
-    stats.inspectionsByRegion.length > 0 &&
+    stats.inspectionsByRegion?.length > 0 &&
     prevCountryInit === "__all"
   ) {
-    const firstCountryId = stats.inspectionsByRegion.find((r) => r.country_id)?.country_id;
+    const firstCountryId = stats.inspectionsByRegion?.find((r) => r.country_id)?.country_id;
     if (firstCountryId) {
       setSelectedCountryId(firstCountryId);
       setPrevCountryInit(firstCountryId);
@@ -669,64 +659,73 @@ export default function DashboardPage() {
   }, [LOCATION_COLORS, INSPECTION_STATUS]);
 
   const locationDonuts = useMemo(() => {
-    const claimMap = new Map(myClaims.map((c) => [c.id, c]));
+    if (!summary) {
+      return {
+        region: { outer: [], inner: [], selectedName: null, selectedPercent: 0 },
+        city: { outer: [], inner: [], selectedName: null, selectedPercent: 0 },
+        commune: { outer: [], inner: [], selectedName: null, selectedPercent: 0 },
+      };
+    }
+
+    const data = summary.inspectionsByLocation;
+
+    const addToMap = (
+      map: Record<string, { agendadas: number; enProceso: number; completadas: number; canceladas: number }>,
+      item: DashboardLocationInspection
+    ) => {
+      if (!map[item.region]) map[item.region] = { agendadas: 0, enProceso: 0, completadas: 0, canceladas: 0 };
+      map[item.region].agendadas += item.agendadas;
+      map[item.region].enProceso += item.enProceso;
+      map[item.region].completadas += item.completadas;
+      map[item.region].canceladas += item.canceladas;
+    };
+
     const regionMap: Record<string, { agendadas: number; enProceso: number; completadas: number; canceladas: number }> = {};
-    const cityMap: Record<string, { agendadas: number; enProceso: number; completadas: number; canceladas: number }> = {};
-    const communeMap: Record<string, { agendadas: number; enProceso: number; completadas: number; canceladas: number }> = {};
-
-    sessionList.forEach((s) => {
-      const claim = s.claim_id ? claimMap.get(s.claim_id) : undefined;
-      const countryId = claim?.region?.country_id;
-      if (selectedCountryId !== "__all" && countryId !== selectedCountryId) return;
-
-      const region = claim?.region?.name || "Sin región";
-      const city = claim?.commune?.city?.name || "Sin ciudad";
-      const commune = claim?.commune?.name || "Sin comuna";
-
-      if (!regionMap[region]) regionMap[region] = { agendadas: 0, enProceso: 0, completadas: 0, canceladas: 0 };
-      if (!cityMap[city]) cityMap[city] = { agendadas: 0, enProceso: 0, completadas: 0, canceladas: 0 };
-      if (!communeMap[commune]) communeMap[commune] = { agendadas: 0, enProceso: 0, completadas: 0, canceladas: 0 };
-
-      if (s.status === "scheduled") { regionMap[region].agendadas++; cityMap[city].agendadas++; communeMap[commune].agendadas++; }
-      else if (s.status === "active") { regionMap[region].enProceso++; cityMap[city].enProceso++; communeMap[commune].enProceso++; }
-      else if (s.status === "completed") { regionMap[region].completadas++; cityMap[city].completadas++; communeMap[commune].completadas++; }
-      else if (s.status === "cancelled") { regionMap[region].canceladas++; cityMap[city].canceladas++; communeMap[commune].canceladas++; }
+    data.forEach((item) => {
+      if (selectedCountryId !== "__all" && item.countryId !== selectedCountryId) return;
+      addToMap(regionMap, item);
     });
 
-    // Filtrar ciudad y comuna por región seleccionada
-    const regionKey = selectedRegion || Object.keys(regionMap)[0];
+    const regionKey =
+      selectedRegion ||
+      Object.entries(regionMap)
+        .sort((a, b) => (b[1].agendadas + b[1].enProceso + b[1].completadas + b[1].canceladas) - (a[1].agendadas + a[1].enProceso + a[1].completadas + a[1].canceladas))[0]?.[0] ||
+      "";
+
     const filteredCityMap: Record<string, { agendadas: number; enProceso: number; completadas: number; canceladas: number }> = {};
     const filteredCommuneMap: Record<string, { agendadas: number; enProceso: number; completadas: number; canceladas: number }> = {};
+    data.forEach((item) => {
+      if (selectedCountryId !== "__all" && item.countryId !== selectedCountryId) return;
+      if (item.region !== regionKey) return;
+      if (!filteredCityMap[item.city]) filteredCityMap[item.city] = { agendadas: 0, enProceso: 0, completadas: 0, canceladas: 0 };
+      filteredCityMap[item.city].agendadas += item.agendadas;
+      filteredCityMap[item.city].enProceso += item.enProceso;
+      filteredCityMap[item.city].completadas += item.completadas;
+      filteredCityMap[item.city].canceladas += item.canceladas;
 
-    sessionList.forEach((s) => {
-      const claim = s.claim_id ? claimMap.get(s.claim_id) : undefined;
-      const countryId = claim?.region?.country_id;
-      if (selectedCountryId !== "__all" && countryId !== selectedCountryId) return;
-      if ((claim?.region?.name || "Sin región") !== regionKey) return;
-      const city = claim?.commune?.city?.name || "Sin ciudad";
-      const commune = claim?.commune?.name || "Sin comuna";
-      if (!filteredCityMap[city]) filteredCityMap[city] = { agendadas: 0, enProceso: 0, completadas: 0, canceladas: 0 };
-      if (!filteredCommuneMap[commune]) filteredCommuneMap[commune] = { agendadas: 0, enProceso: 0, completadas: 0, canceladas: 0 };
-      if (s.status === "scheduled") { filteredCityMap[city].agendadas++; filteredCommuneMap[commune].agendadas++; }
-      else if (s.status === "active") { filteredCityMap[city].enProceso++; filteredCommuneMap[commune].enProceso++; }
-      else if (s.status === "completed") { filteredCityMap[city].completadas++; filteredCommuneMap[commune].completadas++; }
-      else if (s.status === "cancelled") { filteredCityMap[city].canceladas++; filteredCommuneMap[commune].canceladas++; }
+      if (!filteredCommuneMap[item.commune]) filteredCommuneMap[item.commune] = { agendadas: 0, enProceso: 0, completadas: 0, canceladas: 0 };
+      filteredCommuneMap[item.commune].agendadas += item.agendadas;
+      filteredCommuneMap[item.commune].enProceso += item.enProceso;
+      filteredCommuneMap[item.commune].completadas += item.completadas;
+      filteredCommuneMap[item.commune].canceladas += item.canceladas;
     });
 
-    const cityKey = selectedCity || Object.keys(filteredCityMap)[0];
+    const cityKey =
+      selectedCity ||
+      Object.entries(filteredCityMap)
+        .sort((a, b) => (b[1].agendadas + b[1].enProceso + b[1].completadas + b[1].canceladas) - (a[1].agendadas + a[1].enProceso + a[1].completadas + a[1].canceladas))[0]?.[0] ||
+      "";
+
     const finalCommuneMap: Record<string, { agendadas: number; enProceso: number; completadas: number; canceladas: number }> = {};
-    sessionList.forEach((s) => {
-      const claim = s.claim_id ? claimMap.get(s.claim_id) : undefined;
-      const countryId = claim?.region?.country_id;
-      if (selectedCountryId !== "__all" && countryId !== selectedCountryId) return;
-      if ((claim?.region?.name || "Sin región") !== regionKey) return;
-      if ((claim?.commune?.city?.name || "Sin ciudad") !== cityKey) return;
-      const commune = claim?.commune?.name || "Sin comuna";
-      if (!finalCommuneMap[commune]) finalCommuneMap[commune] = { agendadas: 0, enProceso: 0, completadas: 0, canceladas: 0 };
-      if (s.status === "scheduled") finalCommuneMap[commune].agendadas++;
-      else if (s.status === "active") finalCommuneMap[commune].enProceso++;
-      else if (s.status === "completed") finalCommuneMap[commune].completadas++;
-      else if (s.status === "cancelled") finalCommuneMap[commune].canceladas++;
+    data.forEach((item) => {
+      if (selectedCountryId !== "__all" && item.countryId !== selectedCountryId) return;
+      if (item.region !== regionKey) return;
+      if (item.city !== cityKey) return;
+      if (!finalCommuneMap[item.commune]) finalCommuneMap[item.commune] = { agendadas: 0, enProceso: 0, completadas: 0, canceladas: 0 };
+      finalCommuneMap[item.commune].agendadas += item.agendadas;
+      finalCommuneMap[item.commune].enProceso += item.enProceso;
+      finalCommuneMap[item.commune].completadas += item.completadas;
+      finalCommuneMap[item.commune].canceladas += item.canceladas;
     });
 
     return {
@@ -734,22 +733,10 @@ export default function DashboardPage() {
       city: buildDonut(filteredCityMap, selectedCity),
       commune: buildDonut(finalCommuneMap, selectedCommune),
     };
-  }, [myClaims, sessionList, selectedCountryId, selectedRegion, selectedCity, selectedCommune, buildDonut]);
+  }, [summary, selectedCountryId, selectedRegion, selectedCity, selectedCommune, buildDonut]);
 
   // Países con siniestros y seteo inicial del primer país
-  const siniestrosCountries = useMemo(() => {
-    const ids = new Set<string>();
-    myClaims.forEach((c) => {
-      const id = c.region?.country_id;
-      if (id) ids.add(id);
-    });
-    return Array.from(ids)
-      .map((id) => ({
-        id,
-        name: countries?.find((c) => c.id === id)?.name || id,
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [myClaims, countries]);
+  const siniestrosCountries = useMemo(() => summary?.countries ?? [], [summary]);
 
   const [prevSiniestroCountryInit, setPrevSiniestroCountryInit] = useState<string | null>(null);
   if (
@@ -762,6 +749,15 @@ export default function DashboardPage() {
     setPrevSiniestroCountryInit(firstCountryId);
   }
   const siniestrosDonuts = useMemo(() => {
+    if (!summary) {
+      return {
+        region: { outer: [], inner: [], selectedName: null, selectedPercent: 0 },
+        city: { outer: [], inner: [], selectedName: null, selectedPercent: 0 },
+        commune: { outer: [], inner: [], selectedName: null, selectedPercent: 0 },
+        hasData: false,
+      };
+    }
+
     const businessFallbackColors = LOCATION_COLORS;
 
     const addClaim = (
@@ -810,8 +806,8 @@ export default function DashboardPage() {
     };
 
     const claimsForCountry = selectedSiniestroCountryId
-      ? myClaims.filter((c) => c.region?.country_id === selectedSiniestroCountryId)
-      : [];
+      ? summary.claimsByLocation.filter((c) => c.countryId === selectedSiniestroCountryId)
+      : summary.claimsByLocation;
 
     const regionMap: Record<string, { value: number; color: string }> = {};
     const businessByRegion: Record<string, Record<string, { value: number; color: string | null }>> = {};
@@ -820,46 +816,32 @@ export default function DashboardPage() {
     const communeMap: Record<string, { value: number; color: string }> = {};
     const businessByCommune: Record<string, Record<string, { value: number; color: string | null }>> = {};
 
-    claimsForCountry.forEach((c) => {
-      const region = c.region?.name || "Sin región";
-      const city = c.commune?.city?.name || "Sin ciudad";
-      const commune = c.commune?.name || "Sin comuna";
-      const businessLine = c.business_line?.name || c.claim_type?.name || "Sin línea de negocio";
-      const color = c.business_line?.color || null;
-
-      addClaim(regionMap, businessByRegion, region, businessLine, color, Object.keys(regionMap).length);
-      addClaim(cityMap, businessByCity, city, businessLine, color, Object.keys(cityMap).length);
-      addClaim(communeMap, businessByCommune, commune, businessLine, color, Object.keys(communeMap).length);
+    claimsForCountry.forEach((c, i) => {
+      addClaim(regionMap, businessByRegion, c.region, c.businessLine, c.color, i);
+      addClaim(cityMap, businessByCity, c.city, c.businessLine, c.color, i);
+      addClaim(communeMap, businessByCommune, c.commune, c.businessLine, c.color, i);
     });
 
-    // Filtrar ciudad y comuna por región seleccionada
-    const regionKey = selectedSiniestroRegion || Object.keys(regionMap)[0];
+    const regionKey = selectedSiniestroRegion || Object.keys(regionMap).sort((a, b) => regionMap[b].value - regionMap[a].value)[0] || "";
     const filteredCityMap: Record<string, { value: number; color: string }> = {};
     const filteredBusinessByCity: Record<string, Record<string, { value: number; color: string | null }>> = {};
     const filteredCommuneMap: Record<string, { value: number; color: string }> = {};
     const filteredBusinessByCommune: Record<string, Record<string, { value: number; color: string | null }>> = {};
 
-    claimsForCountry.forEach((c) => {
-      if ((c.region?.name || "Sin región") !== regionKey) return;
-      const city = c.commune?.city?.name || "Sin ciudad";
-      const commune = c.commune?.name || "Sin comuna";
-      const businessLine = c.business_line?.name || c.claim_type?.name || "Sin línea de negocio";
-      const color = c.business_line?.color || null;
-      addClaim(filteredCityMap, filteredBusinessByCity, city, businessLine, color, Object.keys(filteredCityMap).length);
-      addClaim(filteredCommuneMap, filteredBusinessByCommune, commune, businessLine, color, Object.keys(filteredCommuneMap).length);
+    claimsForCountry.forEach((c, i) => {
+      if (c.region !== regionKey) return;
+      addClaim(filteredCityMap, filteredBusinessByCity, c.city, c.businessLine, c.color, i);
+      addClaim(filteredCommuneMap, filteredBusinessByCommune, c.commune, c.businessLine, c.color, i);
     });
 
-    const cityKey = selectedSiniestroCity || Object.keys(filteredCityMap)[0];
+    const cityKey = selectedSiniestroCity || Object.keys(filteredCityMap).sort((a, b) => filteredCityMap[b].value - filteredCityMap[a].value)[0] || "";
     const finalCommuneMap: Record<string, { value: number; color: string }> = {};
     const finalBusinessByCommune: Record<string, Record<string, { value: number; color: string | null }>> = {};
 
-    claimsForCountry.forEach((c) => {
-      if ((c.region?.name || "Sin región") !== regionKey) return;
-      if ((c.commune?.city?.name || "Sin ciudad") !== cityKey) return;
-      const commune = c.commune?.name || "Sin comuna";
-      const businessLine = c.business_line?.name || c.claim_type?.name || "Sin línea de negocio";
-      const color = c.business_line?.color || null;
-      addClaim(finalCommuneMap, finalBusinessByCommune, commune, businessLine, color, Object.keys(finalCommuneMap).length);
+    claimsForCountry.forEach((c, i) => {
+      if (c.region !== regionKey) return;
+      if (c.city !== cityKey) return;
+      addClaim(finalCommuneMap, finalBusinessByCommune, c.commune, c.businessLine, c.color, i);
     });
 
     return {
@@ -868,7 +850,7 @@ export default function DashboardPage() {
       commune: buildBusinessDonut(finalCommuneMap, finalBusinessByCommune, selectedSiniestroCommune),
       hasData: claimsForCountry.length > 0,
     };
-  }, [myClaims, selectedSiniestroCountryId, selectedSiniestroRegion, selectedSiniestroCity, selectedSiniestroCommune, LOCATION_COLORS, isAurora]);
+  }, [summary, selectedSiniestroCountryId, selectedSiniestroRegion, selectedSiniestroCity, selectedSiniestroCommune, LOCATION_COLORS, isAurora]);
 
   // KPIs globales: foco en inspecciones
   const kpis = isGlobalUser
@@ -985,89 +967,43 @@ export default function DashboardPage() {
   // Modal de detalle de KPI
   const [kpiModal, setKpiModal] = useState<{ title: string; key: string } | null>(null);
 
+  const { data: kpiDetailData, isLoading: kpiDetailLoading } = useQuery({
+    queryKey: ["dashboard-detail", kpiModal?.key],
+    queryFn: () => kpiModal ? getDashboardDetail(kpiModal.key, 10) : Promise.resolve([]),
+    enabled: !!kpiModal,
+  });
+
   const kpiDetailRows = useMemo<KpiDetailRow[]>(() => {
-    if (!kpiModal) return [];
-    const claimMap = new Map(myClaims.map((c) => [c.id, c]));
-    const getName = (id: string | null) =>
-      users?.find((u) => u.id === id)?.full_name || "Sin asignar";
-
-    const sessions = sessionList;
-
+    if (!kpiModal || !kpiDetailData) return [];
     const fmtDate = (d: string) => new Date(d).toLocaleDateString("es-CL", { timeZone: getUserTimeZone() });
-    const fmtTime = (d: string) =>
-      new Date(d).toLocaleTimeString("es-CL", { timeZone: getUserTimeZone(), hour: "2-digit", minute: "2-digit" });
-    const getBase = (s: (typeof sessions)[number]) => {
-      const claim = s.claim_id ? claimMap.get(s.claim_id) : undefined;
-      const date = s.scheduled_at || s.started_at || s.ended_at;
-      const liq = claim?.liquidation_number || "—";
-      const shortLiq = liq.startsWith("L-") ? liq.slice(2) : liq;
-      const insured = claim?.claims_participants?.find((p) => p.type === "insured")?.full_name || "—";
-      // Regla AGENTS.md: si la liquidación se muestra en el mismo contexto,
-      // el código de gestión debe ser el CORTO (solo gestión, sin prefijo de liquidación)
+    const fmtTime = (d: string) => new Date(d).toLocaleTimeString("es-CL", { timeZone: getUserTimeZone(), hour: "2-digit", minute: "2-digit" });
+
+    return (kpiDetailData as DashboardDetailItem[]).map((s) => {
       const rawCode = s.inspection_number || `I-${s.id.slice(0, 4)}`;
       const shortCode = rawCode.match(/^L-\d+-/) ? rawCode.replace(/^L-\d+-/, "") : rawCode;
+      const liq = s.liquidation_number || "—";
+      const shortLiq = liq.startsWith("L-") ? liq.slice(2) : liq;
+      const date = s.scheduled_at || s.started_at || s.ended_at;
+
       return {
         id: s.id,
         inspectionCode: shortCode,
         liquidation: shortLiq,
-        insured,
-        address: claim?.claim_address || "—",
-        inspector: getName(s.inspector_id),
+        insured: s.insured_name || "—",
+        address: s.claim_address || "—",
+        inspector: s.inspector_name || "Sin asignar",
         status: s.status,
         date: date ? fmtDate(date) : "—",
         time: date ? fmtTime(date) : "—",
+        scheduled: ["today", "my-total", "scheduled-today", "overdue"].includes(kpiModal.key) ? s.scheduled_at : undefined,
+        started: ["active", "my-active"].includes(kpiModal.key) ? s.started_at : undefined,
+        ended: ["completed-today", "my-completed", "avg-time"].includes(kpiModal.key) ? s.ended_at : undefined,
+        duration: s.duration_minutes ? Math.round(s.duration_minutes) : undefined,
       };
-    };
+    });
+  }, [kpiModal, kpiDetailData]);
 
-    switch (kpiModal.key) {
-      case "today":
-      case "my-total":
-        return sessions
-          .filter((s) =>
-            (s.scheduled_at && isToday(s.scheduled_at)) ||
-            (s.started_at && isToday(s.started_at)) ||
-            (s.ended_at && isToday(s.ended_at))
-          )
-          .map((s) => ({ ...getBase(s), scheduled: s.scheduled_at }));
-      case "active":
-      case "my-active":
-        return sessions
-          .filter((s) => s.status === "active")
-          .map((s) => ({ ...getBase(s), started: s.started_at }));
-      case "scheduled-today":
-      case "my-scheduled":
-        return sessions
-          .filter((s) => s.status === "scheduled" && s.scheduled_at && isToday(s.scheduled_at))
-          .map((s) => ({ ...getBase(s), scheduled: s.scheduled_at }));
-      case "completed-today":
-      case "my-completed":
-        return sessions
-          .filter((s) => s.status === "completed" && s.ended_at && isToday(s.ended_at))
-          .map((s) => ({
-            ...getBase(s),
-            ended: s.ended_at,
-            duration:
-              s.started_at && s.ended_at
-                ? Math.round((new Date(s.ended_at).getTime() - new Date(s.started_at).getTime()) / 60000)
-                : 0,
-          }));
-      case "overdue":
-        return sessions
-          .filter((s) => (s.status === "scheduled" || s.status === "active") && s.scheduled_at && new Date(s.scheduled_at) < new Date())
-          .map((s) => ({ ...getBase(s), scheduled: s.scheduled_at }));
-      case "avg-time":
-        return sessions
-          .filter((s) => s.status === "completed" && s.started_at && s.ended_at)
-          .map((s) => ({
-            ...getBase(s),
-            ended: s.ended_at,
-            duration: Math.round((new Date(s.ended_at!).getTime() - new Date(s.started_at!).getTime()) / 60000),
-          }))
-          .sort((a, b) => b.duration - a.duration);
-      default:
-        return [];
-    }
-  }, [kpiModal, myClaims, sessionList, users]);
+  if (summaryLoading || !summary) return <KpiGridSkeleton count={isGlobalUser ? 6 : 4} />;
 
   return (
     <div className="space-y-4">
@@ -1232,8 +1168,9 @@ export default function DashboardPage() {
                   <MapPin className="h-4 w-4" />
                   Inspecciones por Ubicación
                 </div>
-                {countries && countries.length > 0 && (() => {
-                  const activeCountries = countries.filter((c) => myClaims.some((claim) => claim.region?.country_id === c.id));
+                {summary?.countries && summary.countries.length > 0 && (() => {
+                  const activeCountryIds = new Set(summary.inspectionsByLocation.map((i) => i.countryId).filter(Boolean));
+                  const activeCountries = summary.countries.filter((c) => activeCountryIds.has(c.id));
                   if (activeCountries.length === 0) return null;
                   return (
                     <Select
@@ -1564,7 +1501,9 @@ export default function DashboardPage() {
             </DialogTitle>
           </div>
           <div className="modal-body modal-body-flush">
-            {kpiDetailRows.length === 0 ? (
+            {kpiDetailLoading ? (
+              <div className="py-12 text-center text-[11px] text-muted-foreground">Cargando...</div>
+            ) : kpiDetailRows.length === 0 ? (
               <div className="py-12 text-center text-[11px] text-muted-foreground">Sin datos para mostrar</div>
             ) : (
               <div className="app-data-table-wrap modal-grid-wrap">
@@ -1583,7 +1522,7 @@ export default function DashboardPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {kpiDetailRows.slice(0, 10).map((row) => (
+                    {kpiDetailRows.map((row) => (
                       <tr key={row.id}>
                         <td className="font-mono whitespace-nowrap">{row.inspectionCode}</td>
                         <td className="font-mono whitespace-nowrap">{row.liquidation}</td>
@@ -1621,13 +1560,9 @@ export default function DashboardPage() {
             )}
           </div>
           <div className="modal-footer">
-            {kpiDetailRows.length > 10 ? (
+            {kpiDetailRows.length > 0 ? (
               <span className="text-[11px] text-muted-foreground mr-auto">
-                Muestra parcial — primeros 10 registros de {kpiDetailRows.length}
-              </span>
-            ) : kpiDetailRows.length > 0 ? (
-              <span className="text-[11px] text-muted-foreground mr-auto">
-                {kpiDetailRows.length} registro{kpiDetailRows.length !== 1 ? "s" : ""}
+                Mostrando {kpiDetailRows.length} registro{kpiDetailRows.length !== 1 ? "s" : ""} (máx. 10)
               </span>
             ) : null}
             <button type="button" className="pg-btn-platinum" onClick={() => setKpiModal(null)}>

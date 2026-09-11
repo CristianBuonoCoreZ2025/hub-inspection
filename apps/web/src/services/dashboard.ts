@@ -58,6 +58,112 @@ interface LightProfile {
   is_active: boolean;
 }
 
+export interface DashboardStats {
+  totalClaims: number;
+  openClaims: number;
+  closedClaims: number;
+  createdClaims: number;
+  adjustmentClaims: number;
+  dispatchmentClaims: number;
+  reopenedClaims: number;
+  avgResolutionDays: number;
+  closeRate: number;
+
+  totalSessions: number;
+  scheduledSessions: number;
+  activeSessions: number;
+  completedSessions: number;
+  cancelledSessions: number;
+  inspectionCompletionRate: number;
+  unassignedInspections: number;
+  completionVsScheduledRate: number;
+
+  inspectionsToday: number;
+  scheduledToday: number;
+  completedToday: number;
+  overdueSessions: number;
+  avgInspectionMinutes: number;
+
+  claimsByStatus: Array<{ name: string; value: number; color: string }>;
+  topCompanies: Array<{ id: string; name: string; value: number; inspections: number }>;
+  topRamos: Array<{ name: string; value: number; color: string | null }>;
+  topAdjusters: Array<{ id: string; name: string; count: number }>;
+  topDispatchers: Array<{ id: string; name: string; count: number }>;
+  topAuditors: Array<{ id: string; name: string; count: number }>;
+  topInspectors: Array<{
+    id: string;
+    name: string;
+    total: number;
+    completed: number;
+    scheduled: number;
+    active: number;
+    avgMinutes: number;
+  }>;
+  topCompaniesByInspections: Array<{ id: string; name: string; total: number }>;
+
+  inspectionsByStatus: Array<{ name: string; value: number; color: string }>;
+  monthsData: Array<{ name: string; value: number; value2: number }>;
+  claimsByDay: Array<{ name: string; value: number }>;
+  inspectionsByDay: Array<{ name: string; value: number }>;
+  inspectionsByRegion: Array<{ name: string; agendadas: number; enProceso: number; completadas: number; canceladas: number; country_id?: string | null }>;
+  inspectionsByCommune: Array<{ name: string; agendadas: number; enProceso: number; completadas: number; canceladas: number }>;
+  claimsByRegion: Array<{ name: string; value: number }>;
+  avgTimeByInspector: Array<{ name: string; value: number }>;
+
+  totalCompanies: number;
+  totalUsers: number;
+  activeUsers: number;
+  myTotalSessions: number;
+  myActiveSessions: number;
+  myScheduledSessions: number;
+  myCompletedSessions: number;
+
+  inspectionsByLocation: DashboardLocationInspection[];
+  claimsByLocation: DashboardLocationClaim[];
+  countries: Array<{ id: string; name: string }>;
+  recentSessions: DashboardDetailItem[];
+}
+
+export interface DashboardLocationInspection {
+  countryId: string;
+  country: string;
+  region: string;
+  city: string;
+  commune: string;
+  agendadas: number;
+  enProceso: number;
+  completadas: number;
+  canceladas: number;
+}
+
+export interface DashboardLocationClaim {
+  countryId: string;
+  country: string;
+  region: string;
+  city: string;
+  commune: string;
+  businessLine: string;
+  color: string | null;
+  count: number;
+}
+
+export interface DashboardDetailItem {
+  id: string;
+  status: string;
+  scheduled_at: string | null;
+  started_at: string | null;
+  ended_at: string | null;
+  inspector_id: string | null;
+  claim_id: string | null;
+  liquidation_number: string | null;
+  claim_address: string | null;
+  inspection_number: string | null;
+  insured_name: string | null;
+  inspector_name: string | null;
+  duration_minutes?: number | null;
+}
+
+
 // ── SELECT ligeros ──
 
 const CLAIM_LIGHT_SELECT =
@@ -119,6 +225,26 @@ export async function getDashboardCompaniesCount(): Promise<number> {
     .select("id", { count: "exact", head: true });
   if (error) throw new Error(error.message);
   return count ?? 0;
+}
+
+export async function getDashboardSummary(): Promise<DashboardStats> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase.rpc("get_dashboard_summary");
+  if (error) throw new Error(error.message);
+  return (data ?? {}) as DashboardStats;
+}
+
+export async function getDashboardDetail(
+  key: string,
+  limit = 10
+): Promise<DashboardDetailItem[]> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase.rpc("get_dashboard_detail", {
+    p_key: key,
+    p_limit: limit,
+  });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as DashboardDetailItem[];
 }
 
 export type { LightClaim, LightSession, LightProfile };
