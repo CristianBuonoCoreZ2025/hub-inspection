@@ -583,6 +583,7 @@ export interface DamageSketch {
   sketch_url: string;
   sketch_data: Record<string, unknown> | null;
   label: string | null;
+  third_party_id: string | null;
   created_at: string;
 }
 
@@ -615,6 +616,7 @@ export interface InspectionEvidence {
   source: EvidenceSource | null;
   metadata: { originalName?: string; fileCode?: string; fileSize?: number; mimeType?: string; pdfSummary?: string; pdfPageCount?: number; source?: string; lat?: number; lng?: number; capturedBy?: string } | null;
   include_in_report: boolean;
+  third_party_id: string | null;
   created_at: string;
 }
 

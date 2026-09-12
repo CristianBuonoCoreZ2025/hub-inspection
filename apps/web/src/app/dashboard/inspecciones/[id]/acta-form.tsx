@@ -7,6 +7,7 @@ import { actaSchema, type ActaInput } from "@/lib/validations";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateInspectionSession, createThirdParty, updateThirdParty, deleteThirdParty, getInspectionSessionById, type SessionDetail } from "@/services/inspections";
 import { useFlash } from "@/components/ui/alert-context";
+import { useConfirm } from "@/hooks/use-confirm";
 import {
  Shield,
  Building,
@@ -65,6 +66,7 @@ interface ActaFormProps {
 export default function ActaForm({ session, readOnly = false, offlineMode = false, onOfflineSaved, offlineCatalogs, isMobile = false }: ActaFormProps) {
  const queryClient = useQueryClient();
  const flash = useFlash();
+  const confirm = useConfirm();
  const [step, setStep] = useState(1);
 
  const { catalogs: lookupCatalogs } = useLookupCatalogs([
@@ -202,7 +204,13 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
    for (const serverTp of serverThirdParties) {
      const stillExists = actaThirdParties.some((tp) => tp.id === serverTp.id);
      if (!stillExists) {
-       await deleteThirdParty(serverTp.id);
+       try {
+         await deleteThirdParty(serverTp.id);
+       } catch (err) {
+         // El tercero tiene daños/evidencias/croquis asociados (FK RESTRICT).
+         // No se puede eliminar. Mostrar aviso y continuar.
+         flash({ description: `Tercero no eliminado: ${(err as Error).message}`, type: "error" });
+       }
      }
    }
 
@@ -913,18 +921,46 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
  )}
  </h3>
  <div className="space-y-3">
- {((watch("third_parties") as Array<Record<string, unknown>>) || []).map((_, idx) => (
+ {((watch("third_parties") as Array<Record<string, unknown>>) || []).map((_, idx) => {
+   const tpList = (watch("third_parties") as Array<Record<string, unknown>>) || [];
+   const tp = tpList[idx];
+   const tpId = tp?.id as string | undefined;
+   const damages = (session.inspection_damages || []).filter((d) => d.third_party_id === tpId);
+   const evidences = (session.inspection_evidences || []).filter((e) => e.third_party_id === tpId);
+   const sketches = (session.damage_sketches || []).filter((s) => s.third_party_id === tpId);
+   const totalCount = damages.length + evidences.length + sketches.length;
+   return (
  <div key={idx} className="rounded-lg border border-border p-3 space-y-3">
  <div className="flex items-center justify-between">
+ <div className="flex items-center gap-2">
  <span className="text-[11px] font-medium">Tercero {idx + 1}</span>
+ {totalCount > 0 && (
+ <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">
+ {totalCount} registro{totalCount !== 1 ? "s" : ""}
+ </span>
+ )}
+ </div>
  {!readOnly && (
  <button
  type="button"
  className="acta-save-btn"
  aria-label={`Eliminar tercero ${idx + 1}`}
- onClick={() => {
- const current = (watch("third_parties") as Array<Record<string, unknown>>) || [];
- set("third_parties", current.filter((_, i) => i !== idx));
+ onClick={async () => {
+   if (totalCount > 0) {
+     const parts: string[] = [];
+     if (damages.length > 0) parts.push(`${damages.length} daño(s)`);
+     if (evidences.length > 0) parts.push(`${evidences.length} evidencia(s)`);
+     if (sketches.length > 0) parts.push(`${sketches.length} croquis(s)`);
+     await confirm({
+       title: "No se puede eliminar",
+       description: `Este tercero tiene ${parts.join(", ")} asociados. Elimina o reasigna primero esos registros.`,
+       confirmLabel: "Entendido",
+       destructive: true,
+     });
+     return;
+   }
+   const current = (watch("third_parties") as Array<Record<string, unknown>>) || [];
+   set("third_parties", current.filter((_, i) => i !== idx));
  }}
  >
  <Trash2 size={18} strokeWidth={2} />
@@ -1017,7 +1053,8 @@ export default function ActaForm({ session, readOnly = false, offlineMode = fals
  </div>
  </div>
  </div>
- ))}
+ );
+ })}
  {!readOnly && (
  <div className="flex justify-end">
  <button

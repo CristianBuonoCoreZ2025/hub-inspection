@@ -508,13 +508,13 @@ export async function getInspectionSessionLive(token: string) {
       signature_waiver_reason,
       action_template:action_template!inspection_sessions_action_template_id_fkey(code),
       claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(code),
-      inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, url, type, description, category, damage_id, metadata, created_at),
+      inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, url, type, description, category, damage_id, metadata, third_party_id, created_at),
       inspection_notes:inspection_notes!inspection_notes_session_id_fkey(id, content, created_at),
       inspection_checklists:inspection_checklists!inspection_checklists_session_id_fkey(id, area, item, status, notes, created_at),
       inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id, category, subcategory, description, observations, severity, dependency, sector, materiality_type, unit, quantity, length, width, height, damage_length, damage_width, damage_height, damage_quantity, damage_type, product, brand_model, purchase_date, estimated_amount, created_at),
       inspection_chat_messages:inspection_chat_messages!inspection_chat_messages_session_id_fkey(id, content, sender_name, sender_role, created_at),
       inspection_signatures:inspection_signatures!inspection_signatures_session_id_fkey(id, role, signature_url, signed_at),
-      damage_sketches:damage_sketches!damage_sketches_session_id_fkey(id, sketch_url, label, created_at),
+      damage_sketches:damage_sketches!damage_sketches_session_id_fkey(id, sketch_url, label, third_party_id, created_at),
       claim:claims!inspection_sessions_claim_id_fkey(claim_number, client_reference, claim_address, policy_number, claim_date, liquidation_number, claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, email, phone, cell_phone), insurance_company:insurance_companies!claims_insurance_company_id_fkey(name))
     `,
     eq: { magic_link_token: token },
@@ -567,12 +567,12 @@ export async function getInspectionSessionById(id: string) {
     claim_action:claim_actions!inspection_sessions_claim_action_id_fkey(id, code, action_status_id, action_data, issuer_id, issued_on, issued_by),
     action_template:action_template!inspection_sessions_action_template_id_fkey(id, name, code, action_features_id),
     claim:claims!inspection_sessions_claim_id_fkey(claim_number, policy_number, claim_date, report_date, assignment_date, client_reference, claim_address, claim_latitude, claim_longitude, liquidation_number, broker_executive, company_id, inspector_id, assigned_adjuster_id, adjuster_id, auditor_id, dispatcher_id, assistant_id, insurance_company_id, broker_id, advisor_id, country_id, region_id, city_id, commune_id, claim_cause_id, destination_housing_id, created_at, insurance_company:insurance_companies!claims_insurance_company_id_fkey(name), broker:brokers!claims_broker_id_fkey(name), advisor:advisors!claims_advisor_id_fkey(name), claim_cause:claim_causes!claims_claim_cause_id_fkey(name), country:countries!claims_country_id_fkey(name), region:regions!claims_region_id_fkey(name), city:cities!claims_city_id_fkey(name), commune:communes!claims_commune_id_fkey(name), destination_housing:housing_destinations!claims_destination_housing_id_fkey(name), claims_participants:claims_participants!claim_participants_claim_id_fkey(type, full_name, first_name, last_name, email, phone, cell_phone, rut, address, person_type, country, region, city, commune)),
-    inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, url, type, description, category, damage_id, include_in_report, metadata, created_at),
+    inspection_evidences:inspection_evidences!inspection_evidences_session_id_fkey(id, url, type, description, category, damage_id, include_in_report, metadata, third_party_id, created_at),
     inspection_checklists:inspection_checklists!inspection_checklists_session_id_fkey(id, area, item, status),
     inspection_damages:inspection_damages!inspection_damages_session_id_fkey(id, session_id, category, subcategory, description, severity, damage_type, dependency, sector, materiality_type, unit, quantity, length, width, height, damage_length, damage_width, damage_height, damage_quantity, estimated_amount, currency, observations, product, brand_model, product_id, brand_id, purchase_date, third_party_id, space_id, content_good_type_id, building_damage_category_id, created_at, updated_at),
     third_parties:third_parties!third_parties_session_id_fkey(id, party_type, full_name, rut, address, commune, phone, email, company_name, has_insurance, insurance_company, claim_number, notes, created_at, updated_at),
     inspection_signatures:inspection_signatures!inspection_signatures_session_id_fkey(id, role, signature_url, signed_at),
-    damage_sketches:damage_sketches!damage_sketches_session_id_fkey(id, sketch_url, label, created_at),
+    damage_sketches:damage_sketches!damage_sketches_session_id_fkey(id, sketch_url, label, third_party_id, created_at),
     offlineInspector:profiles!offline_downloaded_by(full_name)
   `);
   if (!session) return null;
@@ -1907,6 +1907,42 @@ export async function updateThirdParty(id: string, input: Partial<ThirdParty>) {
 }
 
 export async function deleteThirdParty(id: string) {
+  // Verificar si el tercero tiene daños, evidencias o croquis asociados.
+  // La FK RESTRICT lo bloquearía en BD, pero verificamos antes para
+  // dar un mensaje claro al usuario.
+  const [damages, evidences, sketches] = await Promise.all([
+    fetchAll<{ id: string }>("inspection_damages", {
+      select: "id",
+      eq: { third_party_id: id },
+      limit: 1,
+    }),
+    fetchAll<{ id: string }>("inspection_evidences", {
+      select: "id",
+      eq: { third_party_id: id },
+      limit: 1,
+    }),
+    fetchAll<{ id: string }>("damage_sketches", {
+      select: "id",
+      eq: { third_party_id: id },
+      limit: 1,
+    }),
+  ]);
+
+  const hasDamages = damages.length > 0;
+  const hasEvidences = evidences.length > 0;
+  const hasSketches = sketches.length > 0;
+
+  if (hasDamages || hasEvidences || hasSketches) {
+    const parts: string[] = [];
+    if (hasDamages) parts.push("daños");
+    if (hasEvidences) parts.push("evidencias");
+    if (hasSketches) parts.push("croquis");
+    throw new Error(
+      `No se puede eliminar el tercero porque tiene ${parts.join(", ")} asociados. ` +
+      `Elimina o reasigna primero esos registros.`,
+    );
+  }
+
   await deleteRow("third_parties", id);
 }
 
@@ -1988,7 +2024,7 @@ export async function getOfflineDownloadedSessions() {
 // DAMAGE SKETCHES
 // ═══════════════════════════════════════════════════════════════
 
-const SKETCH_SELECT = `id, session_id, sketch_url, sketch_data, label, created_at`;
+const SKETCH_SELECT = `id, session_id, sketch_url, sketch_data, label, third_party_id, created_at`;
 
 export async function getDamageSketches(sessionId: string) {
   return fetchAll<DamageSketch>("damage_sketches", {
@@ -2087,7 +2123,7 @@ export async function deleteChecklistItem(id: string) {
 //  EVIDENCES
 // ═══════════════════════════════════════════════════════════════
 
-const EVIDENCE_SELECT = `id, session_id, type, url, description, category, damage_id, include_in_report, metadata, created_at`;
+const EVIDENCE_SELECT = `id, session_id, type, url, description, category, damage_id, include_in_report, metadata, third_party_id, created_at`;
 
 export async function getEvidences(sessionId: string) {
   return fetchAll<import("@/types").InspectionEvidence>("inspection_evidences", {

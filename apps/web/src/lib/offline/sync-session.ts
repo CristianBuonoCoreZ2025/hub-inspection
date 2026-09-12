@@ -133,7 +133,13 @@ export async function syncInspection(
         for (const serverTp of serverThirdParties) {
           const stillExists = actaThirdParties.some((tp) => tp.id === serverTp.id);
           if (!stillExists) {
-            await deleteThirdParty(serverTp.id);
+            try {
+              await deleteThirdParty(serverTp.id);
+            } catch (err) {
+              // El tercero tiene daños/evidencias/croquis asociados (FK RESTRICT).
+              // No se puede eliminar. Registrar el error y continuar.
+              errors.push(`Tercero "${serverTp.id}": ${(err as Error).message}`);
+            }
           }
         }
 

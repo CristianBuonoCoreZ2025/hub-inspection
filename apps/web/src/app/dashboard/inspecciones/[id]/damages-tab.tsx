@@ -535,8 +535,23 @@ const canSaveDamage = isBuildingDamage ? buildingValid : isContentDamage ? conte
 
  const effectiveThirdParties = thirdParties;
 
- // Terceros afectados (para asociar daños)
- const affectedThirdParties = effectiveThirdParties.filter((t) => t.party_type === "afectado");
+ // Opciones de dueño: Asegurado + todos los terceros (con etiqueta de tipo)
+ const ownerOptions = [
+   { value: "", label: "Asegurado" },
+   ...effectiveThirdParties.map((t) => ({
+     value: t.id,
+     label: `${t.full_name || "Sin nombre"} (${t.party_type === "afectado" ? "Afectado" : t.party_type === "responsable" ? "Responsable" : t.party_type})`,
+   })),
+ ];
+ const ownerLabel = (id: string | null) => {
+   if (!id) return "Asegurado";
+   const tp = effectiveThirdParties.find((t) => t.id === id);
+   return tp ? `${tp.full_name || "Sin nombre"}` : "Tercero eliminado";
+ };
+ const ownerPartyType = (id: string | null): string | null => {
+   if (!id) return null;
+   return effectiveThirdParties.find((t) => t.id === id)?.party_type ?? null;
+ };
  const evidenceDocs = (evidences || []).filter((e) => e.damage_id === editing);
 
  // Filtrar espacios según la clasificación del inmueble
@@ -1299,20 +1314,20 @@ const canSaveDamage = isBuildingDamage ? buildingValid : isContentDamage ? conte
  className="app-input w-full"
  />
  </div>
- {affectedThirdParties.length > 0 && (
+ {ownerOptions.length > 1 && (
  <div className="modal-field">
- <label className="app-field-label">Tercero Afectado (opcional)</label>
+ <label className="app-field-label">Dueño</label>
  <Select
  value={form.third_party_id || ""}
- items={affectedThirdParties.map((t) => ({ value: t.id, label: t.full_name || "Sin nombre" }))}
+ items={ownerOptions}
  onValueChange={(v) => setForm({ ...form, third_party_id: v || "" })}
  >
  <SelectTrigger className="app-input w-full">
- <SelectValue>{affectedThirdParties.find((t) => t.id === form.third_party_id)?.full_name || "Si es daño de un tercero..."}</SelectValue>
+ <SelectValue>{ownerOptions.find((o) => o.value === (form.third_party_id || ""))?.label || "Asegurado"}</SelectValue>
  </SelectTrigger>
  <SelectContent>
- {affectedThirdParties.map((t) => (
- <SelectItem key={t.id} value={t.id}>{t.full_name || "Sin nombre"}</SelectItem>
+ {ownerOptions.map((o) => (
+ <SelectItem key={o.value || "__asegurado"} value={o.value}>{o.label}</SelectItem>
  ))}
  </SelectContent>
  </Select>
@@ -1500,20 +1515,20 @@ const canSaveDamage = isBuildingDamage ? buildingValid : isContentDamage ? conte
  className='app-input w-full'
  />
  </div>
- {affectedThirdParties.length > 0 && (
+ {ownerOptions.length > 1 && (
  <div className="modal-field">
- <label className="app-field-label">Tercero Afectado (opcional)</label>
+ <label className="app-field-label">Dueño</label>
  <Select
  value={form.third_party_id || ""}
- items={affectedThirdParties.map((t) => ({ value: t.id, label: t.full_name || "Sin nombre" }))}
+ items={ownerOptions}
  onValueChange={(v) => setForm({ ...form, third_party_id: v || "" })}
  >
  <SelectTrigger className="app-input w-full">
- <SelectValue>{affectedThirdParties.find((t) => t.id === form.third_party_id)?.full_name || "Si es daño de un tercero..."}</SelectValue>
+ <SelectValue>{ownerOptions.find((o) => o.value === (form.third_party_id || ""))?.label || "Asegurado"}</SelectValue>
  </SelectTrigger>
  <SelectContent>
- {affectedThirdParties.map((t) => (
- <SelectItem key={t.id} value={t.id}>{t.full_name || "Sin nombre"}</SelectItem>
+ {ownerOptions.map((o) => (
+ <SelectItem key={o.value || "__asegurado"} value={o.value}>{o.label}</SelectItem>
  ))}
  </SelectContent>
  </Select>
@@ -1616,7 +1631,8 @@ const canSaveDamage = isBuildingDamage ? buildingValid : isContentDamage ? conte
  <th>Materialidad</th>
  <th className="text-right">Superficie / Daño</th>
  <th className="text-right">Monto</th>
- <th className="w-20">Acciones</th>
+ <th>Dueño</th>
+<th className="w-20">Acciones</th>
  </tr>
  </thead>
  <tbody>
@@ -1627,7 +1643,16 @@ const canSaveDamage = isBuildingDamage ? buildingValid : isContentDamage ? conte
  <td className="app-body max-w-50 truncate">{d.description || d.materiality_type || "—"}</td>
  <td className="text-right app-body">{formatQuantity(d)}</td>
  <td className="text-right font-medium app-body">{formatMoney(d.estimated_amount || 0, d.currency || "CLP")}</td>
- <td>
+ <td className="app-body">
+{d.third_party_id ? (
+<span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${ownerPartyType(d.third_party_id) === "afectado" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300" : "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"}`}>
+{ownerLabel(d.third_party_id)}
+</span>
+) : (
+<span className="app-body text-muted-foreground">Asegurado</span>
+)}
+</td>
+<td>
  <div className="app-row-actions">
  {!readOnly && (
  <>
@@ -1696,7 +1721,8 @@ const canSaveDamage = isBuildingDamage ? buildingValid : isContentDamage ? conte
  <th className="text-right">Cantidad</th>
  <th className="text-right">Monto</th>
  <th>Compra</th>
- <th className="w-20">Acciones</th>
+ <th>Dueño</th>
+<th className="w-20">Acciones</th>
  </tr>
  </thead>
  <tbody>
@@ -1720,7 +1746,16 @@ const canSaveDamage = isBuildingDamage ? buildingValid : isContentDamage ? conte
  <td className="text-right app-body">{d.quantity ? `${d.quantity}${d.unit ? ` ${d.unit}` : ""}` : "—"}</td>
  <td className="text-right font-medium app-body">{formatMoney(d.estimated_amount || 0, d.currency || "CLP")}</td>
  <td className="app-body">{d.purchase_date ? new Date(d.purchase_date).toLocaleDateString('es-CL') : '—'}</td>
- <td>
+ <td className="app-body">
+{d.third_party_id ? (
+<span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${ownerPartyType(d.third_party_id) === "afectado" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300" : "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"}`}>
+{ownerLabel(d.third_party_id)}
+</span>
+) : (
+<span className="app-body text-muted-foreground">Asegurado</span>
+)}
+</td>
+<td>
  <div className="app-row-actions">
  {!readOnly && (
  <>
